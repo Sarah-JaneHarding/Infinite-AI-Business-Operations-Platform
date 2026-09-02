@@ -57,7 +57,7 @@ export const ProductDevelopmentManager: React.FC<ProductDevelopmentManagerProps>
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
   // Approval Modal/Drawer State
-  const [approvalComment, setApprovalComment] = useState('Verified compliance against POPIA Section 72 and Law 02. Approved for automated merge to tecosystem:main.');
+  const [approvalComment, setApprovalComment] = useState('Verified compliance against POPIA Section 72 and Law 02. Approved for automated merge to Sarah-JaneHarding/infinite-ai-ecosystem:main.');
   const [approverName, setApproverName] = useState('Sarah-Jane (CEO & Founder)');
   const [law02Confirmed, setLaw02Confirmed] = useState(true);
 
@@ -84,7 +84,7 @@ export const ProductDevelopmentManager: React.FC<ProductDevelopmentManagerProps>
     onSyncRepos();
     setTimeout(() => {
       setIsSyncing(false);
-      setSyncNotice('Dual-repo sync verified: commit hashes and webhook state aligned with tecosystem:main');
+      setSyncNotice('Dual-repo sync verified: commit hashes and webhook state aligned with Sarah-JaneHarding/infinite-ai-ecosystem:main');
       setTimeout(() => setSyncNotice(null), 4000);
     }, 900);
   };
@@ -122,12 +122,12 @@ export const ProductDevelopmentManager: React.FC<ProductDevelopmentManagerProps>
     };
 
     const agent = agentLookup[newTaskAgentId] || agentLookup['A04'];
-    const branchName = `feat/tecosystem-${newTaskTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)}`;
+    const branchName = `feat/edu-${newTaskTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)}`;
 
     onAddTask({
       title: newTaskTitle,
       epicId: newTaskEpicId,
-      repo: 'tecosystem',
+      repo: 'Sarah-JaneHarding/infinite-ai-ecosystem',
       branch: branchName,
       assignedAgent: {
         id: newTaskAgentId,
@@ -138,7 +138,7 @@ export const ProductDevelopmentManager: React.FC<ProductDevelopmentManagerProps>
       collaboratingAgents: ['A03 · Principal Architect', 'A06 · QA Automation'],
       status: 'AUTONOMOUS_DEV',
       priority: newTaskPriority,
-      description: newTaskDescription || 'Autonomous feature delivery for tecosystem product core with automated test harness.',
+      description: newTaskDescription || 'Autonomous feature delivery for Infinite-AI Education Ecosystem product core with automated test harness.',
       diffSummary: {
         filesChanged: 3,
         additions: 85,
@@ -166,7 +166,7 @@ export const ProductDevelopmentManager: React.FC<ProductDevelopmentManagerProps>
         required: true,
         status: 'PENDING',
         approverRole: 'Sarah-Jane (CEO) / Product Architect',
-        gatedReason: 'Law 02 (Human-in-the-Loop) gating required before merging into tecosystem:main.'
+        gatedReason: 'Law 02 (Human-in-the-Loop) gating required before merging into Sarah-JaneHarding/infinite-ai-ecosystem:main.'
       },
       codeDiff: `diff --git a/packages/core/src/${newTaskTitle.toLowerCase().replace(/\s+/g, '-')}.ts b/packages/core/src/${newTaskTitle.toLowerCase().replace(/\s+/g, '-')}.ts
 new file mode 100644
@@ -174,12 +174,12 @@ new file mode 100644
 +++ b/packages/core/src/${newTaskTitle.toLowerCase().replace(/\s+/g, '-')}.ts
 @@ -0,0 +1,24 @@
 +// Autonomous Agent Implementation by ${agent.name} (${newTaskAgentId})
-+// Managed by Infinite AI Business Operations Platform for tecosystem
++// Managed by Infinite AI Business Operations Platform for Infinite-AI Education Ecosystem
 +export interface SpecConfig {
 +  tenantId: string;
 +  enabled: boolean;
 +}
-+
+
 +export function initializeModule(config: SpecConfig) {
 +  if (!config.tenantId) throw new Error('Law 04 violation: tenantId required');
 +  return { status: 'INITIALIZED', timestamp: Date.now() };
@@ -193,9 +193,9 @@ new file mode 100644
 
   const handleSimulateTests = (task: AutonomousTask) => {
     setRunningTestSuite(task.id);
-    setTestOutputTerminal(`> cd ../tecosystem && pnpm test --filter=${task.branch}
+    setTestOutputTerminal(`> cd ../infinite-ai-ecosystem && pnpm test --filter=${task.branch}
 
-[TECOSYSTEM:AUTONOMOUS_TEST_HARNESS]
+[INFINITE_AI_ECOSYSTEM:AUTONOMOUS_TEST_HARNESS]
 Initializing sandbox environment in af-south-1 isolated VPC...
 Loaded security policy: Law 01 (Membrane) + Law 04 (Tenant Isolation)
 Agent in charge: ${task.assignedAgent.name} (${task.assignedAgent.id})
@@ -237,23 +237,43 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
             </div>
 
             <h1 className="text-xl md:text-2xl font-bold text-[#E9EDF8] flex items-center gap-2">
-              <span>Business Operations</span>
+              <span>Infinite-AI Business Operations</span>
               <ArrowRight className="w-4 h-4 text-[#22D3EE]" />
-              <span className="text-[#22D3EE]">tecosystem Product Development</span>
+              <span className="text-[#22D3EE]">Infinite-AI Education Ecosystem</span>
             </h1>
 
             <p className="text-xs md:text-sm text-[#8FA0C2] mt-1 max-w-3xl">
-              The business operations app governs, budgets, tests, and drives engineering releases in the core{' '}
-              <strong className="text-[#E9EDF8]">tecosystem</strong> repository. Autonomous AI-agents plan, write code, and execute automated test suites under non-bypassable human approval checks (<strong className="text-[#22D3EE]">Law 02</strong>).
+              Infinite-AI is the business and our product in development is the{' '}
+              <strong className="text-[#E9EDF8]">Infinite-AI Education Ecosystem</strong>, linked directly to{' '}
+              <a
+                href="https://github.com/Sarah-JaneHarding/infinite-ai-ecosystem"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#22D3EE] font-mono underline hover:text-[#38BDF8] inline-flex items-center gap-1 font-semibold"
+              >
+                <span>Sarah-JaneHarding/infinite-ai-ecosystem</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              . Autonomous AI-agents plan, code, and test features under non-bypassable human review (<strong className="text-[#22D3EE]">Law 02</strong>).
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <a
+              href="https://github.com/Sarah-JaneHarding/infinite-ai-ecosystem"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-g text-xs py-2 px-3.5 flex items-center gap-1.5 font-mono text-emerald-300 hover:text-white"
+            >
+              <span>GitHub Repo</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+
             <button
               onClick={handleManualSync}
               disabled={isSyncing}
               className="btn btn-g text-xs py-2 px-3.5 flex items-center gap-2 font-mono"
-              title="Poll tecosystem repository for new commits and webhooks"
+              title="Poll Sarah-JaneHarding/infinite-ai-ecosystem repository for new commits and webhooks"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#22D3EE]' : 'text-[#8FA0C2]'}`} />
               <span>{isSyncing ? 'Syncing...' : 'Sync Repos Now'}</span>
@@ -283,10 +303,10 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
           <div className="panel2 p-4 border border-[rgba(148,163,255,0.15)] bg-[#0B1528]/80">
             <div className="flex items-center justify-between text-xs mb-2">
               <span className="text-[10px] font-mono tracking-wider text-[#8FA0C2] uppercase">
-                Host / Governance Repository
+                Business Operations Repository
               </span>
               <span className="chip text-[10px] bg-blue-950/40 text-blue-300 border-blue-500/30">
-                Operations & Brain
+                Infinite-AI Operations & Brain
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -305,20 +325,35 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
             </div>
           </div>
 
-          {/* Product Repository: tecosystem */}
+          {/* Product Repository: Infinite-AI Education Ecosystem */}
           <div className="panel2 p-4 border border-[#22D3EE]/30 bg-[#0B1528]/80 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-[#22D3EE]/5 pointer-events-none rounded-bl-full" />
             <div className="flex items-center justify-between text-xs mb-2">
-              <span className="text-[10px] font-mono tracking-wider text-[#22D3EE] uppercase">
-                Managed Product Repository
+              <span className="text-[10px] font-mono tracking-wider text-[#22D3EE] uppercase font-bold">
+                Product in Development
               </span>
-              <span className="chip text-[10px] bg-emerald-950/40 text-emerald-300 border-emerald-500/30">
-                Target: tecosystem
+              <span className="chip text-[10px] bg-emerald-950/40 text-emerald-300 border-emerald-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Linked to GitHub
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <GitPullRequest className="w-4 h-4 text-emerald-400" />
-              <strong className="text-sm text-[#E9EDF8] font-mono">{repoConnection.productRepo.name}</strong>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <GitPullRequest className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-xs font-bold text-[#E9EDF8]">Infinite-AI Education Ecosystem</div>
+                  <strong className="text-xs text-[#22D3EE] font-mono">{repoConnection.productRepo.name}</strong>
+                </div>
+              </div>
+              <a
+                href="https://github.com/Sarah-JaneHarding/infinite-ai-ecosystem"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-g text-[11px] py-1 px-2.5 flex items-center gap-1 shrink-0 font-mono text-emerald-300 hover:text-white"
+              >
+                <span>View on GitHub</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
             <div className="text-xs text-[#8FA0C2] mt-2 space-y-1">
               <div className="flex items-center gap-2">
@@ -350,7 +385,7 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
             <strong className="text-emerald-400">100% (48 Suites)</strong>
           </div>
           <div className="panel2 p-2.5 flex items-center justify-between">
-            <span className="text-[#8FA0C2]">Merged to tecosystem</span>
+            <span className="text-[#8FA0C2]">Merged to Product Repo</span>
             <strong className="text-[#E9EDF8]">{mergedCount} Delivered</strong>
           </div>
         </div>
@@ -436,7 +471,7 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-[#E9EDF8]">
-                Autonomous Agent Execution Pipeline (Target: <code className="text-[#22D3EE]">tecosystem</code>)
+                Autonomous Agent Execution Pipeline (Target: <code className="text-[#22D3EE]">Sarah-JaneHarding/infinite-ai-ecosystem</code>)
               </h2>
               <p className="text-xs text-[#8FA0C2]">
                 Agents autonomously write code diffs, trigger automated test runs, and await non-bypassable human sign-off.
@@ -899,7 +934,7 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
                         }`}
                       >
                         <Check className="w-4 h-4" />
-                        <span>Sign & Merge to tecosystem:main</span>
+                        <span>Sign & Merge to Sarah-JaneHarding/infinite-ai-ecosystem:main</span>
                       </button>
                     </div>
                   </div>
@@ -916,7 +951,7 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-[#E9EDF8]">
-                tecosystem Automated Test Matrix & Verification Harness
+                Infinite-AI Education Ecosystem Automated Test Matrix & Verification Harness
               </h2>
               <p className="text-xs text-[#8FA0C2]">
                 Continuous autonomous test suites verifying IRT math, tenant isolation, and POPIA privacy membranes.
@@ -959,7 +994,7 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
           {/* Test Suites Table */}
           <div className="panel overflow-hidden">
             <div className="p-4 border-b border-[rgba(148,163,255,0.1)] flex items-center justify-between">
-              <p className="kick">TECOSYSTEM COMPONENT TEST SUITES</p>
+              <p className="kick">INFINITE-AI EDUCATION ECOSYSTEM TEST SUITES</p>
               <span className="text-xs text-emerald-400 font-mono">48 of 48 Passing</span>
             </div>
 
@@ -994,10 +1029,10 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-[#E9EDF8]">
-                Product Epics Managed by Business Operations
+                Product Epics Managed by Infinite-AI Business Operations
               </h2>
               <p className="text-xs text-[#8FA0C2]">
-                Strategic product roadmap for tecosystem aligned with commercial pilot customer contracts.
+                Strategic product roadmap for Infinite-AI Education Ecosystem aligned with commercial pilot customer contracts.
               </p>
             </div>
             <span className="chip text-xs border-[#22D3EE]/30 text-[#22D3EE]">
@@ -1052,7 +1087,7 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
               <span>Two-Way Repository Bridge Architecture</span>
             </h2>
             <p className="text-xs text-[#8FA0C2] leading-relaxed">
-              Bi-directional synchronization coordinates business operations governance (policies, audits, agent memory L0-L4) with the product development lifecycle in <code className="text-[#22D3EE] font-mono">tecosystem</code>.
+              Bi-directional synchronization coordinates business operations governance (policies, audits, agent memory L0-L4) with the product development lifecycle in <code className="text-[#22D3EE] font-mono">Sarah-JaneHarding/infinite-ai-ecosystem</code>.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-4 pt-2">
@@ -1064,8 +1099,19 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
               </div>
 
               <div className="panel2 p-4 space-y-2 text-xs">
-                <p className="kick">PRODUCT REPO (MANAGED)</p>
-                <div className="font-mono text-emerald-400">git@github.com:infinite-ai/tecosystem.git</div>
+                <div className="flex items-center justify-between">
+                  <p className="kick">PRODUCT REPO (MANAGED)</p>
+                  <a
+                    href="https://github.com/Sarah-JaneHarding/infinite-ai-ecosystem"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-emerald-400 hover:underline inline-flex items-center gap-1 font-mono"
+                  >
+                    <span>github.com/Sarah-JaneHarding/infinite-ai-ecosystem</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <div className="font-mono text-emerald-400">git@github.com:Sarah-JaneHarding/infinite-ai-ecosystem.git</div>
                 <div className="text-[#8FA0C2]">Branch: <code className="text-emerald-400">main</code> (Protected)</div>
                 <div className="text-[#8FA0C2]">Role: Adaptive Learning Engine, Student Assessment, Microservices</div>
               </div>
@@ -1097,7 +1143,7 @@ Automated test gate cleared. Task transitioned to: AWAITING_APPROVAL (HITL Law 0
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-[#E9EDF8] flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-[#22D3EE]" />
-                <span>Dispatch Autonomous Agent to tecosystem</span>
+                <span>Dispatch Autonomous Agent to Infinite-AI Education Ecosystem</span>
               </h3>
               <button 
                 onClick={() => setShowNewTaskModal(false)}

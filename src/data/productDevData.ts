@@ -3,25 +3,27 @@ import { RepoConnection, ProductEpic, AutonomousTask } from '../types';
 export const INITIAL_REPO_CONNECTION: RepoConnection = {
   opsRepo: {
     name: 'infinite-ai/business-operations',
+    url: 'https://github.com/infinite-ai/business-operations',
     branch: 'main',
     commitHash: 'a8f912c',
     lastCommitMsg: 'chore(gov): verify Stage 02 Merkle ledger hash chain & ratify bylaws',
     status: 'CONNECTED',
-    role: 'Operations, Governance, L0-L4 Brain & Agent Orchestration'
+    role: 'Infinite-AI Business Operations: Governance, L0-L4 Brain & 46 AI-Agent Orchestration'
   },
   productRepo: {
-    name: 'infinite-ai/tecosystem',
+    name: 'Sarah-JaneHarding/infinite-ai-ecosystem',
+    url: 'https://github.com/Sarah-JaneHarding/infinite-ai-ecosystem',
     branch: 'main',
-    commitHash: 'c3d491f',
-    lastCommitMsg: 'feat(engine): add adaptive diagnostic student assessment matrix v2.4',
+    commitHash: 'e7b419a',
+    lastCommitMsg: 'feat(core): initialize Infinite-AI Education Ecosystem kernel & diagnostic engine v2.4',
     status: 'CONNECTED',
-    role: 'Core Product Codebase, Learning Engine, APIs & Microservices'
+    role: 'Infinite-AI Education Ecosystem — Core Product Repository, Learning Engine, APIs & Microservices'
   },
   syncStatus: 'CONNECTED',
   twoWaySyncActive: true,
   lastSynced: 'Just now',
-  syncLatencyMs: 42,
-  webhookUrl: 'https://ops.infinite-ai.internal/api/v1/webhooks/tecosystem-bridge',
+  syncLatencyMs: 38,
+  webhookUrl: 'https://ops.infinite-ai.internal/api/v1/webhooks/github-bridge',
   secretConfigured: true,
   stats: {
     openPrs: 5,
@@ -34,69 +36,69 @@ export const INITIAL_REPO_CONNECTION: RepoConnection = {
 
 export const INITIAL_EPICS: ProductEpic[] = [
   {
-    id: 'EPIC-TEC-01',
+    id: 'EPIC-EDU-01',
     title: 'Adaptive Learning & Diagnostic Engine v2.4',
     status: 'IN_PROGRESS',
     leadAgent: 'A01 · Chief Product Officer',
     collaboratingAgents: ['A03 · Software Architect', 'A04 · Full-Stack Lead', 'A06 · QA Automation'],
     progress: 78,
-    targetRelease: 'tecosystem v2.4.0-rc1',
-    description: 'Dynamic question difficulty calibrator with real-time competency graph updates and sub-50ms latency in af-south-1.',
+    targetRelease: 'Infinite-AI Education Ecosystem v2.4.0-rc1',
+    description: 'Dynamic item difficulty calibrator with real-time student competency graph updates and sub-50ms latency in af-south-1.',
     featuresCount: 6
   },
   {
-    id: 'EPIC-TEC-02',
+    id: 'EPIC-EDU-02',
     title: 'POPIA Section 72 Data Egress & Pseudonymization Firewall',
     status: 'IN_PROGRESS',
     leadAgent: 'A11 · Security & Compliance Auditor',
     collaboratingAgents: ['A03 · Software Architect', 'A05 · DevOps & Cloud Lead'],
     progress: 92,
-    targetRelease: 'tecosystem v2.4.0-rc1',
+    targetRelease: 'Infinite-AI Education Ecosystem v2.4.0-rc1',
     description: 'Cryptographic student PII masking prior to vectorization or external model inference, strictly enforced in all API gateways.',
     featuresCount: 4
   },
   {
-    id: 'EPIC-TEC-03',
+    id: 'EPIC-EDU-03',
     title: 'Real-Time Multi-Tenant Curriculum Assessment API',
     status: 'VALIDATION',
     leadAgent: 'A03 · Principal Software Architect',
     collaboratingAgents: ['A04 · Full-Stack Lead', 'A06 · QA Automation'],
     progress: 85,
-    targetRelease: 'tecosystem v2.4.0',
+    targetRelease: 'Infinite-AI Education Ecosystem v2.4.0',
     description: 'Postgres row-level security (RLS) partition scheme ensuring school/tenant curriculum data isolation with zero bleed.',
     featuresCount: 5
   },
   {
-    id: 'EPIC-TEC-04',
-    title: 'Offline-First SQLite Edge Synchronization for Rural Hubs',
+    id: 'EPIC-EDU-04',
+    title: 'Offline-First SQLite Edge Synchronization for Rural Schools',
     status: 'PLANNED',
     leadAgent: 'A04 · Full-Stack Development Lead',
     collaboratingAgents: ['A05 · DevOps & Cloud Lead', 'A12 · Operations Specialist'],
     progress: 35,
-    targetRelease: 'tecosystem v2.5.0-alpha',
+    targetRelease: 'Infinite-AI Education Ecosystem v2.5.0-alpha',
     description: 'CRDT-based synchronization protocol for resource-constrained schools with intermittent connectivity.',
     featuresCount: 7
   },
   {
-    id: 'EPIC-TEC-05',
+    id: 'EPIC-EDU-05',
     title: 'Infinite Brain L3 Procedural Integration SDK',
     status: 'COMPLETED',
     leadAgent: 'A03 · Principal Software Architect',
     collaboratingAgents: ['A01 · Chief Product Officer', 'A06 · QA Automation'],
     progress: 100,
-    targetRelease: 'tecosystem v2.3.9-stable',
-    description: 'Direct bi-directional hook allowing tecosystem product code to ingest procedural SOPs and guidelines from Operations Brain.',
+    targetRelease: 'Infinite-AI Education Ecosystem v2.3.9-stable',
+    description: 'Direct bi-directional hook allowing Infinite-AI Education Ecosystem product code to ingest procedural SOPs and guidelines from Operations Brain.',
     featuresCount: 3
   }
 ];
 
 export const INITIAL_AUTONOMOUS_TASKS: AutonomousTask[] = [
   {
-    id: 'TASK-TEC-204',
+    id: 'TASK-EDU-204',
     title: 'Implement POPIA Egress Sanitizer Middleware in API Router',
-    epicId: 'EPIC-TEC-02',
-    repo: 'tecosystem',
-    branch: 'feat/tecosystem-popia-egress-sanitizer',
+    epicId: 'EPIC-EDU-02',
+    repo: 'Sarah-JaneHarding/infinite-ai-ecosystem',
+    branch: 'feat/edu-popia-egress-sanitizer',
     assignedAgent: {
       id: 'A11',
       name: 'Sentinel-Auditor',
@@ -142,7 +144,7 @@ export const INITIAL_AUTONOMOUS_TASKS: AutonomousTask[] = [
       approverRole: 'Sarah-Jane (CEO) / Lead Security Officer',
       gatedReason: 'Law 02 (Human-in-the-Loop) & POPIA statutory compliance sign-off required prior to production branch merge.'
     },
-    releaseVersion: 'tecosystem v2.4.0-rc1',
+    releaseVersion: 'Infinite-AI Education Ecosystem v2.4.0-rc1',
     createdAt: '2026-09-02 10:15 UTC',
     updatedAt: '2026-09-02 12:45 UTC',
     codeDiff: `diff --git a/packages/api/src/middleware/popia-egress.ts b/packages/api/src/middleware/popia-egress.ts
@@ -152,7 +154,7 @@ index 0000000..f4a812b
 +++ b/packages/api/src/middleware/popia-egress.ts
 @@ -0,0 +1,38 @@
 +import { Request, Response, NextFunction } from 'express';
-+import { maskSouthAfricanPii, verifyProvenanceStamp } from '@tecosystem/security';
++import { maskSouthAfricanPii, verifyProvenanceStamp } from '@infinite-ai-ecosystem/security';
 +
 +export function popiaEgressGuard(req: Request, res: Response, next: NextFunction) {
 +  const originTenant = req.headers['x-tenant-id'] as string;
@@ -177,11 +179,11 @@ index 0000000..f4a812b
 +}`
   },
   {
-    id: 'TASK-TEC-205',
+    id: 'TASK-EDU-205',
     title: 'Adaptive Diagnostic Engine: Dynamic Difficulty IRT Algorithm',
-    epicId: 'EPIC-TEC-01',
-    repo: 'tecosystem',
-    branch: 'feat/tecosystem-irt-diagnostic-v2',
+    epicId: 'EPIC-EDU-01',
+    repo: 'Sarah-JaneHarding/infinite-ai-ecosystem',
+    branch: 'feat/edu-irt-diagnostic-v2',
     assignedAgent: {
       id: 'A04',
       name: 'Titan-FullStack',
@@ -219,7 +221,7 @@ index 0000000..f4a812b
         status: 'PASS',
         piiChecked: true,
         popiaCompliant: true,
-        details: 'Static analysis passed. Algorithmic bias metrics within Cape Town educational benchmark tolerances.'
+        details: 'Static analysis passed. Algorithmic bias metrics within South African curriculum benchmark tolerances.'
       }
     },
     approvalCheck: {
@@ -228,7 +230,7 @@ index 0000000..f4a812b
       approverRole: 'Sarah-Jane (CEO) / Product Architect',
       gatedReason: 'Core pedagogical scoring algorithm update. Requires executive countersignature under Law 02.'
     },
-    releaseVersion: 'tecosystem v2.4.0-rc1',
+    releaseVersion: 'Infinite-AI Education Ecosystem v2.4.0-rc1',
     createdAt: '2026-09-02 08:30 UTC',
     updatedAt: '2026-09-02 13:10 UTC',
     codeDiff: `diff --git a/packages/engine/src/irt/adaptive-calibrator.ts b/packages/engine/src/irt/adaptive-calibrator.ts
@@ -269,11 +271,11 @@ index 0000000..9c381da
 +}`
   },
   {
-    id: 'TASK-TEC-206',
+    id: 'TASK-EDU-206',
     title: 'Automated Playwright E2E Test Suite for Classroom Assessment',
-    epicId: 'EPIC-TEC-03',
-    repo: 'tecosystem',
-    branch: 'feat/tecosystem-playwright-e2e-classroom',
+    epicId: 'EPIC-EDU-03',
+    repo: 'Sarah-JaneHarding/infinite-ai-ecosystem',
+    branch: 'feat/edu-playwright-e2e-classroom',
     assignedAgent: {
       id: 'A06',
       name: 'Vanguard-QA',
@@ -319,16 +321,16 @@ index 0000000..9c381da
       approverRole: 'QA Lead / Tech Lead',
       gatedReason: 'Automated CI test suite pass verification before branch promotion.'
     },
-    releaseVersion: 'tecosystem v2.4.0-rc1',
+    releaseVersion: 'Infinite-AI Education Ecosystem v2.4.0-rc1',
     createdAt: '2026-09-02 11:20 UTC',
     updatedAt: '2026-09-02 13:25 UTC'
   },
   {
-    id: 'TASK-TEC-207',
+    id: 'TASK-EDU-207',
     title: 'Multi-Tenant Row-Level Security Migration for Postgres in af-south-1',
-    epicId: 'EPIC-TEC-03',
-    repo: 'tecosystem',
-    branch: 'feat/tecosystem-postgres-rls-tenant-guard',
+    epicId: 'EPIC-EDU-03',
+    repo: 'Sarah-JaneHarding/infinite-ai-ecosystem',
+    branch: 'feat/edu-postgres-rls-tenant-guard',
     assignedAgent: {
       id: 'A03',
       name: 'Nexus-Architect',
@@ -376,16 +378,16 @@ index 0000000..9c381da
       comments: 'Statutory compliance confirmed. RLS migration approved for staging & production.',
       gatedReason: 'Law 04 (Tenant Isolation) requires cryptographic confirmation before migration run.'
     },
-    releaseVersion: 'tecosystem v2.3.9-stable',
+    releaseVersion: 'Infinite-AI Education Ecosystem v2.3.9-stable',
     createdAt: '2026-09-01 14:00 UTC',
     updatedAt: '2026-09-02 09:15 UTC'
   },
   {
-    id: 'TASK-TEC-208',
+    id: 'TASK-EDU-208',
     title: 'Autonomous Circuit Breaker for Model Gateway with Failover to Claude 3.5 Sonnet',
-    epicId: 'EPIC-TEC-01',
-    repo: 'tecosystem',
-    branch: 'feat/tecosystem-gateway-circuit-breaker',
+    epicId: 'EPIC-EDU-01',
+    repo: 'Sarah-JaneHarding/infinite-ai-ecosystem',
+    branch: 'feat/edu-gateway-circuit-breaker',
     assignedAgent: {
       id: 'A05',
       name: 'Aegis-DevOps',
@@ -429,8 +431,9 @@ index 0000000..9c381da
       approverRole: 'DevOps Lead / Architect',
       gatedReason: 'Infrastructure routing parameter change requires review.'
     },
-    releaseVersion: 'tecosystem v2.4.0-rc1',
+    releaseVersion: 'Infinite-AI Education Ecosystem v2.4.0-rc1',
     createdAt: '2026-09-02 12:00 UTC',
     updatedAt: '2026-09-02 13:30 UTC'
   }
 ];
+

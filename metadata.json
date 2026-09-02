@@ -1,6 +1,6 @@
 {
   "name": "Infinite AI Business Operations Platform",
-  "description": "Multi-tenant enterprise operations platform managing tecosystem product development with autonomous AI-agents, non-bypassable HITL approval checks, automated testing harnesses, and Infinite Brain L0-L4 governance.",
+  "description": "Multi-tenant enterprise operations platform for Infinite-AI managing the Infinite-AI Education Ecosystem product development (Sarah-JaneHarding/infinite-ai-ecosystem) with autonomous AI-agents, non-bypassable HITL approval checks, automated testing harnesses, and Infinite Brain L0-L4 governance.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

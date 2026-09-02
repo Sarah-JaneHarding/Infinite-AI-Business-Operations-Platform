@@ -131,6 +131,7 @@ export interface IntegrationTool {
 
 export interface RepoDetails {
   name: string;
+  url?: string;
   branch: string;
   commitHash: string;
   lastCommitMsg: string;
@@ -172,7 +173,7 @@ export interface AutonomousTask {
   id: string;
   title: string;
   epicId: string;
-  repo: 'tecosystem' | 'business-operations';
+  repo: 'Sarah-JaneHarding/infinite-ai-ecosystem' | 'infinite-ai-ecosystem' | 'tecosystem' | 'business-operations' | string;
   branch: string;
   assignedAgent: {
     id: string;
