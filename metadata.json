@@ -1,0 +1,6 @@
+{
+  "name": "Infinite AI Business Operations Platform",
+  "description": "Multi-tenant enterprise operations platform adapted from Infinite AI Ecosystem with Infinite Brain (L0-L4), 5 core operations modules, Model Gateway, agent DAG orchestrator, HITL approval gates, and developer environment.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
