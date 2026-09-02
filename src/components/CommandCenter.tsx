@@ -11,7 +11,8 @@ import {
   Check, 
   ExternalLink,
   Zap,
-  Lock
+  Lock,
+  GitPullRequest
 } from 'lucide-react';
 
 interface CommandCenterProps {
@@ -19,13 +20,15 @@ interface CommandCenterProps {
   stage02Resolved: boolean;
   ratifiedCount: number;
   onRatifyAll: () => void;
+  pendingApprovalsCount?: number;
 }
 
 export const CommandCenter: React.FC<CommandCenterProps> = ({ 
   onNavigate, 
   stage02Resolved, 
   ratifiedCount,
-  onRatifyAll 
+  onRatifyAll,
+  pendingApprovalsCount = 2
 }) => {
   // Local state for launch sequence checkboxes
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>(() => {
@@ -118,6 +121,41 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 {stage02Resolved ? 'Inspect Gate' : 'Resolve in Dev Studio'} <ArrowRight className="w-3 h-3" />
               </button>
             </div>
+          </div>
+
+          {/* Product Development & Tecosystem Connection Callout */}
+          <div className="panel2 p-3.5 mt-3 border border-[#22D3EE]/30 bg-[#0A162B] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-[#22D3EE]/10 text-[#22D3EE] shrink-0">
+                <GitPullRequest className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#E9EDF8]">
+                    tecosystem Repository Connected
+                  </span>
+                  <span className="chip text-[9px] bg-emerald-950/40 text-emerald-300 border-emerald-500/30">
+                    Two-Way Sync Active
+                  </span>
+                  {pendingApprovalsCount > 0 && (
+                    <span className="chip text-[9px] bg-amber-950/40 text-amber-300 border-amber-500/30 font-bold">
+                      {pendingApprovalsCount} PRs Awaiting Your Law 02 Sign-off
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-[#8FA0C2] mt-0.5">
+                  Business Operations is autonomously driving product development, automated testing, and release gating in <code className="text-[#22D3EE] font-mono">tecosystem</code>.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => onNavigate('product')}
+              className="btn btn-p text-xs py-1.5 px-3 flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+            >
+              <span>Manage Product Dev</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
           </div>
         </div>
 
@@ -289,6 +327,14 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <div className="panel p-6">
             <p className="kick mb-3">SYSTEM MODULE SHORTCUTS</p>
             <div className="grid grid-cols-2 gap-2.5">
+              <button 
+                onClick={() => onNavigate('product')}
+                className="btn-s text-left p-2.5 flex items-center justify-between border-emerald-500/30 bg-emerald-950/20"
+              >
+                <span className="text-emerald-300 font-semibold">🚀 Product & Tecosystem</span>
+                <ArrowRight className="w-3 h-3 text-emerald-400" />
+              </button>
+
               <button 
                 onClick={() => onNavigate('brain')}
                 className="btn-s text-left p-2.5 flex items-center justify-between"

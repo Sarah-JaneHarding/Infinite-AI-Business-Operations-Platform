@@ -13,11 +13,179 @@ import { GovernanceAndRisk } from './components/GovernanceAndRisk';
 import { CrmSystem } from './components/CrmSystem';
 import { IntegrationsDashboard } from './components/IntegrationsDashboard';
 import { DocsAndRatify } from './components/DocsAndRatify';
+import { ProductDevelopmentManager } from './components/ProductDevelopmentManager';
+import { INITIAL_REPO_CONNECTION, INITIAL_EPICS, INITIAL_AUTONOMOUS_TASKS } from './data/productDevData';
+import { RepoConnection, ProductEpic, AutonomousTask } from './types';
 import { ShieldCheck, CheckCircle2, Lock, Cpu, ArrowUpRight } from 'lucide-react';
 
 export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<NavTab>('command');
+
+  // Product Development & Tecosystem Connection State
+  const [repoConnection, setRepoConnection] = useState<RepoConnection>(() => {
+    try {
+      const saved = localStorage.getItem('ia_repo_connection');
+      return saved ? JSON.parse(saved) : INITIAL_REPO_CONNECTION;
+    } catch {
+      return INITIAL_REPO_CONNECTION;
+    }
+  });
+
+  const [epics, setEpics] = useState<ProductEpic[]>(() => {
+    try {
+      const saved = localStorage.getItem('ia_epics');
+      return saved ? JSON.parse(saved) : INITIAL_EPICS;
+    } catch {
+      return INITIAL_EPICS;
+    }
+  });
+
+  const [autonomousTasks, setAutonomousTasks] = useState<AutonomousTask[]>(() => {
+    try {
+      const saved = localStorage.getItem('ia_autonomous_tasks');
+      return saved ? JSON.parse(saved) : INITIAL_AUTONOMOUS_TASKS;
+    } catch {
+      return INITIAL_AUTONOMOUS_TASKS;
+    }
+  });
+
+  const pendingApprovalsCount = autonomousTasks.filter(t => t.status === 'AWAITING_APPROVAL').length;
+
+  const handleSyncRepos = () => {
+    setRepoConnection(prev => {
+      const updated: RepoConnection = {
+        ...prev,
+        lastSynced: 'Just now',
+        syncStatus: 'CONNECTED',
+        stats: {
+          ...prev.stats,
+          autonomousCommitsToday: prev.stats.autonomousCommitsToday + 1
+        }
+      };
+      try {
+        localStorage.setItem('ia_repo_connection', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleApproveTask = (taskId: string, comment: string, approverName: string) => {
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
+    const signatureHash = 'sha256:' + Array.from({ length: 4 }, () => Math.random().toString(16).substring(2, 8)).join('');
+
+    setAutonomousTasks(prev => {
+      const next = prev.map(task => {
+        if (task.id === taskId) {
+          return {
+            ...task,
+            status: 'MERGED' as const,
+            approvalCheck: {
+              ...task.approvalCheck,
+              status: 'APPROVED' as const,
+              signedBy: approverName,
+              signedAt: timestamp,
+              signatureHash,
+              comments: comment
+            }
+          };
+        }
+        return task;
+      });
+      try {
+        localStorage.setItem('ia_autonomous_tasks', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    // Update repository latest commit
+    setRepoConnection(prev => {
+      const updated: RepoConnection = {
+        ...prev,
+        productRepo: {
+          ...prev.productRepo,
+          commitHash: signatureHash.substring(7, 14),
+          lastCommitMsg: `merge(pr): approve autonomous agent pull request #${taskId.replace(/[^0-9]/g, '')}`
+        },
+        stats: {
+          ...prev.stats,
+          openPrs: Math.max(0, prev.stats.openPrs - 1),
+          pendingApprovals: Math.max(0, prev.stats.pendingApprovals - 1)
+        }
+      };
+      try {
+        localStorage.setItem('ia_repo_connection', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleRejectTask = (taskId: string, reason: string) => {
+    setAutonomousTasks(prev => {
+      const next = prev.map(task => {
+        if (task.id === taskId) {
+          return {
+            ...task,
+            status: 'AUTONOMOUS_DEV' as const,
+            approvalCheck: {
+              ...task.approvalCheck,
+              status: 'CHANGES_REQUESTED' as const,
+              comments: reason
+            }
+          };
+        }
+        return task;
+      });
+      try {
+        localStorage.setItem('ia_autonomous_tasks', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleAddTask = (newTaskData: Omit<AutonomousTask, 'id' | 'createdAt' | 'updatedAt' | 'releaseVersion'>) => {
+    const taskId = `TASK-TEC-${210 + autonomousTasks.length}`;
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
+
+    const newTask: AutonomousTask = {
+      ...newTaskData,
+      id: taskId,
+      releaseVersion: 'tecosystem v2.4.0-rc1',
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+
+    setAutonomousTasks(prev => {
+      const next = [newTask, ...prev];
+      try {
+        localStorage.setItem('ia_autonomous_tasks', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleRunTestTask = (taskId: string) => {
+    setAutonomousTasks(prev => {
+      const next = prev.map(task => {
+        if (task.id === taskId) {
+          return {
+            ...task,
+            status: 'AWAITING_APPROVAL' as const,
+            testResults: {
+              ...task.testResults,
+              passed: task.testResults.totalTests,
+              failed: 0
+            }
+          };
+        }
+        return task;
+      });
+      try {
+        localStorage.setItem('ia_autonomous_tasks', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Stage 02 Resolution State (Persisted)
   const [stage02Resolved, setStage02Resolved] = useState<boolean>(() => {
@@ -141,6 +309,7 @@ export default function App() {
         onSelectTab={setActiveTab}
         stage02Resolved={stage02Resolved}
         ratifiedCount={ratifiedCount}
+        pendingApprovalsCount={pendingApprovalsCount}
       />
 
       {/* Main Workspace Canvas */}
@@ -151,6 +320,20 @@ export default function App() {
             stage02Resolved={stage02Resolved}
             ratifiedCount={ratifiedCount}
             onRatifyAll={handleRatifyAll}
+            pendingApprovalsCount={pendingApprovalsCount}
+          />
+        )}
+
+        {activeTab === 'product' && (
+          <ProductDevelopmentManager
+            repoConnection={repoConnection}
+            epics={epics}
+            tasks={autonomousTasks}
+            onSyncRepos={handleSyncRepos}
+            onApproveTask={handleApproveTask}
+            onRejectTask={handleRejectTask}
+            onAddTask={handleAddTask}
+            onRunTestTask={handleRunTestTask}
           />
         )}
 

@@ -39,14 +39,14 @@ export const INITIAL_INTEGRATIONS: IntegrationTool[] = [
   },
   {
     id: 'int-github',
-    name: 'GitHub',
+    name: 'GitHub (Dual-Repo Bridge)',
     category: 'Code',
     tier: 'Free Tier',
     status: 'Connected',
     iconName: 'GitBranch',
-    description: 'Turborepo repository hosting, GitHub Actions 19-stage CI verification, and release tags.',
-    usageQuota: '2,000 CI runner minutes / month',
-    webhookUrl: 'https://api.github.com/repos/infinite-ai/platform/events',
+    description: 'Bi-directional repository bridge syncing infinite-ai/business-operations and infinite-ai/tecosystem with autonomous AI agent PRs and test hooks.',
+    usageQuota: '2,000 CI runner minutes / month · Webhook secret active',
+    webhookUrl: 'https://api.github.com/repos/infinite-ai/tecosystem/events',
     lastSynced: 'Just now'
   },
   {

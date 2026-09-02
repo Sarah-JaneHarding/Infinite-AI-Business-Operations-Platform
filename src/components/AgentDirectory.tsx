@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FULL_46_AGENTS, HUMAN_LEADERSHIP } from '../data/agentRegistry';
 import { AgentRecord } from '../types';
+import { AgentPerformanceAnalytics } from './AgentPerformanceAnalytics';
 import { 
   Users, 
   Search, 
@@ -18,7 +19,8 @@ import {
   ArrowRight,
   ExternalLink,
   ChevronRight,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
 
 export const AgentDirectory: React.FC = () => {
@@ -26,6 +28,7 @@ export const AgentDirectory: React.FC = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('All');
   const [selectedAgent, setSelectedAgent] = useState<AgentRecord | null>(null);
   const [activeView, setActiveView] = useState<'ai' | 'human'>('ai');
+  const [showAnalytics, setShowAnalytics] = useState(true);
 
   // Task dispatch simulation state
   const [dispatchTaskInput, setDispatchTaskInput] = useState('');
@@ -180,20 +183,38 @@ RESULT: Task executed successfully and written to L4 Episodic Working Memory.`,
         </div>
       ) : (
         /* 46 AI Agents View */
-        <div className="space-y-5">
+        <div className="space-y-6">
+          {/* Telemetry & Performance Data Visualization Component (Recharts) */}
+          {showAnalytics && (
+            <AgentPerformanceAnalytics agents={FULL_46_AGENTS} />
+          )}
+
           {/* Controls: Search & Department Tabs */}
           <div className="panel p-4 space-y-3">
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 text-[#8FA0C2] absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search 46 agents, skills, or roles..."
-                  className="inp pl-9 text-xs"
-                />
+              {/* Search Bar & Analytics Toggle */}
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => setShowAnalytics(!showAnalytics)}
+                  className={`btn text-xs py-1 px-2.5 flex items-center gap-1.5 font-mono ${
+                    showAnalytics ? 'btn-p text-white' : 'btn-g text-[#8FA0C2]'
+                  }`}
+                  title="Toggle real-time success rate and throughput charts"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>{showAnalytics ? 'Hide Charts' : 'Show Telemetry Charts'}</span>
+                </button>
+
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 text-[#8FA0C2] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search 46 agents, skills, or roles..."
+                    className="inp pl-9 text-xs"
+                  />
+                </div>
               </div>
 
               <div className="text-xs text-[#8FA0C2] font-mono">

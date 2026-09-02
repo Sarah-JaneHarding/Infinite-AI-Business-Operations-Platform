@@ -3,12 +3,13 @@ export type NavTab =
   | 'brain' 
   | 'agents'
   | 'website'
+  | 'product'
   | 'dev' 
   | 'gateway' 
   | 'infra' 
   | 'gov' 
   | 'crm' 
-  | 'integrations'
+  | 'integrations' 
   | 'docs';
 
 export interface StageGate {
@@ -127,3 +128,100 @@ export interface IntegrationTool {
   webhookUrl: string;
   lastSynced: string;
 }
+
+export interface RepoDetails {
+  name: string;
+  branch: string;
+  commitHash: string;
+  lastCommitMsg: string;
+  status: 'CONNECTED' | 'SYNCING' | 'ERROR' | 'OFFLINE';
+  role: string;
+}
+
+export interface RepoConnection {
+  opsRepo: RepoDetails;
+  productRepo: RepoDetails;
+  syncStatus: 'CONNECTED' | 'SYNCING' | 'ERROR' | 'OFFLINE';
+  twoWaySyncActive: boolean;
+  lastSynced: string;
+  syncLatencyMs: number;
+  webhookUrl: string;
+  secretConfigured: boolean;
+  stats: {
+    openPrs: number;
+    branchesCount: number;
+    testSuitesPassing: number;
+    pendingApprovals: number;
+    autonomousCommitsToday: number;
+  };
+}
+
+export interface ProductEpic {
+  id: string;
+  title: string;
+  status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'VALIDATION';
+  leadAgent: string;
+  collaboratingAgents: string[];
+  progress: number;
+  targetRelease: string;
+  description: string;
+  featuresCount: number;
+}
+
+export interface AutonomousTask {
+  id: string;
+  title: string;
+  epicId: string;
+  repo: 'tecosystem' | 'business-operations';
+  branch: string;
+  assignedAgent: {
+    id: string;
+    name: string;
+    role: string;
+    department: string;
+  };
+  collaboratingAgents: string[];
+  status: 'BACKLOG' | 'AUTONOMOUS_DEV' | 'TESTING' | 'AWAITING_APPROVAL' | 'APPROVED' | 'MERGED' | 'REJECTED';
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  description: string;
+  diffSummary: {
+    filesChanged: number;
+    additions: number;
+    deletions: number;
+    files: string[];
+  };
+  testResults: {
+    totalTests: number;
+    passed: number;
+    failed: number;
+    durationMs: number;
+    coveragePct: number;
+    suites: {
+      name: string;
+      status: 'PASS' | 'FAIL' | 'RUNNING';
+      tests: number;
+      duration: string;
+    }[];
+    securityScan: {
+      status: 'PASS' | 'WARN' | 'FAIL';
+      piiChecked: boolean;
+      popiaCompliant: boolean;
+      details: string;
+    };
+  };
+  approvalCheck: {
+    required: boolean;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
+    approverRole: string;
+    signedBy?: string;
+    signedAt?: string;
+    signatureHash?: string;
+    comments?: string;
+    gatedReason: string;
+  };
+  releaseVersion: string;
+  createdAt: string;
+  updatedAt: string;
+  codeDiff?: string;
+}
+

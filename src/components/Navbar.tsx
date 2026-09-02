@@ -13,7 +13,8 @@ import {
   Share2, 
   BookOpen, 
   Menu, 
-  X 
+  X,
+  GitPullRequest
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -21,18 +22,26 @@ interface NavbarProps {
   onSelectTab: (tab: NavTab) => void;
   stage02Resolved: boolean;
   ratifiedCount: number;
+  pendingApprovalsCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   activeTab, 
   onSelectTab, 
   stage02Resolved,
-  ratifiedCount 
+  ratifiedCount,
+  pendingApprovalsCount = 0
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems: { id: NavTab; label: string; icon: React.ReactNode; badge?: string }[] = [
     { id: 'command', label: 'Command', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+    { 
+      id: 'product', 
+      label: 'Product & Tecosystem', 
+      icon: <GitPullRequest className="w-3.5 h-3.5 text-emerald-400" />,
+      badge: pendingApprovalsCount > 0 ? `${pendingApprovalsCount} Gated` : undefined
+    },
     { id: 'brain', label: 'Brain & Modules', icon: <Cpu className="w-3.5 h-3.5" /> },
     { id: 'agents', label: '46 AI Agents', icon: <Users className="w-3.5 h-3.5" /> },
     { id: 'website', label: 'Business Website', icon: <Globe className="w-3.5 h-3.5" /> },
