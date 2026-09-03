@@ -38,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'command', label: 'Command', icon: <BarChart3 className="w-3.5 h-3.5" /> },
     { 
       id: 'product', 
-      label: 'Product & Tecosystem', 
+      label: 'Product: Infinite-AI Ecosystem', 
       icon: <GitPullRequest className="w-3.5 h-3.5 text-emerald-400" />,
       badge: pendingApprovalsCount > 0 ? `${pendingApprovalsCount} Gated` : undefined
     },

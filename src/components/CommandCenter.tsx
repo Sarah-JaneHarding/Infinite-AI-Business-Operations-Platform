@@ -123,20 +123,27 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             </div>
           </div>
 
-          {/* Product Development & Tecosystem Connection Callout */}
+          {/* Product Development & Infinite-AI Education Ecosystem Connection Callout */}
           <div className="panel2 p-3.5 mt-3 border border-[#22D3EE]/30 bg-[#0A162B] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-lg bg-[#22D3EE]/10 text-[#22D3EE] shrink-0">
                 <GitPullRequest className="w-4 h-4" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold text-[#E9EDF8]">
-                    tecosystem Repository Connected
+                    Product in Dev: Infinite-AI Education Ecosystem
                   </span>
-                  <span className="chip text-[9px] bg-emerald-950/40 text-emerald-300 border-emerald-500/30">
-                    Two-Way Sync Active
-                  </span>
+                  <a
+                    href="https://github.com/Sarah-JaneHarding/infinite-ai-ecosystem"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="chip text-[9px] bg-emerald-950/40 text-emerald-300 border-emerald-500/30 flex items-center gap-1 font-mono hover:text-white"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span>Sarah-JaneHarding/infinite-ai-ecosystem</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
                   {pendingApprovalsCount > 0 && (
                     <span className="chip text-[9px] bg-amber-950/40 text-amber-300 border-amber-500/30 font-bold">
                       {pendingApprovalsCount} PRs Awaiting Your Law 02 Sign-off
@@ -144,7 +151,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   )}
                 </div>
                 <p className="text-[11px] text-[#8FA0C2] mt-0.5">
-                  Business Operations is autonomously driving product development, automated testing, and release gating in <code className="text-[#22D3EE] font-mono">tecosystem</code>.
+                  Infinite-AI Business Operations is autonomously driving product development, automated testing, and release gating in <code className="text-[#22D3EE] font-mono">Sarah-JaneHarding/infinite-ai-ecosystem</code>.
                 </p>
               </div>
             </div>
@@ -331,7 +338,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 onClick={() => onNavigate('product')}
                 className="btn-s text-left p-2.5 flex items-center justify-between border-emerald-500/30 bg-emerald-950/20"
               >
-                <span className="text-emerald-300 font-semibold">🚀 Product & Tecosystem</span>
+                <span className="text-emerald-300 font-semibold">🚀 Infinite-AI Ecosystem (Dev)</span>
                 <ArrowRight className="w-3 h-3 text-emerald-400" />
               </button>
 

@@ -39,14 +39,14 @@ export const INITIAL_INTEGRATIONS: IntegrationTool[] = [
   },
   {
     id: 'int-github',
-    name: 'GitHub (Dual-Repo Bridge)',
+    name: 'GitHub (Product Repo Bridge)',
     category: 'Code',
     tier: 'Free Tier',
     status: 'Connected',
     iconName: 'GitBranch',
-    description: 'Bi-directional repository bridge syncing infinite-ai/business-operations and infinite-ai/tecosystem with autonomous AI agent PRs and test hooks.',
+    description: 'Bi-directional repository bridge syncing infinite-ai/business-operations and Sarah-JaneHarding/infinite-ai-ecosystem with autonomous AI agent PRs and automated testing hooks.',
     usageQuota: '2,000 CI runner minutes / month · Webhook secret active',
-    webhookUrl: 'https://api.github.com/repos/infinite-ai/tecosystem/events',
+    webhookUrl: 'https://api.github.com/repos/Sarah-JaneHarding/infinite-ai-ecosystem/events',
     lastSynced: 'Just now'
   },
   {

@@ -22,11 +22,17 @@ export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<NavTab>('command');
 
-  // Product Development & Tecosystem Connection State
+  // Product Development & Infinite-AI Education Ecosystem Connection State
   const [repoConnection, setRepoConnection] = useState<RepoConnection>(() => {
     try {
       const saved = localStorage.getItem('ia_repo_connection');
-      return saved ? JSON.parse(saved) : INITIAL_REPO_CONNECTION;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.productRepo?.name?.includes('Sarah-JaneHarding')) {
+          return parsed;
+        }
+      }
+      return INITIAL_REPO_CONNECTION;
     } catch {
       return INITIAL_REPO_CONNECTION;
     }
@@ -44,7 +50,16 @@ export default function App() {
   const [autonomousTasks, setAutonomousTasks] = useState<AutonomousTask[]>(() => {
     try {
       const saved = localStorage.getItem('ia_autonomous_tasks');
-      return saved ? JSON.parse(saved) : INITIAL_AUTONOMOUS_TASKS;
+      if (saved) {
+        const parsed: AutonomousTask[] = JSON.parse(saved);
+        // Ensure tasks reference the connected Sarah-JaneHarding/infinite-ai-ecosystem repo
+        return parsed.map(t => ({
+          ...t,
+          repo: t.repo === 'tecosystem' ? 'Sarah-JaneHarding/infinite-ai-ecosystem' : t.repo,
+          releaseVersion: t.releaseVersion.replace('tecosystem', 'infinite-ai-ecosystem')
+        }));
+      }
+      return INITIAL_AUTONOMOUS_TASKS;
     } catch {
       return INITIAL_AUTONOMOUS_TASKS;
     }
@@ -150,7 +165,7 @@ export default function App() {
     const newTask: AutonomousTask = {
       ...newTaskData,
       id: taskId,
-      releaseVersion: 'tecosystem v2.4.0-rc1',
+      releaseVersion: 'infinite-ai-ecosystem v2.4.0-rc1',
       createdAt: timestamp,
       updatedAt: timestamp
     };
