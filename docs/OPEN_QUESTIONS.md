@@ -1,0 +1,18 @@
+# Open questions
+
+Raised while building the Operations Platform, in the same stop-and-ask spirit as the ecosystem's own
+`docs/OPEN_QUESTIONS.md`. Each needs a human decision. Nothing below has been guessed.
+
+| ID | Raised | Question | Why it matters | Current behaviour |
+| -- | ------ | -------- | -------------- | ----------------- |
+| OPQ-001 | 2026-10-24 | **Credentials.** Which GitHub token (fine-grained, read-only on the ecosystem repo) and which Gemini key should the server use? | Live connector, webhook and narrative need them. | Not set. Connector degrades to the committed snapshot and lists its errors. Local deterministic engine is used for narrative. |
+| OPQ-002 | 2026-10-24 | **Sign-in / SSO.** How should staff authenticate (the ecosystem uses Keycloak)? | Approval is recorded against a typed name; the server's publish gate trusts its own warehouse, which any client can append to. | Single-operator tool bound to 127.0.0.1, optional `OPS_API_TOKEN`. Not safe to expose publicly. |
+| OPQ-003 | 2026-10-24 | **Outbound channels.** Should the platform ever send email, WhatsApp or post to social? | POPIA s69 and consent evidence are needed first. | Not built. Drafts are downloaded and sent by a human. |
+| OPQ-004 | 2026-10-24 | **Payments and invoicing.** Which provider and VAT treatment? | Finance currently models from typed inputs only. | Not built; calculators only. |
+| OPQ-005 | 2026-10-24 | **Agent roster discrepancy.** 56 contract files are counted in `packages/agents`; `docs/AGENTS.md` says "Fifty-five"; a marketing artefact says 46. Which is authoritative? | Any external claim about the number of agents. | Warning in the Command centre; OPS-AI-01 drafts the reconciliation. |
+| OPQ-006 | 2026-10-24 | **Pricing framing.** Reconcile pricing language in marketing artefacts with the approved price list. | The platform generates no prices. | No prices anywhere in the platform. |
+| OPQ-007 | 2026-10-24 | **Tenant data.** Should any aggregate (not learner-level) usage ever flow to the platform? | Needs a new de-identification path and a POPIA assessment. | Out of scope. Connector reads the repository only; learner data is refused. |
+| OPQ-008 | 2026-10-24 | **Ecosystem writes.** Enable `OPS_ALLOW_ECOSYSTEM_WRITES` so an approved proposal can open an issue? | Needs Issues: write on the token. | Disabled by default; downloading the issue text always works. |
+| OPQ-009 | 2026-10-24 | **True PDF.** Is "print to PDF" from HTML acceptable, or should the server render PDFs? | A server renderer adds a browser dependency. | HTML print dialog ("Save as PDF"). |
+| OPQ-010 | 2026-10-24 | **Warehouse of record.** Keep JSON-lines files, or move to the ecosystem's Postgres with row-level security? | Durability, backup, multi-user access. | JSON-lines under `data/warehouse` (gitignored) or browser storage. |
+| OPQ-011 | 2026-10-24 | **Ecosystem OQ-036** (MFA not shown as enforced in the Keycloak realm) was raised in the ecosystem repo today. Does Security own the follow-up? | Security of school admin accounts. | Surfaced in Security widgets; OPS-SEC-03 drafts the control mapping. |
