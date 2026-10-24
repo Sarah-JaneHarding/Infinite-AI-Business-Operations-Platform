@@ -1,0 +1,23 @@
+# Local test container. The API has no real authentication (docs/OPEN_QUESTIONS.md OPQ-002), so the port is
+# published on loopback only. Do not change 127.0.0.1 to 0.0.0.0 without putting auth in front of it.
+#
+# Secrets are read only from an explicit, gitignored .env (copy .env.example and remove the inline comments, which
+# `docker --env-file` would otherwise take as part of the value). The host environment is deliberately NOT forwarded.
+services:
+  ops:
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      OPS_ALLOW_ECOSYSTEM_WRITES: "false"
+    volumes:
+      - ops-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  ops-data:

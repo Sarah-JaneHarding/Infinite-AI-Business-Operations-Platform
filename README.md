@@ -15,6 +15,15 @@ npm run lint             # strict TypeScript
 npm run audit:ecosystem -- /path/to/infinite-ai-ecosystem   # refresh src/generated/ecosystem-snapshot.json
 ```
 
+### Docker
+
+```bash
+docker build --target test .        # lint + tests inside the build
+docker compose up -d --build        # http://127.0.0.1:3000, loopback only; put secrets in .env
+```
+
+See `docs/AUDIT_2026-10-24.md` before exposing it beyond loopback: the API has no real authentication yet.
+
 Without any keys it still works: the committed ecosystem snapshot is used and a deterministic local engine drafts.
 
 ## What is in it
