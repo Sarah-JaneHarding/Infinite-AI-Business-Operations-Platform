@@ -52,7 +52,7 @@ the ledger. There is no second path.
                       1 gate: tombstone → purpose → contract
                       2 input guardrails: PII → injection → deidentify
                       3 brain.recall(tier, topic)         ◄── L0 constitution / L1 graph / L2 episodes / L3 procedures
-                      4 gateway.complete()                ◄── only model path (local draft engine | Gemini via server)
+                      4 gateway.complete()                ◄── only model path (local draft engine | Claude via server)
                       5 output guardrails: claim-sourcing, template shape, PII echo
                       6 artefact DRAFT → warehouse.put (versioned)
                       7 ledger.append (hash-chained)      ──► HITL queue ──► approve/reject (named human)

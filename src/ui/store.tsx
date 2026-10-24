@@ -7,7 +7,7 @@ import { snapshotFacts } from '../connector/snapshot';
 import type { LiveStatus } from '../connector/github';
 import type { Actor } from '../core/types';
 
-export interface Health { ok: boolean; repo: string; githubToken: boolean; gemini: boolean; ecosystemWrites: boolean; webhook: boolean }
+export interface Health { ok: boolean; repo: string; githubToken: boolean; llm: boolean; ecosystemWrites: boolean; webhook: boolean }
 export type View = { name: 'overview' } | { name: 'dept'; id: string } | { name: 'studio'; id?: string } | { name: 'brain' } | { name: 'ledger' } | { name: 'warehouse' } | { name: 'connector' } | { name: 'guardrails' };
 
 interface Ctx {
@@ -23,8 +23,8 @@ interface Ctx {
   bump: () => void;
   view: View;
   go: (v: View) => void;
-  gemini: boolean;
-  setGemini: (on: boolean) => void;
+  llm: boolean;
+  setLlm: (on: boolean) => void;
 }
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useOps = () => useContext(C);
@@ -45,7 +45,7 @@ export function OpsProvider({ children }: { children: ReactNode }) {
   const [liveError, setLiveError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [view, go] = useState<View>({ name: 'overview' });
-  const [gemini, setGem] = useState(false);
+  const [llm, setGem] = useState(false);
   const [actorName, setActorName] = useState(read('ops.actor', ''));
   const [actorRole, setActorRole] = useState(read('ops.role', 'Founder'));
   const liveFacts = useRef<Record<string, string | number>>({});
@@ -88,7 +88,7 @@ export function OpsProvider({ children }: { children: ReactNode }) {
     if (mode === 'server') void refreshLive();
   }, [mode, refreshLive]);
 
-  const setGemini = useCallback((on: boolean) => {
+  const setLlm = useCallback((on: boolean) => {
     if (!p) return;
     p.useEngine(on ? remoteEngine() : undefined);
     setGem(on);
@@ -99,6 +99,6 @@ export function OpsProvider({ children }: { children: ReactNode }) {
     setActorName(n); setActorRole(role); write('ops.actor', n); write('ops.role', role);
   };
 
-  const value: Ctx = { p, mode, health, live, liveError, refreshLive, actor, setActor, tick, bump, view, go, gemini, setGemini };
+  const value: Ctx = { p, mode, health, live, liveError, refreshLive, actor, setActor, tick, bump, view, go, llm, setLlm };
   return <C.Provider value={value}>{children}</C.Provider>;
 }

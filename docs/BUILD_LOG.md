@@ -18,7 +18,7 @@ Honest record of what was built and verified on 2026-10-24 (branch `claude/ops-p
 * **Live GitHub connector** could not be exercised against the real repo: the sandbox has no valid read token
   (requests returned 401 and the connector degraded as designed). The client is covered by tests using a stubbed fetch.
   First real run needs `GITHUB_TOKEN` (see `.env.example`).
-* **Gemini narrative** not exercised (no key). The deterministic local engine is what ran.
+* **Claude narrative** not exercised against the real API (no key); the client is unit-tested with a stubbed fetch. The deterministic local engine is what ran.
 * **Webhook** verified only by unit test, not by a real GitHub delivery.
 * **PDF** is "print to PDF" from the HTML artefact, not a server-rendered PDF.
 * **Auth:** none. Approvals are against a typed name. See OPQ-002.
@@ -28,7 +28,7 @@ Honest record of what was built and verified on 2026-10-24 (branch `claude/ops-p
 ## Dependencies added (recorded per the ecosystem rule)
 
 `vitest` (dev), `docx`, `exceljs` (artefact export), `@types/react`, `@types/react-dom` (dev, needed once `strict` was
-enabled). Existing: Vite, React 19, Tailwind 4, express, tsx, lucide-react, @google/genai.
+enabled). Existing: Vite, React 19, Tailwind 4, express, tsx, lucide-react. `@google/genai` was removed when the model path moved to Claude (plain `fetch`, no SDK).
 
 ## Removed
 

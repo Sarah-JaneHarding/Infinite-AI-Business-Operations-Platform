@@ -5,6 +5,7 @@ import { GithubReader, liveFacts, type LiveStatus } from './src/connector/github
 import { summariseEvent, verifySignature, type EcoEvent } from './src/connector/webhook';
 import { ProposalPublisher, proposalFromArtefact, PublishRefused } from './src/connector/proposals';
 import { FileStore } from './src/server/fileAdapter';
+import { completeWithClaude, ClaudeError } from './src/server/claude';
 import { detectPii } from './src/core/guardrails/pii';
 import { detectInjection } from './src/core/guardrails/injection';
 import type { Artefact } from './src/core/platform';
@@ -40,7 +41,7 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-app.get('/api/health', (_q, res) => res.json({ ok: true, repo: REPO, githubToken: Boolean(env.GITHUB_TOKEN), gemini: Boolean(env.GEMINI_API_KEY), ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true', webhook: Boolean(env.GITHUB_WEBHOOK_SECRET) }));
+app.get('/api/health', (_q, res) => res.json({ ok: true, repo: REPO, githubToken: Boolean(env.GITHUB_TOKEN), llm: Boolean(env.ANTHROPIC_API_KEY), ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true', webhook: Boolean(env.GITHUB_WEBHOOK_SECRET) }));
 
 // ---- connector: read-only live status, cached briefly ----
 let cache: { at: number; status: LiveStatus } | null = null;
@@ -67,17 +68,15 @@ app.post('/api/connector/publish', async (req, res) => {
 });
 
 // ---- gateway upstream: holds the key; refuses anything that looks personal or hostile ----
-app.post('/api/gateway/gemini', async (req, res) => {
+app.post('/api/gateway/complete', async (req, res) => {
   const { system = '', prompt = '' } = req.body ?? {};
-  if (!env.GEMINI_API_KEY) return res.status(503).json({ error: 'GEMINI_API_KEY not configured' });
+  if (!env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
   if (detectPii(`${system}\n${prompt}`).length || detectInjection(prompt).length) return res.status(422).json({ error: 'refused: personal data or injection pattern' });
   try {
-    const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-    const r = await ai.models.generateContent({ model: env.GEMINI_MODEL ?? 'gemini-2.5-flash', contents: String(prompt), config: { systemInstruction: String(system) } });
-    res.json({ text: r.text ?? '' });
+    const text = await completeWithClaude({ apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL ?? 'claude-sonnet-5-5', system: String(system), prompt: String(prompt) });
+    res.json({ text });
   } catch (e) {
-    res.status(502).json({ error: (e as Error).message });
+    res.status(e instanceof ClaudeError ? 502 : 500).json({ error: (e as Error).message });
   }
 });
 
