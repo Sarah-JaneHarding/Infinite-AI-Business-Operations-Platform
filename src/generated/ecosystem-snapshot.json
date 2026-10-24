@@ -1,0 +1,871 @@
+{
+  "schema": "infinite-ai.ecosystem-snapshot/1",
+  "source": {
+    "repo": "Sarah-JaneHarding/infinite-ai-ecosystem",
+    "method": "local-checkout-count",
+    "note": "Every number below is counted from files. Test PASS counts are not claimed here: they come from CI via the live connector."
+  },
+  "repo": {
+    "head": "3c2511a",
+    "headDate": "2026-10-24",
+    "headSubject": "Merge pull request #158 from Sarah-JaneHarding/claude/peaceful-hopper-5p0vtu",
+    "visibleCommits": 1,
+    "shallow": true
+  },
+  "code": {
+    "totals": {
+      "srcFiles": 500,
+      "srcLoc": 94275,
+      "testFiles": 350,
+      "testLoc": 67595
+    },
+    "units": [
+      {
+        "kind": "app",
+        "name": "gateway",
+        "srcFiles": 18,
+        "srcLoc": 3134,
+        "testFiles": 17,
+        "testLoc": 3081
+      },
+      {
+        "kind": "app",
+        "name": "web",
+        "srcFiles": 69,
+        "srcLoc": 8661,
+        "testFiles": 40,
+        "testLoc": 3445
+      },
+      {
+        "kind": "app",
+        "name": "worker",
+        "srcFiles": 20,
+        "srcLoc": 3333,
+        "testFiles": 15,
+        "testLoc": 2879
+      },
+      {
+        "kind": "package",
+        "name": "agent-builder",
+        "srcFiles": 6,
+        "srcLoc": 2028,
+        "testFiles": 1,
+        "testLoc": 567
+      },
+      {
+        "kind": "package",
+        "name": "agents",
+        "srcFiles": 63,
+        "srcLoc": 2134,
+        "testFiles": 38,
+        "testLoc": 2544
+      },
+      {
+        "kind": "package",
+        "name": "analytics",
+        "srcFiles": 8,
+        "srcLoc": 1756,
+        "testFiles": 7,
+        "testLoc": 1666
+      },
+      {
+        "kind": "package",
+        "name": "billing",
+        "srcFiles": 7,
+        "srcLoc": 542,
+        "testFiles": 5,
+        "testLoc": 651
+      },
+      {
+        "kind": "package",
+        "name": "brain",
+        "srcFiles": 18,
+        "srcLoc": 2520,
+        "testFiles": 17,
+        "testLoc": 3266
+      },
+      {
+        "kind": "package",
+        "name": "compliance",
+        "srcFiles": 9,
+        "srcLoc": 542,
+        "testFiles": 2,
+        "testLoc": 753
+      },
+      {
+        "kind": "package",
+        "name": "config",
+        "srcFiles": 3,
+        "srcLoc": 298,
+        "testFiles": 3,
+        "testLoc": 293
+      },
+      {
+        "kind": "package",
+        "name": "contracts",
+        "srcFiles": 81,
+        "srcLoc": 44792,
+        "testFiles": 52,
+        "testLoc": 12766
+      },
+      {
+        "kind": "package",
+        "name": "curriculum-seed",
+        "srcFiles": 23,
+        "srcLoc": 2854,
+        "testFiles": 18,
+        "testLoc": 5924
+      },
+      {
+        "kind": "package",
+        "name": "db",
+        "srcFiles": 29,
+        "srcLoc": 4688,
+        "testFiles": 33,
+        "testLoc": 7940
+      },
+      {
+        "kind": "package",
+        "name": "deident",
+        "srcFiles": 4,
+        "srcLoc": 377,
+        "testFiles": 3,
+        "testLoc": 385
+      },
+      {
+        "kind": "package",
+        "name": "design-system",
+        "srcFiles": 8,
+        "srcLoc": 399,
+        "testFiles": 2,
+        "testLoc": 167
+      },
+      {
+        "kind": "package",
+        "name": "document-annotation",
+        "srcFiles": 4,
+        "srcLoc": 423,
+        "testFiles": 1,
+        "testLoc": 608
+      },
+      {
+        "kind": "package",
+        "name": "evals",
+        "srcFiles": 13,
+        "srcLoc": 1587,
+        "testFiles": 12,
+        "testLoc": 1781
+      },
+      {
+        "kind": "package",
+        "name": "gamification",
+        "srcFiles": 5,
+        "srcLoc": 553,
+        "testFiles": 2,
+        "testLoc": 748
+      },
+      {
+        "kind": "package",
+        "name": "guardrails",
+        "srcFiles": 16,
+        "srcLoc": 1774,
+        "testFiles": 14,
+        "testLoc": 2210
+      },
+      {
+        "kind": "package",
+        "name": "learner-client",
+        "srcFiles": 4,
+        "srcLoc": 342,
+        "testFiles": 1,
+        "testLoc": 582
+      },
+      {
+        "kind": "package",
+        "name": "learning",
+        "srcFiles": 15,
+        "srcLoc": 1472,
+        "testFiles": 13,
+        "testLoc": 2056
+      },
+      {
+        "kind": "package",
+        "name": "low-tech-assessment",
+        "srcFiles": 4,
+        "srcLoc": 392,
+        "testFiles": 1,
+        "testLoc": 456
+      },
+      {
+        "kind": "package",
+        "name": "orchestrator",
+        "srcFiles": 17,
+        "srcLoc": 3612,
+        "testFiles": 12,
+        "testLoc": 3972
+      },
+      {
+        "kind": "package",
+        "name": "pd-journal",
+        "srcFiles": 3,
+        "srcLoc": 220,
+        "testFiles": 1,
+        "testLoc": 562
+      },
+      {
+        "kind": "package",
+        "name": "policy",
+        "srcFiles": 6,
+        "srcLoc": 980,
+        "testFiles": 7,
+        "testLoc": 1443
+      },
+      {
+        "kind": "package",
+        "name": "prompt-builder",
+        "srcFiles": 4,
+        "srcLoc": 314,
+        "testFiles": 1,
+        "testLoc": 348
+      },
+      {
+        "kind": "package",
+        "name": "prompts",
+        "srcFiles": 3,
+        "srcLoc": 274,
+        "testFiles": 4,
+        "testLoc": 386
+      },
+      {
+        "kind": "package",
+        "name": "provisioning",
+        "srcFiles": 6,
+        "srcLoc": 451,
+        "testFiles": 4,
+        "testLoc": 554
+      },
+      {
+        "kind": "package",
+        "name": "school-setup",
+        "srcFiles": 3,
+        "srcLoc": 157,
+        "testFiles": 1,
+        "testLoc": 248
+      },
+      {
+        "kind": "package",
+        "name": "security",
+        "srcFiles": 7,
+        "srcLoc": 551,
+        "testFiles": 5,
+        "testLoc": 601
+      },
+      {
+        "kind": "package",
+        "name": "system-prompt-builder",
+        "srcFiles": 4,
+        "srcLoc": 239,
+        "testFiles": 1,
+        "testLoc": 299
+      },
+      {
+        "kind": "package",
+        "name": "telemetry",
+        "srcFiles": 8,
+        "srcLoc": 946,
+        "testFiles": 7,
+        "testLoc": 866
+      },
+      {
+        "kind": "package",
+        "name": "testkit",
+        "srcFiles": 1,
+        "srcLoc": 147,
+        "testFiles": 1,
+        "testLoc": 116
+      },
+      {
+        "kind": "package",
+        "name": "warehouse",
+        "srcFiles": 11,
+        "srcLoc": 1783,
+        "testFiles": 9,
+        "testLoc": 3432
+      }
+    ]
+  },
+  "stages": {
+    "count": 116,
+    "first": {
+      "n": 0,
+      "title": "Ground rules, repository, toolchain",
+      "date": null
+    },
+    "latest": [
+      {
+        "n": 106,
+        "title": "the header shows the school's name, not its tenant id",
+        "date": null
+      },
+      {
+        "n": 107,
+        "title": "`next` 16.3.6 → 16.3.8 (GHSA-cjq9-62q9-8jv4)",
+        "date": null
+      },
+      {
+        "n": 108,
+        "title": "the SBST tabs stop presenting sample learners and SIAS cases as real",
+        "date": null
+      },
+      {
+        "n": 109,
+        "title": "free local testing manual, local-model timeout, single-provider routing",
+        "date": null
+      },
+      {
+        "n": 110,
+        "title": "live agent and pipeline runners",
+        "date": null
+      },
+      {
+        "n": 111,
+        "title": "dev-only chaining and grounding for MOD-01 (OQ-030, option C)",
+        "date": null
+      },
+      {
+        "n": 112,
+        "title": "the actor is the school's account id, not the provider's `sub` (OQ-033)",
+        "date": null
+      },
+      {
+        "n": 113,
+        "title": "OQ-033 provisioning, step 1: the `user_invitation` table",
+        "date": null
+      }
+    ],
+    "stageLogLines": 11134
+  },
+  "openQuestions": {
+    "total": 36,
+    "open": 20,
+    "openList": [
+      {
+        "id": "OQ-002",
+        "raised": "2026-07-28",
+        "stage": "08",
+        "status": "PARTIALLY ANSWERED",
+        "title": "Scope confirmed 2026-07-29: full primary, Grades R-7, across all three phases. Update 2026-08-18: 21 CAPS documents ingested — all core subjects for Grades R-7."
+      },
+      {
+        "id": "OQ-003",
+        "raised": "2026-07-28",
+        "stage": "08",
+        "status": "PARTIALLY ANSWERED",
+        "title": "Update 2026-08-19: Benjamin Pine Primary School's 2026 Lesson Plan Preparation Template supplied and ingested. Machine-readable `TemplateDefinition` at `package"
+      },
+      {
+        "id": "OQ-006",
+        "raised": "2026-07-29",
+        "stage": "12",
+        "status": "PARTIALLY ANSWERED",
+        "title": "SACE CPTD point-value schedules are needed for PD-08, which may not compute them. Same supply problem as OQ-002. Update 2026-08-13: The SACE PD Points Schedule "
+      },
+      {
+        "id": "OQ-008",
+        "raised": "2026-08-05",
+        "stage": "19",
+        "status": "OPEN",
+        "title": "Should the visual AI-workflow builder be its own package (`@infinite-ai/agent-builder`) or built inside `packages/agents`? A separate package is cleaner to main"
+      },
+      {
+        "id": "OQ-009",
+        "raised": "2026-08-05",
+        "stage": "22",
+        "status": "OPEN",
+        "title": "Should live classroom quiz games (Stage 22) be a standalone product area, or folded into MOD-04's teaching-and-learning toolkit (Stage 11)? Standalone gets more"
+      },
+      {
+        "id": "OQ-011",
+        "raised": "2026-08-05",
+        "stage": "10/19",
+        "status": "OPEN",
+        "title": "Where should SIAS documentation and workflow live long-term — inside MOD-02 Support Analytics (Stage 10, where it is currently planned), or split into its own m"
+      },
+      {
+        "id": "OQ-012",
+        "raised": "2026-08-05",
+        "stage": "20/21",
+        "status": "OPEN",
+        "title": "Should the Master Prompt Builder (Stage 20) and System Prompt Builder (Stage 21) be one combined tool or two separate ones? Separate is clearer about what each "
+      },
+      {
+        "id": "OQ-013",
+        "raised": "2026-08-05",
+        "stage": "08",
+        "status": "OPEN",
+        "title": "Eight of South Africa's eleven official languages, and Grades 10-12 entirely, are still missing from the CAPS documents supplied so far (see OQ-002). Sepedi, Se"
+      },
+      {
+        "id": "OQ-015",
+        "raised": "2026-08-05",
+        "stage": "06",
+        "status": "OPEN (Gap 2's model call resolved; calibration pending OQ-016)",
+        "title": "Age-appropriateness needs a supplied content policy. The same guardrail engine's `checkAgeAppropriateness` is a real mechanism with no built-in rule — this code"
+      },
+      {
+        "id": "OQ-016",
+        "raised": "2026-08-06",
+        "stage": "07",
+        "status": "OPEN",
+        "title": "The LLM-as-judge scorer has no calibration data. Stage 07 step 2's own text requires the judge to be \"calibrated against at least 50 human-labelled cases, and r"
+      },
+      {
+        "id": "OQ-017",
+        "raised": "2026-08-12",
+        "stage": "18",
+        "status": "OPEN",
+        "title": "k6 load tests need a live environment. Stage 18 step 2 requires load testing at 3× expected peak (450 concurrent learners, Starter tier) and a spike test for te"
+      },
+      {
+        "id": "OQ-018",
+        "raised": "2026-08-12",
+        "stage": "18",
+        "status": "OPEN",
+        "title": "Cost model needs real gateway telemetry. `docs/COST_MODEL.md` uses estimated token counts based on typical artefact types. Actual costs depend on real usage pat"
+      },
+      {
+        "id": "OQ-020",
+        "raised": "2026-08-12",
+        "stage": "18",
+        "status": "OPEN",
+        "title": "Architecture walkthrough recording. Stage 18 step 7 requires a recorded architecture walkthrough (screen + audio) covering the nine-layer diagram, the four inva"
+      },
+      {
+        "id": "OQ-030",
+        "raised": "2026-10-23",
+        "stage": "111",
+        "status": "PARTIALLY ANSWERED (2026-10-23)",
+        "title": "MOD-01 prompts require _ratified_ upstream artefacts, but the pipeline has one human gate at the end and no store for ratified artefacts. Asked to make pipeline"
+      },
+      {
+        "id": "OQ-031",
+        "raised": "2026-10-01",
+        "stage": "",
+        "status": "OPEN",
+        "title": "four navigation entries had no page and no data behind them"
+      },
+      {
+        "id": "OQ-032",
+        "raised": "2026-10-01",
+        "stage": "",
+        "status": "OPEN",
+        "title": "which role wins when an account holds more than one"
+      },
+      {
+        "id": "OQ-033",
+        "raised": "2026-10-07",
+        "stage": "",
+        "status": "OPEN",
+        "title": "no real person can decide an approval gate: identity mismatch and no provisioning"
+      },
+      {
+        "id": "OQ-034",
+        "raised": "2026-10-08",
+        "stage": "",
+        "status": "OPEN",
+        "title": "what a district rollup would be, if the product wants one"
+      },
+      {
+        "id": "OQ-035",
+        "raised": "2026-10-08",
+        "stage": "",
+        "status": "OPEN",
+        "title": "the EGRA screening tab's benchmarks and tier rule have no supplied source"
+      },
+      {
+        "id": "OQ-036",
+        "raised": "2026-10-24",
+        "stage": "",
+        "status": "OPEN",
+        "title": "is MFA actually enforced for `admin`, `smt` and the platform roles?"
+      }
+    ],
+    "all": [
+      {
+        "id": "OQ-001",
+        "raised": "2026-07-29",
+        "stage": "",
+        "status": "RESOLVED",
+        "title": "where the platform lives"
+      },
+      {
+        "id": "OQ-002",
+        "raised": "2026-07-28",
+        "stage": "08",
+        "status": "PARTIALLY ANSWERED",
+        "title": "Scope confirmed 2026-07-29: full primary, Grades R-7, across all three phases. Update 2026-08-18: 21 CAPS documents ingested — all core subjects for Grades R-7."
+      },
+      {
+        "id": "OQ-003",
+        "raised": "2026-07-28",
+        "stage": "08",
+        "status": "PARTIALLY ANSWERED",
+        "title": "Update 2026-08-19: Benjamin Pine Primary School's 2026 Lesson Plan Preparation Template supplied and ingested. Machine-readable `TemplateDefinition` at `package"
+      },
+      {
+        "id": "OQ-004",
+        "raised": "2026-07-28",
+        "stage": "01",
+        "status": "RESOLVED (2026-08-13)",
+        "title": "Tenant shape for the seed data: the manual asks for a small primary, a large primary and a school group with two campuses. Should the seed model Benjamin Pine P"
+      },
+      {
+        "id": "OQ-005",
+        "raised": "2026-07-29",
+        "stage": "08",
+        "status": "RESOLVED (2026-08-13)",
+        "title": "CAPS statements, ATPs and DBE policy documents are Crown-copyright government publications. Redistributing them inside a multi-tenant SaaS product is a licensin"
+      },
+      {
+        "id": "OQ-006",
+        "raised": "2026-07-29",
+        "stage": "12",
+        "status": "PARTIALLY ANSWERED",
+        "title": "SACE CPTD point-value schedules are needed for PD-08, which may not compute them. Same supply problem as OQ-002. Update 2026-08-13: The SACE PD Points Schedule "
+      },
+      {
+        "id": "OQ-007",
+        "raised": "2026-07-29",
+        "stage": "03",
+        "status": "RESOLVED (2026-09-14)",
+        "title": "Retention periods per data category. Decision recorded: a 7-year retention period applies to learner and school records for the pilot/release scope, measured fr"
+      },
+      {
+        "id": "OQ-008",
+        "raised": "2026-08-05",
+        "stage": "19",
+        "status": "OPEN",
+        "title": "Should the visual AI-workflow builder be its own package (`@infinite-ai/agent-builder`) or built inside `packages/agents`? A separate package is cleaner to main"
+      },
+      {
+        "id": "OQ-009",
+        "raised": "2026-08-05",
+        "stage": "22",
+        "status": "OPEN",
+        "title": "Should live classroom quiz games (Stage 22) be a standalone product area, or folded into MOD-04's teaching-and-learning toolkit (Stage 11)? Standalone gets more"
+      },
+      {
+        "id": "OQ-010",
+        "raised": "2026-08-05",
+        "stage": "25",
+        "status": "RESOLVED (Stage 26)",
+        "title": "Should the learner-facing app (Stage 25) be a separate PWA, or built into the same `apps/web` every other role uses? Decision: integrated into `apps/web`. The `"
+      },
+      {
+        "id": "OQ-011",
+        "raised": "2026-08-05",
+        "stage": "10/19",
+        "status": "OPEN",
+        "title": "Where should SIAS documentation and workflow live long-term — inside MOD-02 Support Analytics (Stage 10, where it is currently planned), or split into its own m"
+      },
+      {
+        "id": "OQ-012",
+        "raised": "2026-08-05",
+        "stage": "20/21",
+        "status": "OPEN",
+        "title": "Should the Master Prompt Builder (Stage 20) and System Prompt Builder (Stage 21) be one combined tool or two separate ones? Separate is clearer about what each "
+      },
+      {
+        "id": "OQ-013",
+        "raised": "2026-08-05",
+        "stage": "08",
+        "status": "OPEN",
+        "title": "Eight of South Africa's eleven official languages, and Grades 10-12 entirely, are still missing from the CAPS documents supplied so far (see OQ-002). Sepedi, Se"
+      },
+      {
+        "id": "OQ-014",
+        "raised": "2026-08-05",
+        "stage": "06",
+        "status": "RESOLVED (2026-09-13)",
+        "title": "Safeguarding escalation needs a real paging integration. Stage 06 step 6's guardrail engine (`packages/guardrails/src/engine.ts`) can attach an `EscalationRoute"
+      },
+      {
+        "id": "OQ-015",
+        "raised": "2026-08-05",
+        "stage": "06",
+        "status": "OPEN (Gap 2's model call resolved; calibration pending OQ-016)",
+        "title": "Age-appropriateness needs a supplied content policy. The same guardrail engine's `checkAgeAppropriateness` is a real mechanism with no built-in rule — this code"
+      },
+      {
+        "id": "OQ-016",
+        "raised": "2026-08-06",
+        "stage": "07",
+        "status": "OPEN",
+        "title": "The LLM-as-judge scorer has no calibration data. Stage 07 step 2's own text requires the judge to be \"calibrated against at least 50 human-labelled cases, and r"
+      },
+      {
+        "id": "OQ-017",
+        "raised": "2026-08-12",
+        "stage": "18",
+        "status": "OPEN",
+        "title": "k6 load tests need a live environment. Stage 18 step 2 requires load testing at 3× expected peak (450 concurrent learners, Starter tier) and a spike test for te"
+      },
+      {
+        "id": "OQ-018",
+        "raised": "2026-08-12",
+        "stage": "18",
+        "status": "OPEN",
+        "title": "Cost model needs real gateway telemetry. `docs/COST_MODEL.md` uses estimated token counts based on typical artefact types. Actual costs depend on real usage pat"
+      },
+      {
+        "id": "OQ-019",
+        "raised": "2026-08-12",
+        "stage": "18",
+        "status": "RESOLVED (2026-09-09)",
+        "title": "Pilot schools have not been identified. `docs/PILOT_PROTOCOL.md` targets 3 schools (small primary, large primary, school group). Pilot school #1 confirmed: Benj"
+      },
+      {
+        "id": "OQ-020",
+        "raised": "2026-08-12",
+        "stage": "18",
+        "status": "OPEN",
+        "title": "Architecture walkthrough recording. Stage 18 step 7 requires a recorded architecture walkthrough (screen + audio) covering the nine-layer diagram, the four inva"
+      },
+      {
+        "id": "OQ-021",
+        "raised": "2026-08-12",
+        "stage": "18",
+        "status": "RESOLVED (2026-09-14)",
+        "title": "Dunning emails need a transactional email provider. Decision recorded: use the configured outbound mail account `infinite-ai-ecosystem@protonmail.com` for dunni"
+      },
+      {
+        "id": "OQ-022",
+        "raised": "2026-08-12",
+        "stage": "17",
+        "status": "RESOLVED (2026-09-14)",
+        "title": "POPIA erasure for append-only tables. Decision recorded: append-only compliance ledgers (`audit_event`, `consent_record`, `tenant_metering_event`) are retained "
+      },
+      {
+        "id": "OQ-023",
+        "raised": "2026-08-20",
+        "stage": "29",
+        "status": "RESOLVED (2026-09-11)",
+        "title": "`GradeFramework` needs `hoursPerWeek` and `assessmentWeighting` data. Answer: statutory values are not LLM output — they are gazette facts. A deterministic DBE "
+      },
+      {
+        "id": "OQ-024",
+        "raised": "2026-08-24",
+        "stage": "06",
+        "status": "RESOLVED (2026-09-01)",
+        "title": "`branch` step conditions cannot see a prior step's actual output. `evaluateCondition` only ever received `run.input`, never what an intervening agent produced, "
+      },
+      {
+        "id": "OQ-025",
+        "raised": "2026-08-25",
+        "stage": "16",
+        "status": "RESOLVED (2026-08-25)",
+        "title": "The per-request CSP nonce did not reach the client on `/sign-in`. Answer: root cause was `next-auth@4.24.15`'s `withAuth()` unconditionally short-circuiting bef"
+      },
+      {
+        "id": "OQ-026",
+        "raised": "2026-08-25",
+        "stage": "06/10",
+        "status": "RESOLVED (2026-09-01)",
+        "title": "`checkDiagnosticLanguage` has no caller. Needed to know which of a MOD-02 agent's own output fields are free text before it could be wired in for real, without "
+      },
+      {
+        "id": "OQ-027",
+        "raised": "2026-09-01",
+        "stage": "06/10",
+        "status": "RESOLVED 2026-09-02",
+        "title": "`support.needs_referral`'s SIAS-status field has no ratified shape. Found while resolving OQ-024: `mod-02.ts`'s `branch-on-referral` is narrated as evaluating \""
+      },
+      {
+        "id": "OQ-028",
+        "raised": "2026-09-01",
+        "stage": "06/11",
+        "status": "RESOLVED (2026-09-03)",
+        "title": "Three more declared guardrail names have no real caller: `source_grounding_guard`, `grounding_check`, `template_fidelity`; `readability_guard` is now only half-"
+      },
+      {
+        "id": "OQ-029",
+        "raised": "2026-09-11",
+        "stage": "—",
+        "status": "RESOLVED (2026-09-13)",
+        "title": "GitHub Actions CI has returned `startup_failure` (zero jobs ever created) on every single workflow run since run #276 (2026-09-02T01:37:04Z), and this is not ca"
+      },
+      {
+        "id": "OQ-030",
+        "raised": "2026-10-23",
+        "stage": "111",
+        "status": "PARTIALLY ANSWERED (2026-10-23)",
+        "title": "MOD-01 prompts require _ratified_ upstream artefacts, but the pipeline has one human gate at the end and no store for ratified artefacts. Asked to make pipeline"
+      },
+      {
+        "id": "OQ-031",
+        "raised": "2026-10-01",
+        "stage": "",
+        "status": "OPEN",
+        "title": "four navigation entries had no page and no data behind them"
+      },
+      {
+        "id": "OQ-032",
+        "raised": "2026-10-01",
+        "stage": "",
+        "status": "OPEN",
+        "title": "which role wins when an account holds more than one"
+      },
+      {
+        "id": "OQ-033",
+        "raised": "2026-10-07",
+        "stage": "",
+        "status": "OPEN",
+        "title": "no real person can decide an approval gate: identity mismatch and no provisioning"
+      },
+      {
+        "id": "OQ-034",
+        "raised": "2026-10-08",
+        "stage": "",
+        "status": "OPEN",
+        "title": "what a district rollup would be, if the product wants one"
+      },
+      {
+        "id": "OQ-035",
+        "raised": "2026-10-08",
+        "stage": "",
+        "status": "OPEN",
+        "title": "the EGRA screening tab's benchmarks and tier rule have no supplied source"
+      },
+      {
+        "id": "OQ-036",
+        "raised": "2026-10-24",
+        "stage": "",
+        "status": "OPEN",
+        "title": "is MFA actually enforced for `admin`, `smt` and the platform roles?"
+      }
+    ]
+  },
+  "agents": {
+    "contractFiles": 56,
+    "byModule": {
+      "le": 9,
+      "mod-01": 9,
+      "mod-02": 11,
+      "mod-03": 8,
+      "mod-04": 11,
+      "mod-05": 8
+    },
+    "rosterClaimInAgentsMd": "Fifty-five",
+    "ids": [
+      "AC-01",
+      "AC-02",
+      "AC-03",
+      "AC-04",
+      "AC-05",
+      "AC-06",
+      "AC-07",
+      "AC-08",
+      "AC-09",
+      "AC-10",
+      "AC-11",
+      "CE-01",
+      "CE-02",
+      "CE-03",
+      "CE-04",
+      "CE-05",
+      "CE-06",
+      "CE-07",
+      "CE-08",
+      "CE-09",
+      "DW-01",
+      "DW-02",
+      "DW-03",
+      "DW-04",
+      "DW-05",
+      "DW-06",
+      "DW-07",
+      "DW-08",
+      "LE-01",
+      "LE-02",
+      "LE-03",
+      "LE-04",
+      "LE-05",
+      "LE-06",
+      "LE-07",
+      "LE-08",
+      "LE-09",
+      "PD-01",
+      "PD-02",
+      "PD-03",
+      "PD-04",
+      "PD-05",
+      "PD-06",
+      "PD-07",
+      "PD-08",
+      "TB-01",
+      "TB-02",
+      "TB-03",
+      "TB-04",
+      "TB-05",
+      "TB-06",
+      "TB-07",
+      "TB-08",
+      "TB-09",
+      "TB-10",
+      "TB-11"
+    ]
+  },
+  "docs": {
+    "files": [
+      "AGENTS.md",
+      "ARCHITECTURE.md",
+      "AWS_MIGRATION_AUDIT.md",
+      "BRAND_KIT.md",
+      "COST_MODEL.md",
+      "DEPENDENCIES.md",
+      "DEV_SETUP.md",
+      "FREE_LOCAL_TESTING.md",
+      "HOW_TO_ADD_AN_AGENT.md",
+      "INCIDENT_PROCESS.md",
+      "INFINITE-AI-PRODUCTION-READINESS-AUDIT.html",
+      "INFINITE-AI-VERIFIED-PILOT-AUDIT-V3.html",
+      "ONBOARDING_GUIDE.md",
+      "OPEN_QUESTIONS.md",
+      "OPERATOR_MANUAL.md",
+      "PEDAGOGY.md",
+      "PILOT_PROTOCOL.md",
+      "POPIA.md",
+      "PROMPTS.md",
+      "PROVISIONING_DESIGN.md",
+      "REPOSITORY_AUDIT_2026-09-25.md",
+      "RETENTION_SCHEDULE_TEMPLATE.md",
+      "SECURITY.md",
+      "SOURCE_DOCUMENTS.md",
+      "STAGE_LOG.md",
+      "aws-cost-estimate.html",
+      "brand-identity.html",
+      "financial-model.html",
+      "infinite-ai-business-planning.html",
+      "sbom.json"
+    ],
+    "runbooks": [
+      "README.md",
+      "bad-prompt-promotion-rollback.md",
+      "brain-restore.md",
+      "canary-deploy.md",
+      "database-restore.md",
+      "drill-results",
+      "provider-outage.md",
+      "queue-backlog.md",
+      "region-loss.md",
+      "suspected-breach.md",
+      "tenant-data-erasure.md"
+    ],
+    "ciWorkflows": [
+      "cd.yml",
+      "ci.yml",
+      "docker-publish.yml",
+      "terraform.yml"
+    ]
+  }
+}
