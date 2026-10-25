@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Download, RefreshCw } from 'lucide-react';
 import { useOps } from './store';
+import { apiFetch } from '../core/api';
 import { Badge, Card, download, Icon, statusTone } from './primitives';
 import { WidgetCard } from './Widgets';
 import { AgentRunner } from './AgentRunner';
@@ -190,7 +191,7 @@ export function ConnectorView() {
 }
 function EventsCard() {
   const [ev, setEv] = useState<{ kind: string; summary: string; at: string }[]>([]);
-  useEffect(() => { const load = () => fetch('/api/connector/events').then((r) => r.json()).then(setEv).catch(() => undefined); load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
+  useEffect(() => { const load = () => apiFetch('/api/connector/events').then((r) => r.json()).then(setEv).catch(() => undefined); load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
   return <Card title="Webhook events">{ev.length ? <ul className="space-y-1 text-sm">{ev.map((e, i) => <li key={i}><Badge tone="info">{e.kind}</Badge> {e.summary} <span className="mono text-[10px]" style={{ color: 'var(--muted)' }}>{e.at.slice(11, 19)}</span></li>)}</ul> : <p className="text-sm" style={{ color: 'var(--muted)' }}>No events received yet.</p>}</Card>;
 }
 

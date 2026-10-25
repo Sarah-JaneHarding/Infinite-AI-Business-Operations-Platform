@@ -3,11 +3,12 @@ import { Platform } from '../core/platform';
 import { LocalStorageAdapter, type StorageAdapter } from '../core/warehouse';
 import { ServerAdapter } from '../core/serverAdapter';
 import { remoteEngine } from '../core/gateway';
+import { apiFetch, loadToken, setToken } from '../core/api';
 import { snapshotFacts } from '../connector/snapshot';
 import type { LiveStatus } from '../connector/github';
 import type { Actor } from '../core/types';
 
-export interface Health { ok: boolean; repo: string; githubToken: boolean; llm: boolean; ecosystemWrites: boolean; webhook: boolean }
+export interface Health { ok: boolean; repo: string; auth: 'users' | 'open'; githubToken: boolean; llm: boolean; ecosystemWrites: boolean; webhook: boolean }
 export type View = { name: 'overview' } | { name: 'dept'; id: string } | { name: 'studio'; id?: string } | { name: 'brain' } | { name: 'ledger' } | { name: 'warehouse' } | { name: 'connector' } | { name: 'guardrails' };
 
 interface Ctx {
@@ -25,6 +26,12 @@ interface Ctx {
   go: (v: View) => void;
   llm: boolean;
   setLlm: (on: boolean) => void;
+  /** The server wants a token before it will show anything. */
+  authNeeded: boolean;
+  authError: string | null;
+  signIn: (token: string) => void;
+  /** Set when the server refused or lost a record the platform tried to save. */
+  syncError: string | null;
 }
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useOps = () => useContext(C);
@@ -46,6 +53,11 @@ export function OpsProvider({ children }: { children: ReactNode }) {
   const [tick, setTick] = useState(0);
   const [view, go] = useState<View>({ name: 'overview' });
   const [llm, setGem] = useState(false);
+  const [authNeeded, setAuthNeeded] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [serverActor, setServerActor] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [actorName, setActorName] = useState(read('ops.actor', ''));
   const [actorRole, setActorRole] = useState(read('ops.role', 'Founder'));
   const liveFacts = useRef<Record<string, string | number>>({});
@@ -55,26 +67,46 @@ export function OpsProvider({ children }: { children: ReactNode }) {
     (async () => {
       let adapter: StorageAdapter = new LocalStorageAdapter();
       let m: Ctx['mode'] = 'local';
+      const hadToken = Boolean(loadToken());
       try {
-        const h = await fetch('/api/health');
+        const h = await apiFetch('/api/health');
         if (h.ok) {
-          setHealth((await h.json()) as Health);
+          const hh = (await h.json()) as Health;
+          setHealth(hh);
+          if (hh.auth === 'users') {
+            // Who is acting comes from the server's reading of the token, never from what the user types.
+            const w = await apiFetch('/api/whoami');
+            if (!w.ok) {
+              setToken(undefined);
+              setAuthError(hadToken ? 'That token was not accepted.' : null);
+              setAuthNeeded(true);
+              return;
+            }
+            setServerActor(((await w.json()) as { actor: string }).actor);
+          }
+          setAuthNeeded(false);
           const sa = new ServerAdapter();
           await sa.load();
           adapter = sa;
           m = 'server';
         }
       } catch { /* static hosting: browser storage */ }
-      const plat = new Platform({ adapter, facts: () => ({ ...snapshotFacts(), ...liveFacts.current }) });
+      const plat = new Platform({ adapter, facts: () => ({ ...snapshotFacts(), ...liveFacts.current }), onPersistError: (e) => setSyncError(e.message) });
       await plat.init();
       setP(plat);
       setMode(m);
     })();
+  }, [attempt]);
+
+  const signIn = useCallback((token: string) => {
+    setToken(token.trim());
+    setAuthError(null);
+    setAttempt((n) => n + 1);
   }, []);
 
   const refreshLive = useCallback(async () => {
     try {
-      const r = await fetch('/api/connector/status');
+      const r = await apiFetch('/api/connector/status');
       if (!r.ok) throw new Error(`connector ${r.status}`);
       const j = (await r.json()) as { status: LiveStatus; facts: Record<string, string | number> };
       liveFacts.current = j.facts;
@@ -94,11 +126,11 @@ export function OpsProvider({ children }: { children: ReactNode }) {
     setGem(on);
   }, [p]);
 
-  const actor: Actor = useMemo(() => ({ id: slug(actorName), name: actorName || 'Operator', kind: 'human', roles: [actorRole] }), [actorName, actorRole]);
+  const actor: Actor = useMemo(() => (serverActor ? { id: serverActor, name: serverActor, kind: 'human', roles: [actorRole] } : { id: slug(actorName), name: actorName || 'Operator', kind: 'human', roles: [actorRole] }), [actorName, actorRole, serverActor]);
   const setActor = (n: string, role: string) => {
     setActorName(n); setActorRole(role); write('ops.actor', n); write('ops.role', role);
   };
 
-  const value: Ctx = { p, mode, health, live, liveError, refreshLive, actor, setActor, tick, bump, view, go, llm, setLlm };
+  const value: Ctx = { p, mode, health, live, liveError, refreshLive, actor, setActor, tick, bump, view, go, llm, setLlm, authNeeded, authError, signIn, syncError };
   return <C.Provider value={value}>{children}</C.Provider>;
 }

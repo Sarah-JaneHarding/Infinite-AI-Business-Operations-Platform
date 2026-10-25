@@ -7,14 +7,24 @@ import { BrainView, ConnectorView, Dept, GuardrailLab, LedgerView, Overview, War
 import { DEPARTMENTS } from './departments';
 
 function Shell() {
-  const { view, go, p, mode, actor, setActor, llm, setLlm, health } = useOps();
+  const { view, go, p, mode, actor, setActor, llm, setLlm, health, authNeeded, authError, signIn, syncError } = useOps();
   const [navOpen, setNavOpen] = useState(false);
   const [name, setName] = useState('');
+  const [token, setTokenInput] = useState('');
   const item = (v: View, label: string, icon: React.ReactNode, on: boolean) => (
     <button key={label} className={on ? 'on' : ''} onClick={() => { go(v); setNavOpen(false); }} aria-current={on ? 'page' : undefined}>{icon}{label}</button>
   );
+  if (authNeeded) return (
+    <div className="card mx-auto mt-10 max-w-md space-y-3 p-5">
+      <h1 className="text-xl font-bold">Sign in</h1>
+      <p className="text-sm" style={{ color: 'var(--muted)' }}>This server requires your access token. Approvals are recorded against the person the token belongs to.</p>
+      <input className="input" type="password" autoComplete="off" placeholder="Access token" value={token} onChange={(e) => setTokenInput(e.target.value)} aria-label="Access token" />
+      {authError && <p className="text-xs" style={{ color: 'var(--muted)' }}>{authError}</p>}
+      <button className="btn primary" disabled={token.trim().length < 20} onClick={() => signIn(token)}>Sign in</button>
+    </div>
+  );
   if (!p) return <div className="p-8">Starting the platform…</div>;
-  const needName = !actor.name || actor.name === 'Operator';
+  const needName = health?.auth !== 'users' && (!actor.name || actor.name === 'Operator');
   return (
     <div className="flex min-h-full">
       <aside className={`nav fixed inset-y-0 left-0 z-20 w-64 overflow-y-auto p-3 lg:static lg:block ${navOpen ? 'block' : 'hidden'}`} style={{ background: '#14112b' }}>
@@ -38,6 +48,7 @@ function Shell() {
           <label className="ml-auto flex items-center gap-2 text-xs"><input type="checkbox" checked={llm} disabled={!health?.llm} onChange={(e) => setLlm(e.target.checked)} /> Claude narrative {health?.llm ? '' : '(not configured)'}</label>
           {!needName && <span className="text-xs">Signed in as <b>{actor.name}</b> · {actor.roles[0]}</span>}
         </header>
+        {syncError && <div role="alert" className="border-b px-4 py-2 text-sm" style={{ background: '#fdecec', borderColor: 'var(--line)', color: '#9b1c1c' }}>The server did not accept a record, so this view may be ahead of what is saved: {syncError}. Reload to see what is stored.</div>}
         <main className="mx-auto max-w-[1400px] p-4">
           {needName ? (
             <div className="card mx-auto mt-10 max-w-md space-y-3 p-5">

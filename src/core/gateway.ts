@@ -1,5 +1,6 @@
 import type { Purpose, Provenance } from './types';
 import type { Ledger } from './ledger';
+import { apiFetch } from './api';
 
 export interface GatewayRequest {
   orgId: string;
@@ -34,11 +35,11 @@ export const localDraftEngine: Engine = {
 };
 
 /** Calls the server route, which holds the provider key. The browser never sees a key. */
-export function remoteEngine(url = '/api/gateway/complete', fetchImpl: typeof fetch = fetch): Engine {
+export function remoteEngine(url = '/api/gateway/complete', fetchImpl: typeof fetch = apiFetch): Engine {
   return {
     name: 'claude-via-server',
     async complete(req) {
-      const r = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ system: req.system, prompt: req.prompt }) });
+      const r = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ system: req.system, prompt: req.prompt, provenance: req.provenance }) });
       if (!r.ok) throw new Error(`gateway upstream ${r.status}`);
       const j = (await r.json()) as { text?: string };
       if (!j.text) throw new Error('gateway upstream returned no text');
