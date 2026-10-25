@@ -7,7 +7,7 @@ import { BrainView, ConnectorView, Dept, GuardrailLab, LedgerView, Overview, War
 import { DEPARTMENTS } from './departments';
 
 function Shell() {
-  const { view, go, p, mode, actor, setActor, gemini, setGemini, health } = useOps();
+  const { view, go, p, mode, actor, setActor, llm, setLlm, health } = useOps();
   const [navOpen, setNavOpen] = useState(false);
   const [name, setName] = useState('');
   const item = (v: View, label: string, icon: React.ReactNode, on: boolean) => (
@@ -35,7 +35,7 @@ function Shell() {
           <button className="btn lg:hidden" aria-label="Menu" onClick={() => setNavOpen(!navOpen)}><Menu size={16} /></button>
           <span className="badge info"><ListChecks size={11} className="mr-1 inline" />POPIA · learner data refused</span>
           <span className={`badge ${mode === 'server' ? 'ok' : 'draft'}`}>{mode === 'server' ? 'server storage' : 'browser storage'}</span>
-          <label className="ml-auto flex items-center gap-2 text-xs"><input type="checkbox" checked={gemini} disabled={!health?.gemini} onChange={(e) => setGemini(e.target.checked)} /> Gemini narrative {health?.gemini ? '' : '(not configured)'}</label>
+          <label className="ml-auto flex items-center gap-2 text-xs"><input type="checkbox" checked={llm} disabled={!health?.llm} onChange={(e) => setLlm(e.target.checked)} /> Claude narrative {health?.llm ? '' : '(not configured)'}</label>
           {!needName && <span className="text-xs">Signed in as <b>{actor.name}</b> · {actor.roles[0]}</span>}
         </header>
         <main className="mx-auto max-w-[1400px] p-4">

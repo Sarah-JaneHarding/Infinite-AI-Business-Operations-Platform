@@ -5,7 +5,7 @@ Raised while building the Operations Platform, in the same stop-and-ask spirit a
 
 | ID | Raised | Question | Why it matters | Current behaviour |
 | -- | ------ | -------- | -------------- | ----------------- |
-| OPQ-001 | 2026-10-24 | **Credentials.** Which GitHub token (fine-grained, read-only on the ecosystem repo) and which Gemini key should the server use? | Live connector, webhook and narrative need them. | Not set. Connector degrades to the committed snapshot and lists its errors. Local deterministic engine is used for narrative. |
+| OPQ-001 | 2026-10-24 | **Credentials.** Which GitHub token (fine-grained, read-only on the ecosystem repo) and which Anthropic API key should the server use? | Live connector, webhook and narrative need them. | Not set. Connector degrades to the committed snapshot and lists its errors. Local deterministic engine is used for narrative. |
 | OPQ-002 | 2026-10-24 | **Sign-in / SSO.** How should staff authenticate (the ecosystem uses Keycloak)? | Approval is recorded against a typed name; the server's publish gate trusts its own warehouse, which any client can append to. | Single-operator tool bound to 127.0.0.1, optional `OPS_API_TOKEN`. Not safe to expose publicly. |
 | OPQ-003 | 2026-10-24 | **Outbound channels.** Should the platform ever send email, WhatsApp or post to social? | POPIA s69 and consent evidence are needed first. | Not built. Drafts are downloaded and sent by a human. |
 | OPQ-004 | 2026-10-24 | **Payments and invoicing.** Which provider and VAT treatment? | Finance currently models from typed inputs only. | Not built; calculators only. |
