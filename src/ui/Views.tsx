@@ -167,6 +167,7 @@ export function ConnectorView() {
           <li>Webhook secret: <Badge tone={health.webhook ? 'ok' : 'draft'}>{health.webhook ? 'set' : 'not set (webhook rejects all)'}</Badge></li>
           <li>Ecosystem writes: <Badge tone={health.ecosystemWrites ? 'review' : ''}>{health.ecosystemWrites ? 'enabled (issues only)' : 'disabled'}</Badge></li>
           <li>Gemini key: <Badge tone={health.gemini ? 'ok' : ''}>{health.gemini ? 'set' : 'not set (local engine)'}</Badge></li>
+          <li>Claude key: <Badge tone={health.claude ? 'ok' : ''}>{health.claude ? 'set' : 'not set (local engine)'}</Badge></li>
         </ul> : <p className="text-sm">The server is not running. Start it with <span className="mono">npm run dev</span> to enable live status, webhooks and issue publishing. The committed snapshot is used meanwhile.</p>}
         <p className="mt-2 text-xs" style={{ color: 'var(--muted)' }}>Webhook URL: <span className="mono">/api/connector/webhook</span> · events: push, pull_request, workflow_run, issues · content type: application/json · secret = GITHUB_WEBHOOK_SECRET.</p>
       </Card>

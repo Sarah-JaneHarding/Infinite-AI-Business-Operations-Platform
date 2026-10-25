@@ -34,9 +34,9 @@ export const localDraftEngine: Engine = {
 };
 
 /** Calls the server route, which holds the provider key. The browser never sees a key. */
-export function remoteEngine(url = '/api/gateway/gemini', fetchImpl: typeof fetch = fetch): Engine {
+export function remoteEngine(url = '/api/gateway/gemini', name = 'gemini-via-server', fetchImpl: typeof fetch = fetch): Engine {
   return {
-    name: 'gemini-via-server',
+    name,
     async complete(req) {
       const r = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ system: req.system, prompt: req.prompt }) });
       if (!r.ok) throw new Error(`gateway upstream ${r.status}`);

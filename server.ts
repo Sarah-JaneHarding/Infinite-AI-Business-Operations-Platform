@@ -40,7 +40,7 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-app.get('/api/health', (_q, res) => res.json({ ok: true, repo: REPO, githubToken: Boolean(env.GITHUB_TOKEN), gemini: Boolean(env.GEMINI_API_KEY), ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true', webhook: Boolean(env.GITHUB_WEBHOOK_SECRET) }));
+app.get('/api/health', (_q, res) => res.json({ ok: true, repo: REPO, githubToken: Boolean(env.GITHUB_TOKEN), gemini: Boolean(env.GEMINI_API_KEY), claude: Boolean(env.ANTHROPIC_API_KEY), ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true', webhook: Boolean(env.GITHUB_WEBHOOK_SECRET) }));
 
 // ---- connector: read-only live status, cached briefly ----
 let cache: { at: number; status: LiveStatus } | null = null;
@@ -76,6 +76,27 @@ app.post('/api/gateway/gemini', async (req, res) => {
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
     const r = await ai.models.generateContent({ model: env.GEMINI_MODEL ?? 'gemini-2.5-flash', contents: String(prompt), config: { systemInstruction: String(system) } });
     res.json({ text: r.text ?? '' });
+  } catch (e) {
+    res.status(502).json({ error: (e as Error).message });
+  }
+});
+
+// ---- gateway upstream: Claude (Anthropic) — holds the key; refuses anything that looks personal or hostile ----
+app.post('/api/gateway/claude', async (req, res) => {
+  const { system = '', prompt = '' } = req.body ?? {};
+  if (!env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  if (detectPii(`${system}\n${prompt}`).length || detectInjection(prompt).length) return res.status(422).json({ error: 'refused: personal data or injection pattern' });
+  try {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+    const r = await anthropic.messages.create({
+      model: env.ANTHROPIC_MODEL ?? 'claude-opus-5',
+      max_tokens: 1024,
+      system: String(system),
+      messages: [{ role: 'user', content: String(prompt) }],
+    });
+    const text = r.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+    res.json({ text });
   } catch (e) {
     res.status(502).json({ error: (e as Error).message });
   }
