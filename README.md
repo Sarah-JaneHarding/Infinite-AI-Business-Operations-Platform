@@ -9,7 +9,7 @@ Brain, one gateway, one guardrail plane and one hash-chained ledger. **AI drafts
 ```bash
 npm install
 cp .env.example .env     # fill in only what you need; never commit .env
-npm run dev              # http://127.0.0.1:3000  (server + UI)
+npm run dev              # http://127.0.0.1:3000  (server + UI, loopback only)
 npm test                 # unit + end-to-end agent tests
 npm run lint             # strict TypeScript
 npm run audit:ecosystem -- /path/to/infinite-ai-ecosystem   # refresh src/generated/ecosystem-snapshot.json
@@ -22,7 +22,9 @@ docker build --target test .        # lint + tests inside the build
 docker compose up -d --build        # http://127.0.0.1:3000, loopback only; put secrets in .env
 ```
 
-See `docs/AUDIT_2026-10-24.md` before exposing it beyond loopback: the API has no real authentication yet.
+Set `OPS_USERS` in `.env` (see `.env.example`) to require a token per person; without it the server runs in open dev mode
+(loopback only, identity self-declared, publishing disabled). SSO is still an open question (OPQ-002). Audit and fixes:
+`docs/AUDIT_2026-10-24.md`.
 
 Without any keys it still works: the committed ecosystem snapshot is used and a deterministic local engine drafts.
 

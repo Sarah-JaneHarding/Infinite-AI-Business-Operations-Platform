@@ -5,7 +5,7 @@ Honest record of what was built and verified on 2026-10-24 (branch `claude/ops-p
 ## Verified (run in this session)
 
 * `npx tsc --noEmit` (strict) — clean.
-* `npx vitest run` — all test files pass: guardrails, ledger, Brain, gateway, platform pipeline, HITL, persistence,
+* `npx vitest run` — 112 tests in 8 files pass (2026-10-25: adds server auth, validation and end-to-end suites). Original list: guardrails, ledger, Brain, gateway, platform pipeline, HITL, persistence,
   renderers, connector (parsers, GET-only client, HMAC webhook, gated publisher), calculators, and **every one of the
   48 agents run end-to-end** (clean DRAFT, no stripped static text, every declared format renders).
 * `npx vite build` — succeeds.

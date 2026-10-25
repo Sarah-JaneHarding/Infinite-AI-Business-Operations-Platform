@@ -11,8 +11,7 @@ RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi; \
     npm ci --no-audit --no-fund
 COPY . .
-RUN npm run build \
- && npx esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=server.js
+RUN npm run build && npm run build:server
 
 # ---- test: `docker build --target test .` fails the build if lint or tests fail ----
 FROM build AS test

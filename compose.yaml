@@ -15,6 +15,9 @@ services:
         required: false
     environment:
       OPS_ALLOW_ECOSYSTEM_WRITES: "false"
+      # Only matters when .env defines no OPS_USERS: the container listens on 0.0.0.0 inside, so the server would
+      # otherwise refuse to start. In that case identity is self-declared and publishing is disabled.
+      OPS_OPEN_DEV: "true"
     volumes:
       - ops-data:/app/data
     restart: unless-stopped
