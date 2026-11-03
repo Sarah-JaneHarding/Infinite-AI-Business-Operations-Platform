@@ -1,10 +1,8 @@
-import { canonical, sha256Hex } from '../core/crypto';
 import { DEPARTMENTS, agentById } from '../departments';
 import type { Rec } from '../core/warehouse';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
-const GENESIS = '0'.repeat(64);
 const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'tombstones'];
 
 /** Only these collections can be appended to by a client. `connector_events` is written by the server alone. */
@@ -31,9 +29,10 @@ const isHash = (v: unknown) => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v)
 
 /**
  * Server-side rules for every client append. The browser runs the Platform, so none of its checks can be trusted
- * on their own; this re-checks the ones that matter (the approval gate, the ledger chain, the Brain constitution).
+ * on their own; this re-checks the ones that matter (the approval gate, the Brain constitution; the ledger is not client-appendable at all).
  */
 export async function validateAppend(collection: string, body: unknown, ctx: AppendCtx): Promise<Rec> {
+  if (collection === 'ledger') bad('ledger entries are authored by the server: POST /api/ledger', 403);
   if (!CLIENT_COLLECTIONS.has(collection)) bad('unknown collection', 404);
   if (typeof body !== 'object' || body === null || Array.isArray(body)) bad('record must be an object');
   const rec = body as Rec;
@@ -42,24 +41,12 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
   if (ctx.store.list(collection).length >= MAX_RECORDS) bad('collection is full', 507);
 
   switch (collection) {
-    case 'ledger': await ledger(rec, ctx); break;
     case 'artefact_versions': artefact(rec, ctx); break;
     case 'approvals': approval(rec, ctx); break;
     case 'brain': brain(rec, ctx); break;
     case 'tombstones': if (!isHash(rec.subjectHash)) bad('tombstone needs a subjectHash (sha-256 hex)'); break;
   }
   return rec;
-}
-
-async function ledger(rec: Rec, ctx: AppendCtx) {
-  const last = ctx.store.list('ledger').at(-1);
-  const seq = Number(last?.seq ?? 0) + 1;
-  if (rec.seq !== seq || rec.id !== `L${seq}`) bad(`ledger entry must be seq ${seq}`, 409);
-  if (rec.prevHash !== (last?.hash ?? GENESIS)) bad('ledger prevHash does not chain', 409);
-  const { id: _id, hash, ...base } = rec;
-  if (!isHash(hash) || (await sha256Hex(canonical(base))) !== hash) bad('ledger hash does not match its content');
-  // Human decisions are recorded under the authenticated person, never under a name the client picked.
-  if (ctx.actor && typeof rec.action === 'string' && /^(hitl|artefact)\./.test(rec.action) && rec.actor !== ctx.actor) bad('ledger actor is not you', 403);
 }
 
 function artefact(rec: Rec, ctx: AppendCtx) {

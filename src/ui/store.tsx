@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform } from '../core/platform';
 import { LocalStorageAdapter, type StorageAdapter } from '../core/warehouse';
-import { ServerAdapter } from '../core/serverAdapter';
+import { ServerAdapter, serverSequencer } from '../core/serverAdapter';
 import { remoteEngine } from '../core/gateway';
 import { apiFetch, loadToken, setToken } from '../core/api';
 import { snapshotFacts } from '../connector/snapshot';
@@ -91,7 +91,7 @@ export function OpsProvider({ children }: { children: ReactNode }) {
           m = 'server';
         }
       } catch { /* static hosting: browser storage */ }
-      const plat = new Platform({ adapter, facts: () => ({ ...snapshotFacts(), ...liveFacts.current }), onPersistError: (e) => setSyncError(e.message) });
+      const plat = new Platform({ adapter, facts: () => ({ ...snapshotFacts(), ...liveFacts.current }), onPersistError: (e) => setSyncError(e.message), sequencer: m === 'server' ? serverSequencer() : undefined });
       await plat.init();
       setP(plat);
       setMode(m);

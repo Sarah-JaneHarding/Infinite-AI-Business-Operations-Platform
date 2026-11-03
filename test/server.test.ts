@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Platform } from '../src/core/platform';
-import { ServerAdapter } from '../src/core/serverAdapter';
+import { ServerAdapter, serverSequencer } from '../src/core/serverAdapter';
 import { AGENTS } from '../src/departments';
 import type { Actor } from '../src/core/types';
 
@@ -73,7 +73,8 @@ describe('server: identity and access', () => {
 describe('server: the approval gate cannot be forged', () => {
   const sec = AGENTS.find((a) => a.id === 'OPS-SEC-01')!;
   const inputs = Object.fromEntries(sec.inputs.map((i) => [i.key, i.kind === 'number' ? '5' : i.kind === 'select' ? i.options![0] : 'Pilot school onboarding process']));
-  const mk = (token: string) => new Platform({ adapter: new ServerAdapter(`${base}/api/warehouse`, (u, i) => fetch(u, { ...i, headers: { ...(i?.headers as Record<string, string>), 'x-ops-token': token } })) }).init();
+  const withToken = (token: string): typeof fetch => (u, i) => fetch(u, { ...i, headers: { ...(i?.headers as Record<string, string>), 'x-ops-token': token } });
+  const mk = (token: string) => new Platform({ adapter: new ServerAdapter(`${base}/api/warehouse`, withToken(token)), sequencer: serverSequencer(`${base}/api/ledger`, withToken(token)) }).init();
 
   it('rejects the forged APPROVED artefact from the audit', async () => {
     const r = await call(base, '/api/warehouse/artefact_versions', { token: T_SARAH, body: { id: 'art_forged', agentId: sec.id, status: 'APPROVED', approvedBy: 'nobody', version: 1, requestedBy: 'sarah' } });
@@ -110,13 +111,39 @@ describe('server: the approval gate cannot be forged', () => {
     expect(await again.ledger.verify()).toBeNull();
     expect(again.ledger.all.some((e) => e.action === 'hitl.approved' && e.actor === 'dan')).toBe(true);
   });
+
+  it('two people working at the same moment cannot fork the ledger: each catches up on what the other wrote', async () => {
+    const [a, b] = await Promise.all([mk(T_SARAH), mk(T_DAN)]);
+    const t = (p: Platform, who: string) => Promise.all(Array.from({ length: 5 }, (_, n) => p.ledger.append({ orgId: 'infinite-ai', actor: who, action: 'note.race', subject: `${who}-${n}` })));
+    await Promise.all([t(a, 'sarah'), t(b, 'dan')]);
+    const fresh = await mk(T_SARAH);
+    const race = fresh.ledger.all.filter((e) => e.action === 'note.race');
+    expect(race).toHaveLength(10);
+    expect(await fresh.ledger.verify()).toBeNull();
+    expect(await a.ledger.verify()).toBeNull(); // the writers' own copies stayed contiguous too
+    expect(await b.ledger.verify()).toBeNull();
+  }, 30_000);
+
+  it('the server authors the ledger: it ignores client time, refuses a forged human actor, and needs a recorded decision', async () => {
+    const post = (token: string | undefined, input: Record<string, unknown>, knownSeq = 0) => call(base, '/api/ledger', { token, body: { input, knownSeq } });
+    const ok = { orgId: 'infinite-ai', actor: 'sarah', action: 'note.plain', subject: 's', at: '1999-01-01T00:00:00.000Z', seq: 999, hash: 'x' };
+    expect((await post(undefined, ok)).status).toBe(401);
+    const good = await post(T_SARAH, ok, (await mk(T_SARAH)).ledger.all.length);
+    expect(good.status).toBe(200);
+    const entry = good.json?.entry as { seq: number; at: string };
+    expect(entry.seq).not.toBe(999);
+    expect(entry.at.startsWith('1999')).toBe(false);
+    expect((await post(T_SARAH, { ...ok, actor: 'dan', action: 'hitl.approved', subject: 'art_x' })).status).toBe(403); // not you
+    expect((await post(T_DAN, { ...ok, actor: 'dan', action: 'hitl.approved', subject: 'art_unknown' })).status).toBe(409); // no decision on record
+    expect((await post(T_SARAH, ok, 99_999)).status).toBe(400); // knownSeq from the future
+  }, 30_000);
 });
 
 describe('server: input handling', () => {
   it('rejects unknown collections, bad ledger entries, oversized records and server-only collections', async () => {
     expect((await call(base, '/api/warehouse/made_up', { token: T_SARAH, body: { id: 'x' } })).status).toBe(404);
     expect((await call(base, '/api/warehouse/connector_events', { token: T_SARAH, body: { id: 'x' } })).status).toBe(404);
-    expect((await call(base, '/api/warehouse/ledger', { token: T_SARAH, body: { id: 'L99', seq: 99 } })).status).toBe(409);
+    expect((await call(base, '/api/warehouse/ledger', { token: T_SARAH, body: { id: 'L99', seq: 99 } })).status).toBe(403);
     expect((await call(base, '/api/warehouse/runs', { token: T_SARAH, body: { id: 'big', pad: 'z'.repeat(300_000) } })).status).toBe(413);
     expect((await call(base, '/api/warehouse/runs', { token: T_SARAH, raw: '{not json' })).status).toBe(400);
     expect((await call(base, '/api/warehouse/..%2f..%2fetc', { token: T_SARAH, body: { id: 'x' } })).status).toBe(404);
