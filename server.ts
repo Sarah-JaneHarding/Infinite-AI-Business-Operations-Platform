@@ -9,6 +9,7 @@ import { completeWithClaude, ClaudeError } from './src/server/claude';
 import { authenticate, parseAuth } from './src/server/auth';
 import { Rejected, validateAppend } from './src/server/validate';
 import { RateLimiter } from './src/server/rate';
+import { appendLedger } from './src/server/ledgerService';
 import { detectPii } from './src/core/guardrails/pii';
 import { detectInjection } from './src/core/guardrails/injection';
 import type { Artefact } from './src/core/platform';
@@ -116,6 +117,17 @@ app.post('/api/gateway/complete', wrap(async (req, res) => {
     res.json({ text });
   } catch (e) {
     res.status(e instanceof ClaudeError ? 502 : 500).json({ error: (e as Error).message });
+  }
+}));
+
+// ---- ledger: the server authors every entry (seq, hash, time), so the chain cannot fork or be forged ----
+app.post('/api/ledger', wrap(async (req, res) => {
+  try {
+    const out = await appendLedger(store, req.body?.input, req.body?.knownSeq, actorOf(res));
+    res.json(out);
+  } catch (e) {
+    if (e instanceof Rejected) return res.status(e.status).json({ error: e.message });
+    throw e;
   }
 }));
 

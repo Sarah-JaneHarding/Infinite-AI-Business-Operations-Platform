@@ -6,7 +6,6 @@ import { authenticate, parseAuth } from '../src/server/auth';
 import { RateLimiter } from '../src/server/rate';
 import { FileStore } from '../src/server/fileAdapter';
 import { MAX_RECORDS, Rejected, validateAppend, type ReadStore } from '../src/server/validate';
-import { Ledger } from '../src/core/ledger';
 import { AGENTS } from '../src/departments';
 import type { Rec } from '../src/core/warehouse';
 
@@ -101,16 +100,10 @@ describe('validateAppend: approval gate', () => {
 });
 
 describe('validateAppend: ledger, Brain, quotas', () => {
-  it('accepts a correctly chained ledger entry and rejects a gap, a bad hash and a forged human actor', async () => {
-    const l = new Ledger();
-    const e1 = await l.append({ orgId: 'o', actor: 'sarah', action: 'artefact.submit', subject: 'a' });
-    const rec = { ...e1, id: 'L1' } as unknown as Rec;
-    await expect(validateAppend('ledger', rec, { actor: 'sarah', store: store() })).resolves.toBeDefined();
-    expect((await reject(validateAppend('ledger', { ...rec, id: 'L2', seq: 2 }, { actor: 'sarah', store: store() })))?.status).toBe(409);
-    expect((await reject(validateAppend('ledger', { ...rec, detail: { tampered: true } }, { actor: 'sarah', store: store() })))?.message).toMatch(/hash/);
-    expect((await reject(validateAppend('ledger', rec, { actor: 'dan', store: store() })))?.status).toBe(403);
-    const e2 = await l.append({ orgId: 'o', actor: 'agent-x', action: 'gateway.complete', subject: 's' });
-    await expect(validateAppend('ledger', { ...e2, id: 'L2' } as unknown as Rec, { actor: 'sarah', store: store({ ledger: [rec] }) })).resolves.toBeDefined();
+  it('refuses any client-authored ledger entry: the server alone writes the chain', async () => {
+    const e = await reject(validateAppend('ledger', { id: 'L1', seq: 1 }, { actor: 'sarah', store: store() }));
+    expect(e?.status).toBe(403);
+    expect(e?.message).toMatch(/POST \/api\/ledger/);
   });
   it('protects the Brain constitution and the human-ratification rule', async () => {
     const f = (o: Record<string, unknown>) => ({ id: 'fact_1', tier: 'L1', topic: 't', text: 'x', status: 'ratified', by: 'sarah', provenance: { deidentified: true, sources: ['s'] }, ...o }) as Rec;
