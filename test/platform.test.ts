@@ -45,8 +45,30 @@ describe('platform pipeline', () => {
   });
   it('tombstoned subject is refused first', async () => {
     const p = mk();
-    p.tombstone('s1');
+    await p.tombstone('s1', 'sarah');
     await expect(p.runAgent(agent, { goal: 'x' }, sarah, { subjectId: 's1' })).rejects.toMatchObject({ kind: 'tombstone' });
+    await expect(p.runAgent(agent, { goal: 'x' }, sarah, { subjectId: 's2' })).resolves.toBeDefined();
+  });
+  it('a tombstone survives a reload, stores only a hash, and is on the ledger', async () => {
+    const adapter = new MemoryAdapter();
+    const p1 = await new Platform({ adapter }).init();
+    await p1.tombstone('subject-77', 'sarah');
+    await p1.tombstone('subject-77', 'sarah'); // idempotent
+    const p2 = await new Platform({ adapter }).init();
+    await expect(p2.runAgent(agent, { goal: 'x' }, sarah, { subjectId: 'subject-77' })).rejects.toMatchObject({ kind: 'tombstone' });
+    expect(JSON.stringify(adapter.data)).not.toContain('subject-77');
+    expect(adapter.data['tombstones']).toHaveLength(1);
+    expect(p2.ledger.all.filter((e) => e.action === 'subject.tombstone')).toHaveLength(1);
+    expect(await p2.ledger.verify()).toBeNull();
+  });
+  it('reports a refused ledger/Brain write instead of swallowing it', async () => {
+    const seen: string[] = [];
+    const adapter = new MemoryAdapter();
+    adapter.append = async () => { throw new Error('warehouse append failed (409)'); };
+    const p = await new Platform({ adapter, onPersistError: (e) => seen.push(e.message) }).init();
+    await p.brain.remember({ tier: 'L1', topic: 't', text: 'x', provenance: { deidentified: true, sources: ['s'] }, by: 'sarah' });
+    await p.flush();
+    expect(seen.length).toBeGreaterThan(0);
   });
   it('HITL: agent cannot approve; no self-approval; must be reviewed; rejection needs reason', async () => {
     const p = mk();

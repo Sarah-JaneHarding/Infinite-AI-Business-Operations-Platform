@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Download, RefreshCw } from 'lucide-react';
 import { useOps } from './store';
+import { apiFetch } from '../core/api';
 import { Badge, Card, download, Icon, statusTone } from './primitives';
 import { WidgetCard } from './Widgets';
 import { AgentRunner } from './AgentRunner';
@@ -166,7 +167,7 @@ export function ConnectorView() {
           <li>GitHub token: <Badge tone={health.githubToken ? 'ok' : 'draft'}>{health.githubToken ? 'set' : 'not set (60 req/hr, public data only)'}</Badge></li>
           <li>Webhook secret: <Badge tone={health.webhook ? 'ok' : 'draft'}>{health.webhook ? 'set' : 'not set (webhook rejects all)'}</Badge></li>
           <li>Ecosystem writes: <Badge tone={health.ecosystemWrites ? 'review' : ''}>{health.ecosystemWrites ? 'enabled (issues only)' : 'disabled'}</Badge></li>
-          <li>Gemini key: <Badge tone={health.gemini ? 'ok' : ''}>{health.gemini ? 'set' : 'not set (local engine)'}</Badge></li>
+          <li>Anthropic key: <Badge tone={health.llm ? 'ok' : ''}>{health.llm ? 'set' : 'not set (local engine)'}</Badge></li>
         </ul> : <p className="text-sm">The server is not running. Start it with <span className="mono">npm run dev</span> to enable live status, webhooks and issue publishing. The committed snapshot is used meanwhile.</p>}
         <p className="mt-2 text-xs" style={{ color: 'var(--muted)' }}>Webhook URL: <span className="mono">/api/connector/webhook</span> · events: push, pull_request, workflow_run, issues · content type: application/json · secret = GITHUB_WEBHOOK_SECRET.</p>
       </Card>
@@ -190,7 +191,7 @@ export function ConnectorView() {
 }
 function EventsCard() {
   const [ev, setEv] = useState<{ kind: string; summary: string; at: string }[]>([]);
-  useEffect(() => { const load = () => fetch('/api/connector/events').then((r) => r.json()).then(setEv).catch(() => undefined); load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
+  useEffect(() => { const load = () => apiFetch('/api/connector/events').then((r) => r.json()).then(setEv).catch(() => undefined); load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
   return <Card title="Webhook events">{ev.length ? <ul className="space-y-1 text-sm">{ev.map((e, i) => <li key={i}><Badge tone="info">{e.kind}</Badge> {e.summary} <span className="mono text-[10px]" style={{ color: 'var(--muted)' }}>{e.at.slice(11, 19)}</span></li>)}</ul> : <p className="text-sm" style={{ color: 'var(--muted)' }}>No events received yet.</p>}</Card>;
 }
 

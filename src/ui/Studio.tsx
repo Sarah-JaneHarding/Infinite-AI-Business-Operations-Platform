@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Download, Eye, FilePlus2, Pencil, Save, Send, XCircle, UploadCloud } from 'lucide-react';
 import { useOps } from './store';
+import { apiFetch } from '../core/api';
 import { Badge, Card, downloadDoc, FORMAT_LABEL, statusTone } from './primitives';
 import { toHtml, toMarkdown } from '../core/artefacts/render';
 import { AGENTS, agentById } from '../departments';
@@ -102,7 +103,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
           <p className="text-sm">Opens an <b>issue</b> on the ecosystem repo with the ecosystem’s own rules checklist. It never pushes code.</p>
           <div className="mt-2 flex gap-2">
             <button className="btn" onClick={() => { const pr = proposalFromArtefact(a, toMarkdown(a.doc)); download('ecosystem-issue.md', `# ${pr.title}\n\n${pr.body}\n`, 'text/markdown'); }}><Download size={14} /> Download issue text</button>
-            <button className="btn primary" disabled={mode !== 'server' || !health?.ecosystemWrites} title={!health?.ecosystemWrites ? 'Disabled: OPS_ALLOW_ECOSYSTEM_WRITES is not true on the server' : ''} onClick={() => act(async () => { const r = await fetch('/api/connector/publish', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ artefactId: a.id, summary: toMarkdown(a.doc) }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setMsg({ tone: 'ok', text: `Issue opened: ${j.url}` }); }, 'Published.')}><UploadCloud size={14} /> Open issue on GitHub</button>
+            <button className="btn primary" disabled={mode !== 'server' || !health?.ecosystemWrites} title={!health?.ecosystemWrites ? 'Disabled: OPS_ALLOW_ECOSYSTEM_WRITES is not true on the server' : ''} onClick={() => act(async () => { const r = await apiFetch('/api/connector/publish', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ artefactId: a.id, summary: toMarkdown(a.doc) }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setMsg({ tone: 'ok', text: `Issue opened: ${j.url}` }); }, 'Published.')}><UploadCloud size={14} /> Open issue on GitHub</button>
           </div>
         </Card>
       )}

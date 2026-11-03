@@ -39,6 +39,8 @@ export interface PlatformOptions {
   /** Real facts available to every run (connector snapshot etc.). */
   facts?: () => Record<string, string | number>;
   knownNames?: string[];
+  /** Called when the storage adapter refuses or loses a ledger/Brain record, which is otherwise written in the background. */
+  onPersistError?: (e: Error) => void;
 }
 
 /** One object wiring departments → guardrails → brain → gateway → warehouse → ledger → HITL → learning. */
@@ -51,7 +53,10 @@ export class Platform {
   private engine?: Engine;
   private factsFn: () => Record<string, string | number>;
   private knownNames: string[];
+  /** sha-256 of each erased subject id. The raw id is never stored. */
   private tombstoned = new Set<string>();
+  private onPersistError: (e: Error) => void;
+  private persistTail: Promise<void> = Promise.resolve();
 
   constructor(o: PlatformOptions = {}) {
     this.orgId = o.orgId ?? 'infinite-ai';
@@ -60,12 +65,18 @@ export class Platform {
     this.wire([], []);
     this.factsFn = o.facts ?? (() => ({}));
     this.knownNames = o.knownNames ?? [];
+    this.onPersistError = o.onPersistError ?? ((e) => console.error('persist failed:', e.message));
   }
 
   /** (Re)build ledger, Brain and gateway over the warehouse so state survives a reload. */
   private wire(ledger: LedgerEntry[], facts: Fact[]) {
-    this.ledger = new Ledger(ledger, (e) => void this.warehouse.putRaw('ledger', { ...e, id: `L${e.seq}` } as unknown as Rec));
-    this.brain = new Brain(this.ledger, this.orgId, facts, (f) => void this.warehouse.putRaw('brain', { ...f } as unknown as Rec));
+    const fail = (e: unknown) => this.onPersistError(e instanceof Error ? e : new Error(String(e)));
+    // Background writes go out one at a time, in order: the server checks that each ledger entry chains onto the last.
+    const queue = (collection: string, rec: Rec) => {
+      this.persistTail = this.persistTail.then(() => this.warehouse.putRaw(collection, rec)).catch(fail);
+    };
+    this.ledger = new Ledger(ledger, (e) => queue('ledger', { ...e, id: `L${e.seq}` } as unknown as Rec));
+    this.brain = new Brain(this.ledger, this.orgId, facts, (f) => queue('brain', { ...f } as unknown as Rec));
     this.gateway = new Gateway(this.ledger, this.engine);
   }
 
@@ -74,7 +85,13 @@ export class Platform {
     const ledger = this.warehouse.list<LedgerEntry>('ledger').map(({ id: _id, ...e }: LedgerEntry & { id?: string }) => e as LedgerEntry);
     const facts = this.warehouse.latest<Fact>('brain', 'id');
     this.wire(ledger, facts);
+    this.tombstoned = new Set(this.warehouse.list<{ subjectHash: string }>('tombstones').map((t) => t.subjectHash));
     return this;
+  }
+
+  /** Resolves once every queued ledger/Brain write has been handed to the storage adapter. */
+  flush(): Promise<void> {
+    return this.persistTail;
   }
 
   /** Swap the model engine (undefined = the deterministic local engine). The gateway remains the only path. */
@@ -87,15 +104,20 @@ export class Platform {
     this.factsFn = fn;
   }
 
-  tombstone(subjectId: string) {
-    this.tombstoned.add(subjectId);
+  /** Erase a data subject: recorded in the warehouse and the ledger, so it survives a reload. Only a hash is kept. */
+  async tombstone(subjectId: string, by: string) {
+    const subjectHash = await sha256Hex(subjectId);
+    if (this.tombstoned.has(subjectHash)) return;
+    await this.warehouse.put('tombstones', { id: `ts_${subjectHash.slice(0, 16)}`, subjectHash, by });
+    this.tombstoned.add(subjectHash);
+    await this.ledger.append({ orgId: this.orgId, actor: by, action: 'subject.tombstone', subject: `ts_${subjectHash.slice(0, 16)}` });
   }
 
   async runAgent(agent: AgentContract, rawInput: Record<string, string>, requester: Actor, opts: { subjectId?: string } = {}): Promise<Artefact> {
     const log = (action: string, subject: string, detail: Record<string, unknown> = {}) => this.ledger.append({ orgId: this.orgId, actor: requester.id, action, subject, detail });
 
     // 1. gates: tombstone → purpose → lawful basis
-    const gate = runGates({ subjectId: opts.subjectId, tombstoned: this.tombstoned, purpose: agent.purpose, allowedPurposes: agent.allowedPurposes, dataClass: agent.dataClass, lawfulBasis: agent.lawfulBasis });
+    const gate = runGates({ subjectId: opts.subjectId ? await sha256Hex(opts.subjectId) : undefined, tombstoned: this.tombstoned, purpose: agent.purpose, allowedPurposes: agent.allowedPurposes, dataClass: agent.dataClass, lawfulBasis: agent.lawfulBasis });
     if (gate) {
       await log('run.refused', agent.id, { gate: gate.gate });
       throw new RunRefused(gate.gate, gate.reason);

@@ -1,11 +1,24 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Rec } from '../core/warehouse';
 
-/** Server-side warehouse storage: one append-only JSON-lines file per collection. Never rewritten. */
+/**
+ * Server-side warehouse storage: one append-only JSON-lines file per collection. Never rewritten.
+ * Read once at start-up and kept in memory, so a request never re-parses the disk.
+ */
 export class FileStore {
+  private cache: Record<string, Rec[]> = {};
   constructor(private dir = join(process.cwd(), 'data', 'warehouse')) {
     mkdirSync(this.dir, { recursive: true });
+    for (const f of readdirSync(this.dir).filter((n) => n.endsWith('.jsonl'))) {
+      this.cache[f.slice(0, -6)] = readFileSync(join(this.dir, f), 'utf8').split('\n').filter(Boolean).map((l, i) => {
+        try {
+          return JSON.parse(l) as Rec;
+        } catch {
+          throw new Error(`warehouse file ${f} line ${i + 1} is not valid JSON`);
+        }
+      });
+    }
   }
   private path(c: string) {
     if (!/^[a-z0-9_]{1,64}$/.test(c)) throw new Error('bad collection name');
@@ -13,16 +26,15 @@ export class FileStore {
   }
   append(collection: string, rec: Rec) {
     appendFileSync(this.path(collection), JSON.stringify(rec) + '\n');
+    (this.cache[collection] ??= []).push(rec);
   }
-  load(): Record<string, Rec[]> {
-    const out: Record<string, Rec[]> = {};
-    for (const f of readdirSync(this.dir).filter((n) => n.endsWith('.jsonl'))) {
-      const c = f.slice(0, -6);
-      out[c] = readFileSync(join(this.dir, f), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l) as Rec);
-    }
-    return out;
+  load(): Record<string, readonly Rec[]> {
+    return this.cache;
+  }
+  list(c: string): readonly Rec[] {
+    return this.cache[c] ?? [];
   }
   exists(c: string) {
-    return existsSync(this.path(c));
+    return c in this.cache;
   }
 }
