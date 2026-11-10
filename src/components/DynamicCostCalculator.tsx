@@ -172,7 +172,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
           <h1 className="text-xl md:text-2xl font-bold text-[#E9EDF8] mt-1.5 flex items-center gap-2">
             <span>Infinite AI · Dynamic Financial Model &amp; Unit Economics</span>
           </h1>
-          <p className="text-xs text-[#8FA0C2] mt-0.5 max-w-2xl">
+          <p className="text-xs text-[#CBD5E1] mt-0.5 max-w-2xl">
             South African school SaaS economics at the <strong className="text-cyan-300">R4,000/month baseline</strong>.
             Live infrastructure cost simulation, AWS Cape Town resource catalog, and sensitivity modeling.
           </p>
@@ -185,7 +185,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeSubTab === 'financial'
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-[#8FA0C2] hover:text-[#E9EDF8]'
+                : 'text-[#CBD5E1] hover:text-[#E9EDF8]'
             }`}
           >
             <TrendingUp className="w-3.5 h-3.5" />
@@ -196,7 +196,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeSubTab === 'aws'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                : 'text-[#8FA0C2] hover:text-[#E9EDF8]'
+                : 'text-[#CBD5E1] hover:text-[#E9EDF8]'
             }`}
           >
             <Server className="w-3.5 h-3.5" />
@@ -224,7 +224,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                       className={`px-2.5 py-1 text-xs font-semibold rounded-md border transition-all ${
                         schools === num
                           ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-bold'
-                          : 'bg-[#070D1E] text-[#8FA0C2] border-[rgba(148,163,255,0.16)] hover:border-cyan-500/40 hover:text-white'
+                          : 'bg-[#070D1E] text-[#CBD5E1] border-[rgba(148,163,255,0.16)] hover:border-cyan-500/40 hover:text-white'
                       }`}
                     >
                       {num}
@@ -255,7 +255,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                       className={`px-2 py-1 text-xs font-semibold rounded-md border transition-all ${
                         price === p
                           ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-bold'
-                          : 'bg-[#070D1E] text-[#8FA0C2] border-[rgba(148,163,255,0.16)] hover:border-emerald-500/40 hover:text-white'
+                          : 'bg-[#070D1E] text-[#CBD5E1] border-[rgba(148,163,255,0.16)] hover:border-emerald-500/40 hover:text-white'
                       }`}
                     >
                       {fmtZar(p)}
@@ -277,7 +277,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="kick text-[11px]">SCHOOL PROFILE / SIZE</span>
-                  <span className="font-mono text-xs text-[#8FA0C2] capitalize">{schoolSize}</span>
+                  <span className="font-mono text-xs text-[#CBD5E1] capitalize">{schoolSize}</span>
                 </div>
                 <div className="flex gap-1.5">
                   {(['small', 'medium', 'large'] as const).map((sz) => (
@@ -287,14 +287,14 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                       className={`flex-1 py-1 text-xs font-semibold rounded-md border capitalize transition-all ${
                         schoolSize === sz
                           ? 'bg-purple-600 text-white border-purple-400 font-bold'
-                          : 'bg-[#070D1E] text-[#8FA0C2] border-[rgba(148,163,255,0.16)] hover:border-purple-500/40 hover:text-white'
+                          : 'bg-[#070D1E] text-[#CBD5E1] border-[rgba(148,163,255,0.16)] hover:border-purple-500/40 hover:text-white'
                       }`}
                     >
                       {sz}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-[#8FA0C2] mt-0.5 truncate">
+                <p className="text-[10px] text-[#CBD5E1] mt-0.5 truncate">
                   {selectedTier.label}
                 </p>
               </div>
@@ -303,7 +303,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="kick text-[11px]">EMAIL &amp; FX SETTINGS</span>
-                  <span className="font-mono text-[10px] text-[#8FA0C2]">R{fxRate.toFixed(2)}/$</span>
+                  <span className="font-mono text-[10px] text-[#CBD5E1]">R{fxRate.toFixed(2)}/$</span>
                 </div>
                 <div className="flex gap-1.5">
                   <button
@@ -311,7 +311,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                     className={`flex-1 py-1 text-[11px] font-semibold rounded-md border transition-all ${
                       emailService === 'ses'
                         ? 'bg-amber-500/30 text-amber-300 border-amber-500'
-                        : 'bg-[#070D1E] text-[#8FA0C2] border-[rgba(148,163,255,0.16)]'
+                        : 'bg-[#070D1E] text-[#CBD5E1] border-[rgba(148,163,255,0.16)]'
                     }`}
                   >
                     AWS SES (Free)
@@ -321,13 +321,13 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                     className={`flex-1 py-1 text-[11px] font-semibold rounded-md border transition-all ${
                       emailService === 'postmark'
                         ? 'bg-cyan-500/30 text-cyan-300 border-cyan-500'
-                        : 'bg-[#070D1E] text-[#8FA0C2] border-[rgba(148,163,255,0.16)]'
+                        : 'bg-[#070D1E] text-[#CBD5E1] border-[rgba(148,163,255,0.16)]'
                     }`}
                   >
                     Postmark (+{fmtZar(POSTMARK_ZAR)})
                   </button>
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-[#8FA0C2] pt-0.5">
+                <div className="flex items-center justify-between text-[10px] text-[#CBD5E1] pt-0.5">
                   <span>Planning FX Rate:</span>
                   <div className="flex items-center gap-1">
                     <button
@@ -365,7 +365,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <p className="text-2xl font-bold font-mono text-[#E9EDF8] mt-1">
                 {fmtZar(totalMonthlyCost)}
               </p>
-              <p className="text-[11px] text-[#8FA0C2] mt-0.5">
+              <p className="text-[11px] text-[#CBD5E1] mt-0.5">
                 {fmtZar(totalFixedCosts)} fixed + {fmtZar(totalVariableCosts)} variable
               </p>
             </div>
@@ -379,7 +379,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <p className="text-2xl font-bold font-mono text-cyan-300 mt-1">
                 {fmtZar(blendedCostPerSchool)}
               </p>
-              <p className="text-[11px] text-[#8FA0C2] mt-0.5">
+              <p className="text-[11px] text-[#CBD5E1] mt-0.5">
                 Variable floor: <span className="text-amber-300 font-mono">{fmtZar(variableFloor)}</span> at scale
               </p>
             </div>
@@ -393,7 +393,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <p className="text-2xl font-bold font-mono text-emerald-400 mt-1">
                 {fmtZar(monthlyGrossRevenue)}
               </p>
-              <p className="text-[11px] text-[#8FA0C2] mt-0.5">
+              <p className="text-[11px] text-[#CBD5E1] mt-0.5">
                 {schools} schools × {fmtZar(price)}/mo (ARR: {fmtZar(annualRevenue)})
               </p>
             </div>
@@ -407,7 +407,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <p className={`text-2xl font-bold font-mono mt-1 ${getMarginColor(grossMarginPct)}`}>
                 {grossMarginPct.toFixed(1)}%
               </p>
-              <p className="text-[11px] text-[#8FA0C2] mt-0.5">
+              <p className="text-[11px] text-[#CBD5E1] mt-0.5">
                 Gross profit: <span className="font-mono text-emerald-300">{fmtZar(grossProfit)}/mo</span>
               </p>
             </div>
@@ -421,7 +421,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <p className={`text-xl font-bold font-mono ${schools >= breakEvenSchools ? 'text-emerald-400' : 'text-amber-300'}`}>
                 {isFinite(breakEvenSchools) ? `${breakEvenSchools} ${breakEvenSchools === 1 ? 'school' : 'schools'}` : 'N/A'}
               </p>
-              <p className="text-[11px] text-[#8FA0C2]">
+              <p className="text-[11px] text-[#CBD5E1]">
                 {schools >= breakEvenSchools 
                   ? `✓ Fully profitable at ${schools} schools (+${fmtZar(grossProfit)}/mo net contribution)`
                   : `Need ${breakEvenSchools - schools} more school(s) to cover fixed costs`}
@@ -434,7 +434,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <p className={`text-xl font-bold font-mono ${annualGrossProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {fmtZar(annualGrossProfit)} / year
               </p>
-              <p className="text-[11px] text-[#8FA0C2]">
+              <p className="text-[11px] text-[#CBD5E1]">
                 12 × monthly gross profit of {fmtZar(grossProfit)} before staff &amp; SG&amp;A
               </p>
             </div>
@@ -445,7 +445,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               <p className="text-xl font-bold font-mono text-cyan-300">
                 ${monthlyLlmUsd.toLocaleString()} USD / mo
               </p>
-              <p className="text-[11px] text-[#8FA0C2]">
+              <p className="text-[11px] text-[#CBD5E1]">
                 Billed directly in USD (~{fmtZar(varLlmTotal)}/mo). Prompt caching saves ~80% on inputs.
               </p>
             </div>
@@ -627,7 +627,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               </div>
 
               {/* Legend */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-[rgba(148,163,255,0.1)] text-[11px] text-[#8FA0C2]">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-[rgba(148,163,255,0.1)] text-[11px] text-[#CBD5E1]">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm bg-[#2563EB]" />
                   <span>AWS Fixed ({fmtZar(awsFixedZar)})</span>
@@ -823,7 +823,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
               </div>
 
               {/* Legend */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-[rgba(148,163,255,0.1)] text-[11px] text-[#8FA0C2]">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-[rgba(148,163,255,0.1)] text-[11px] text-[#CBD5E1]">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-0.5 bg-[#38BDF8]" />
                   <span>Blended Cost / School Curve</span>
@@ -847,7 +847,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                 <p className="kick text-[10px]">DETAILED STATEMENT</p>
                 <h3 className="text-sm font-bold text-[#E9EDF8]">Monthly Itemized Cost &amp; Revenue Breakdown</h3>
               </div>
-              <span className="text-xs font-mono text-[#8FA0C2]">
+              <span className="text-xs font-mono text-[#CBD5E1]">
                 ZAR @ R{fxRate.toFixed(2)}/USD
               </span>
             </div>
@@ -855,21 +855,21 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
                 <thead>
-                  <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#8FA0C2] font-mono text-[10px]">
+                  <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#CBD5E1] font-mono text-[10px]">
                     <th className="pb-2">LINE ITEM</th>
                     <th className="pb-2">CLASSIFICATION</th>
                     <th className="pb-2">UNIT BASIS</th>
                     <th className="pb-2 text-right">MONTHLY (ZAR)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#8FA0C2]">
+                <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#CBD5E1]">
                   <tr>
                     <td className="py-2.5 font-medium text-[#E9EDF8] flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-[#2563EB]" />
                       AWS Cape Town Fixed Cluster (ECS, RDS, Redis, ALB, NAT, WAF)
                     </td>
                     <td className="py-2.5 text-blue-300 font-mono text-[11px]">Fixed Shared</td>
-                    <td className="py-2.5 text-[#8FA0C2]">$350 USD baseline</td>
+                    <td className="py-2.5 text-[#CBD5E1]">$350 USD baseline</td>
                     <td className="py-2.5 font-mono text-right text-[#E9EDF8] font-semibold">{fmtZar(awsFixedZar)}</td>
                   </tr>
                   <tr>
@@ -878,7 +878,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                       Primary Domain Name (.co.za)
                     </td>
                     <td className="py-2.5 text-cyan-300 font-mono text-[11px]">Fixed Shared</td>
-                    <td className="py-2.5 text-[#8FA0C2]">Annual amortized</td>
+                    <td className="py-2.5 text-[#CBD5E1]">Annual amortized</td>
                     <td className="py-2.5 font-mono text-right text-[#E9EDF8]">{fmtZar(DOMAIN_ZAR)}</td>
                   </tr>
                   <tr>
@@ -887,7 +887,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                       Sentry Team (Distributed Error Tracking)
                     </td>
                     <td className="py-2.5 text-cyan-300 font-mono text-[11px]">Fixed Shared</td>
-                    <td className="py-2.5 text-[#8FA0C2]">$26 USD / month</td>
+                    <td className="py-2.5 text-[#CBD5E1]">$26 USD / month</td>
                     <td className="py-2.5 font-mono text-right text-[#E9EDF8]">{fmtZar(SENTRY_ZAR)}</td>
                   </tr>
                   <tr>
@@ -896,7 +896,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                       BetterStack (Uptime &amp; Synthetic Monitoring)
                     </td>
                     <td className="py-2.5 text-cyan-300 font-mono text-[11px]">Fixed Shared</td>
-                    <td className="py-2.5 text-[#8FA0C2]">$20 USD / month</td>
+                    <td className="py-2.5 text-[#CBD5E1]">$20 USD / month</td>
                     <td className="py-2.5 font-mono text-right text-[#E9EDF8]">{fmtZar(UPTIME_ZAR)}</td>
                   </tr>
                   {emailService === 'postmark' && (
@@ -906,7 +906,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                         Postmark (Dedicated Transactional Email Delivery)
                       </td>
                       <td className="py-2.5 text-cyan-300 font-mono text-[11px]">Fixed Shared</td>
-                      <td className="py-2.5 text-[#8FA0C2]">$15 USD / month</td>
+                      <td className="py-2.5 text-[#CBD5E1]">$15 USD / month</td>
                       <td className="py-2.5 font-mono text-right text-[#E9EDF8]">{fmtZar(POSTMARK_ZAR)}</td>
                     </tr>
                   )}
@@ -927,7 +927,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                       AWS Marginal Storage &amp; Data Transfer ({schools} schools)
                     </td>
                     <td className="py-2.5 text-amber-400 font-mono text-[11px]">Variable</td>
-                    <td className="py-2.5 text-[#8FA0C2]">{fmtZar(perInfraZar)} / school ({schools}×)</td>
+                    <td className="py-2.5 text-[#CBD5E1]">{fmtZar(perInfraZar)} / school ({schools}×)</td>
                     <td className="py-2.5 font-mono text-right text-amber-300">{fmtZar(varInfraTotal)}</td>
                   </tr>
                   <tr>
@@ -936,7 +936,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                       Anthropic Claude API (Sonnet 4.6 with prompt cache, {schools} schools)
                     </td>
                     <td className="py-2.5 text-rose-400 font-mono text-[11px]">Variable</td>
-                    <td className="py-2.5 text-[#8FA0C2]">{fmtZar(perLlmZar)} / school ({schools}×)</td>
+                    <td className="py-2.5 text-[#CBD5E1]">{fmtZar(perLlmZar)} / school ({schools}×)</td>
                     <td className="py-2.5 font-mono text-right text-rose-300">{fmtZar(varLlmTotal)}</td>
                   </tr>
 
@@ -982,7 +982,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                 <p className="kick text-[10px]">SENSITIVITY ANALYSIS</p>
                 <h3 className="text-sm font-bold text-[#E9EDF8]">Gross Margin Sensitivity Matrix (Price × School Volume)</h3>
               </div>
-              <span className="text-[11px] text-[#8FA0C2]">
+              <span className="text-[11px] text-[#CBD5E1]">
                 Active cell outlined in cyan
               </span>
             </div>
@@ -990,7 +990,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-center border-collapse">
                 <thead>
-                  <tr className="bg-[#0E1B38] text-[#8FA0C2] font-mono text-[10px]">
+                  <tr className="bg-[#0E1B38] text-[#CBD5E1] font-mono text-[10px]">
                     <th className="py-2.5 px-3 text-left">↓ PRICE / SCHOOLS →</th>
                     {matrixSchools.map((n) => (
                       <th key={n} className="py-2.5 px-3">
@@ -1041,47 +1041,47 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-xs">
               <div className="space-y-1.5 divide-y divide-[rgba(148,163,255,0.06)]">
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">Exchange Rate (Planning):</span>
+                  <span className="text-[#CBD5E1]">Exchange Rate (Planning):</span>
                   <strong className="text-[#E9EDF8] font-mono">R{fxRate.toFixed(2)} / $1.00 USD (SARB Reference)</strong>
                 </div>
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">AWS Region &amp; Data Sovereignty:</span>
+                  <span className="text-[#CBD5E1]">AWS Region &amp; Data Sovereignty:</span>
                   <strong className="text-cyan-300 font-mono">af-south-1 (Cape Town) · POPIA In-Region</strong>
                 </div>
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">Standard School Sizing:</span>
+                  <span className="text-[#CBD5E1]">Standard School Sizing:</span>
                   <strong className="text-[#E9EDF8]">~500 learners, ~35 teachers/SMT (DoE medium)</strong>
                 </div>
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">LLM Model &amp; Gateway:</span>
+                  <span className="text-[#CBD5E1]">LLM Model &amp; Gateway:</span>
                   <strong className="text-[#E9EDF8]">Claude Sonnet 4.6 + L2 5-min prompt cache</strong>
                 </div>
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">Cache Hit Rate Assumed:</span>
+                  <span className="text-[#CBD5E1]">Cache Hit Rate Assumed:</span>
                   <strong className="text-emerald-400 font-mono">~80% on CAPS system prompts &amp; rubrics</strong>
                 </div>
               </div>
 
               <div className="space-y-1.5 divide-y divide-[rgba(148,163,255,0.06)]">
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">AWS Shared Baseline (Fixed):</span>
+                  <span className="text-[#CBD5E1]">AWS Shared Baseline (Fixed):</span>
                   <strong className="text-[#E9EDF8] font-mono">{fmtZar(awsFixedZar)}/mo ($350 USD)</strong>
                 </div>
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">AWS Marginal Storage / School:</span>
+                  <span className="text-[#CBD5E1]">AWS Marginal Storage / School:</span>
                   <strong className="text-[#E9EDF8] font-mono">{fmtZar(perInfraZar)}/mo ($13 USD)</strong>
                 </div>
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">Anthropic API Cost / School:</span>
+                  <span className="text-[#CBD5E1]">Anthropic API Cost / School:</span>
                   <strong className="text-[#E9EDF8] font-mono">{fmtZar(perLlmZar)}/mo ($45 USD cached)</strong>
                 </div>
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">Monitoring (Sentry + BetterStack):</span>
+                  <span className="text-[#CBD5E1]">Monitoring (Sentry + BetterStack):</span>
                   <strong className="text-[#E9EDF8] font-mono">{fmtZar(SENTRY_ZAR + UPTIME_ZAR)}/mo ($46 USD)</strong>
                 </div>
                 <div className="flex justify-between py-1.5">
-                  <span className="text-[#8FA0C2]">Excluded from Gross COGS:</span>
-                  <strong className="text-[#8FA0C2] italic">Staff salaries, corporate tax, VAT, SG&amp;A</strong>
+                  <span className="text-[#CBD5E1]">Excluded from Gross COGS:</span>
+                  <strong className="text-[#CBD5E1] italic">Staff salaries, corporate tax, VAT, SG&amp;A</strong>
                 </div>
               </div>
             </div>
@@ -1099,11 +1099,11 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                 <Server className="w-5 h-5 text-amber-400" />
                 <span className="kick text-[11px] text-amber-300">AWS SERVICES &amp; PER-SCHOOL WORKLOAD SPECIFICATION</span>
               </div>
-              <span className="chip font-mono text-[10px] text-[#8FA0C2]">
+              <span className="chip font-mono text-[10px] text-[#CBD5E1]">
                 DOC ID: IAI-INFRA-2026-001
               </span>
             </div>
-            <p className="text-xs text-[#8FA0C2] leading-relaxed max-w-3xl">
+            <p className="text-xs text-[#CBD5E1] leading-relaxed max-w-3xl">
               Multi-tenant SaaS deployment in <strong>af-south-1 (Cape Town)</strong> ensuring full POPIA in-region compliance. 
               One shared container cluster, one RDS PostgreSQL instance with Row-Level Security (RLS), and one ElastiCache cluster.
               Costs split into a <strong className="text-cyan-300">shared baseline (fixed)</strong> and <strong className="text-amber-300">marginal per-school growth</strong>.
@@ -1117,7 +1117,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                 <p className="kick text-[10px]">DOe NORMS MODELING</p>
                 <h3 className="text-sm font-bold text-[#E9EDF8]">Per-School Annual Workload &amp; Resource Consumption</h3>
               </div>
-              <span className="text-xs text-[#8FA0C2] font-mono">
+              <span className="text-xs text-[#CBD5E1] font-mono">
                 Full 5-Module Deployment
               </span>
             </div>
@@ -1125,14 +1125,14 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
                 <thead>
-                  <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#8FA0C2] font-mono text-[10px]">
+                  <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#CBD5E1] font-mono text-[10px]">
                     <th className="pb-2">METRIC</th>
                     <th className="pb-2 text-center text-emerald-400">SMALL (~200 LEARNERS)</th>
                     <th className="pb-2 text-center text-cyan-300">MEDIUM (~500 LEARNERS)</th>
                     <th className="pb-2 text-center text-rose-400">LARGE (~800 LEARNERS)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#8FA0C2] font-mono">
+                <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#CBD5E1] font-mono">
                   <tr>
                     <td className="py-2.5 font-sans font-medium text-[#E9EDF8]">Active Staff Users</td>
                     <td className="py-2.5 text-center">~15</td>
@@ -1207,7 +1207,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                 <span className="chip text-[9px] text-cyan-300 border-cyan-500/30">SHARED BASELINE</span>
               </div>
               <h4 className="font-bold text-xs text-[#E9EDF8]">ECS Fargate (Web, Gateway &amp; Workers)</h4>
-              <p className="text-[11px] text-[#8FA0C2]">
+              <p className="text-[11px] text-[#CBD5E1]">
                 Next.js 16 App Router UI (2 tasks HA), Model Gateway proxy (2 tasks HA), and asynchronous queue worker (1 task). Sized at 0.5 vCPU, 1 GB RAM per task.
               </p>
               <div className="text-[10px] font-mono text-cyan-300 pt-1 border-t border-[rgba(148,163,255,0.08)] flex justify-between">
@@ -1223,7 +1223,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                 <span className="chip text-[9px] text-amber-300 border-amber-500/30">SHARED + MARGINAL</span>
               </div>
               <h4 className="font-bold text-xs text-[#E9EDF8]">RDS PostgreSQL 16 + pgvector</h4>
-              <p className="text-[11px] text-[#8FA0C2]">
+              <p className="text-[11px] text-[#CBD5E1]">
                 Tenant-isolated data plane with strict Row Level Security (RLS). Holds learner tokens, consent ledgers, SIAS cases, and 1536-dim vector embeddings for Brain L2.
               </p>
               <div className="text-[10px] font-mono text-emerald-400 pt-1 border-t border-[rgba(148,163,255,0.08)] flex justify-between">
@@ -1239,7 +1239,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                 <span className="chip text-[9px] text-cyan-300 border-cyan-500/30">SHARED BASELINE</span>
               </div>
               <h4 className="font-bold text-xs text-[#E9EDF8]">ElastiCache for Redis 7</h4>
-              <p className="text-[11px] text-[#8FA0C2]">
+              <p className="text-[11px] text-[#CBD5E1]">
                 In-memory session state, rate-limiting tokens, school context lookups, and Brain L4 hot-tier cache. Keyed strictly by tenant slug.
               </p>
               <div className="text-[10px] font-mono text-purple-300 pt-1 border-t border-[rgba(148,163,255,0.08)] flex justify-between">
@@ -1255,7 +1255,7 @@ export const DynamicCostCalculator: React.FC<DynamicCostCalculatorProps> = ({
                 <span className="chip text-[9px] text-cyan-300 border-cyan-500/30">SHARED BASELINE</span>
               </div>
               <h4 className="font-bold text-xs text-[#E9EDF8]">Secrets Manager, KMS &amp; AWS WAF</h4>
-              <p className="text-[11px] text-[#8FA0C2]">
+              <p className="text-[11px] text-[#CBD5E1]">
                 Customer Managed Keys (CMK) for envelope encryption on RDS/S3 (POPIA data-at-rest obligation). Web Application Firewall on ALB protecting against OWASP Top 10.
               </p>
               <div className="text-[10px] font-mono text-rose-300 pt-1 border-t border-[rgba(148,163,255,0.08)] flex justify-between">

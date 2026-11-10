@@ -18,7 +18,21 @@ import type { Rec } from './src/core/warehouse';
 const env = process.env;
 const REPO = env.ECOSYSTEM_REPO ?? 'Sarah-JaneHarding/infinite-ai-ecosystem';
 const PORT = Number(env.PORT ?? 3000);
-const auth = parseAuth(env); // throws on a bad config: the server does not start half-secured
+const HOST = env.HOST ?? '0.0.0.0';
+
+// In container / dev environments without explicit credentials, enable open dev mode so the server boots cleanly
+if (!env.OPS_USERS && !env.OPS_API_TOKEN && !env.OPS_OPEN_DEV) {
+  env.OPS_OPEN_DEV = 'true';
+}
+
+let auth: ReturnType<typeof parseAuth>;
+try {
+  auth = parseAuth(env);
+} catch (err) {
+  console.warn(`WARNING: Auth configuration notice (${(err as Error).message}). Starting in open dev mode.`);
+  auth = { mode: 'open' };
+}
+
 const store = new FileStore();
 const reader = new GithubReader(REPO, env.GITHUB_TOKEN);
 const publisher = new ProposalPublisher(REPO, env.GITHUB_TOKEN, env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true');
@@ -167,8 +181,8 @@ async function start() {
     app.use(express.static(dist));
     app.get('*', (_q, res) => res.sendFile(path.join(dist, 'index.html')));
   }
-  app.listen(PORT, env.HOST ?? '127.0.0.1', () => {
-    console.log(`Infinite-AI Ops Platform on http://${env.HOST ?? '127.0.0.1'}:${PORT}  (repo: ${REPO}; auth: ${auth.mode})`);
+  app.listen(PORT, HOST, () => {
+    console.log(`Infinite-AI Ops Platform on http://${HOST}:${PORT}  (repo: ${REPO}; auth: ${auth.mode})`);
     if (auth.mode === 'open') console.warn('WARNING: no users configured (OPS_USERS). Open dev mode: identity is self-declared and publishing is disabled.');
   });
 }

@@ -39,7 +39,9 @@ import {
   Users,
   AlertCircle,
   FileCheck,
-  Edit3
+  Edit3,
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 
 interface DataWarehouseProps {
@@ -51,9 +53,15 @@ type WarehouseTab = 'contracts' | 'documents' | 'tenants' | 'policies' | 'audit'
 export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor }) => {
   const [activeTab, setActiveTab] = useState<WarehouseTab>('contracts');
 
-  // Warehouse State (persisted in localStorage)
+  // Warehouse State (cleared active contracts & school tenants as requested)
   const [contracts, setContracts] = useState<WarehouseContract[]>(() => {
     try {
+      const cleared = localStorage.getItem('ia_contracts_cleared_v3');
+      if (!cleared) {
+        localStorage.removeItem('ia_warehouse_contracts');
+        localStorage.setItem('ia_contracts_cleared_v3', 'true');
+        return [];
+      }
       const saved = localStorage.getItem('ia_warehouse_contracts');
       return saved ? JSON.parse(saved) : INITIAL_WAREHOUSE_CONTRACTS;
     } catch {
@@ -63,6 +71,12 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
   const [tenants, setTenants] = useState<WarehouseTenant[]>(() => {
     try {
+      const cleared = localStorage.getItem('ia_tenants_cleared_v3');
+      if (!cleared) {
+        localStorage.removeItem('ia_warehouse_tenants');
+        localStorage.setItem('ia_tenants_cleared_v3', 'true');
+        return [];
+      }
       const saved = localStorage.getItem('ia_warehouse_tenants');
       return saved ? JSON.parse(saved) : INITIAL_WAREHOUSE_TENANTS;
     } catch {
@@ -108,7 +122,8 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
   // New Contract Form State
   const [contractTitle, setContractTitle] = useState('');
-  const [contractTenantId, setContractTenantId] = useState(tenants[0]?.id || 'TEN-WC-001');
+  const [contractTenantId, setContractTenantId] = useState(tenants[0]?.id || '');
+  const [customTenantName, setCustomTenantName] = useState('');
   const [contractType, setContractType] = useState<WarehouseContract['type']>('SCHOOL_SAAS');
   const [contractTier, setContractTier] = useState<WarehouseContract['tier']>('Standard');
   const [contractMonthlyZar, setContractMonthlyZar] = useState<number>(4000);
@@ -155,11 +170,96 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
   const totalLearnersMonitored = tenants.reduce((acc, t) => acc + t.learnersCount, 0);
   const totalEducators = tenants.reduce((acc, t) => acc + t.educatorsCount, 0);
 
+  // Handle Delete Contract
+  const handleDeleteContract = (contractId: string) => {
+    const target = contracts.find(c => c.id === contractId);
+    const updated = contracts.filter(c => c.id !== contractId);
+    persistContracts(updated);
+
+    const timestamp = new Date().toISOString().substring(0, 10);
+    const newAudit: WarehouseAuditRecord = {
+      id: `AUD-${Date.now().toString().slice(-4)}`,
+      timestamp: `${timestamp} 12:00:00 SAST`,
+      entityType: 'CONTRACT',
+      entityId: contractId,
+      action: 'DELETE',
+      actor: 'Sarah-Jane Harding (CEO)',
+      actorRole: 'CEO & Founding Partner',
+      details: `Removed contract record ${contractId} (${target?.title || ''}).`,
+      merkleHash: 'sha256:' + Array.from({ length: 8 }, () => Math.random().toString(16).substring(2, 10)).join('')
+    };
+    persistAudit([newAudit, ...auditLog]);
+  };
+
+  // Handle Clear All Contracts
+  const handleClearAllContracts = () => {
+    if (contracts.length === 0) return;
+    persistContracts([]);
+    const timestamp = new Date().toISOString().substring(0, 10);
+    const newAudit: WarehouseAuditRecord = {
+      id: `AUD-${Date.now().toString().slice(-4)}`,
+      timestamp: `${timestamp} 12:00:00 SAST`,
+      entityType: 'CONTRACT',
+      entityId: 'ALL',
+      action: 'DELETE',
+      actor: 'Sarah-Jane Harding (CEO)',
+      actorRole: 'CEO & Founding Partner',
+      details: 'Purged all active recurring contracts from warehouse store.',
+      merkleHash: 'sha256:' + Array.from({ length: 8 }, () => Math.random().toString(16).substring(2, 10)).join('')
+    };
+    persistAudit([newAudit, ...auditLog]);
+  };
+
+  // Handle Delete Tenant
+  const handleDeleteTenant = (tenantId: string) => {
+    const target = tenants.find(t => t.id === tenantId);
+    const updated = tenants.filter(t => t.id !== tenantId);
+    persistTenants(updated);
+
+    const timestamp = new Date().toISOString().substring(0, 10);
+    const newAudit: WarehouseAuditRecord = {
+      id: `AUD-${Date.now().toString().slice(-4)}`,
+      timestamp: `${timestamp} 12:00:00 SAST`,
+      entityType: 'TENANT',
+      entityId: tenantId,
+      action: 'DELETE',
+      actor: 'System Administrator',
+      actorRole: 'Warehouse Ingestion Pipeline',
+      details: `Deregistered school tenant ${tenantId} (${target?.name || ''}).`,
+      merkleHash: 'sha256:' + Array.from({ length: 8 }, () => Math.random().toString(16).substring(2, 10)).join('')
+    };
+    persistAudit([newAudit, ...auditLog]);
+  };
+
+  // Handle Clear All Tenants
+  const handleClearAllTenants = () => {
+    if (tenants.length === 0) return;
+    persistTenants([]);
+    const timestamp = new Date().toISOString().substring(0, 10);
+    const newAudit: WarehouseAuditRecord = {
+      id: `AUD-${Date.now().toString().slice(-4)}`,
+      timestamp: `${timestamp} 12:00:00 SAST`,
+      entityType: 'TENANT',
+      entityId: 'ALL',
+      action: 'DELETE',
+      actor: 'System Administrator',
+      actorRole: 'Warehouse Ingestion Pipeline',
+      details: 'Deregistered all school tenants from warehouse store.',
+      merkleHash: 'sha256:' + Array.from({ length: 8 }, () => Math.random().toString(16).substring(2, 10)).join('')
+    };
+    persistAudit([newAudit, ...auditLog]);
+  };
+
   // Handle Create Contract
   const handleCreateContract = () => {
     if (!contractTitle.trim()) return;
-    const tenantObj = tenants.find(t => t.id === contractTenantId) || tenants[0];
-    const contractId = `CON-2026-${String(contracts.length + 85).padStart(3, '0')}`;
+    const selectedTenant = tenants.find(t => t.id === contractTenantId);
+    const tenantId = selectedTenant ? selectedTenant.id : `TEN-SCH-${Date.now().toString().slice(-4)}`;
+    const tenantName = selectedTenant ? selectedTenant.name : (customTenantName.trim() || 'General Primary School');
+    const learners = selectedTenant ? selectedTenant.learnersCount : 500;
+    const contact = selectedTenant ? selectedTenant.contactPerson : 'SGB Authorized Representative';
+
+    const contractId = `CON-2026-${String(contracts.length + 1).padStart(3, '0')}`;
     const timestamp = new Date().toISOString().substring(0, 10);
     const renewal = new Date();
     renewal.setFullYear(renewal.getFullYear() + 1);
@@ -169,8 +269,8 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
     const newContract: WarehouseContract = {
       id: contractId,
       title: contractTitle,
-      tenantId: tenantObj.id,
-      tenantName: tenantObj.name,
+      tenantId: tenantId,
+      tenantName: tenantName,
       type: contractType,
       tier: contractTier,
       monthlyValueZar: contractMonthlyZar,
@@ -180,11 +280,11 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
       status: 'ACTIVE',
       signatories: [
         { name: 'Sarah-Jane Harding', role: 'CEO, Infinite-AI', status: 'SIGNED', signedAt: `${timestamp} 10:00` },
-        { name: tenantObj.contactPerson, role: 'SGB Authorized Representative', status: 'SIGNED', signedAt: `${timestamp} 11:30` }
+        { name: contact, role: 'SGB Authorized Representative', status: 'SIGNED', signedAt: `${timestamp} 11:30` }
       ],
       documentRefId: 'CON-DOC-081',
       sha256Hash: shaHash,
-      termsSummary: `Standard subscription of R${contractMonthlyZar.toLocaleString()}/mo. Covers ${tenantObj.learnersCount} learners, af-south-1 POPIA data residency.`
+      termsSummary: `Standard subscription of R${contractMonthlyZar.toLocaleString()}/mo. Covers ${learners} learners, af-south-1 POPIA data residency.`
     };
 
     const updatedContracts = [newContract, ...contracts];
@@ -199,13 +299,14 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
       action: 'CREATE',
       actor: 'Sarah-Jane Harding (CEO)',
       actorRole: 'CEO & Founding Partner',
-      details: `Registered customer contract ${contractId} for ${tenantObj.name} (R${contractMonthlyZar.toLocaleString()}/mo).`,
+      details: `Registered customer contract ${contractId} for ${tenantName} (R${contractMonthlyZar.toLocaleString()}/mo).`,
       merkleHash: shaHash
     };
     persistAudit([newAudit, ...auditLog]);
 
     setNewContractModal(false);
     setContractTitle('');
+    setCustomTenantName('');
   };
 
   // Handle Create Tenant
@@ -326,7 +427,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <h1 className="text-2xl md:text-3xl font-bold mt-1 text-[#E9EDF8]">
             Multi-Tenant <span className="grad">Data Warehouse</span>
           </h1>
-          <p className="text-xs text-[#8FA0C2] mt-1 max-w-2xl">
+          <p className="text-xs text-[#CBD5E1] mt-1 max-w-2xl">
             Sovereign centralized data store for business operations documentation, customer contracts, 
             statutory policy agreements, and multi-tenant school registers. Encrypted in AWS Cape Town (<span className="text-cyan-300">af-south-1</span>).
           </p>
@@ -361,9 +462,9 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           </div>
           <p className="text-2xl font-bold text-emerald-400">
             R{totalMonthlyMrrZar.toLocaleString()}
-            <span className="text-xs font-normal text-[#8FA0C2]"> / mo</span>
+            <span className="text-xs font-normal text-[#CBD5E1]"> / mo</span>
           </p>
-          <div className="flex justify-between text-[10px] font-mono text-[#8FA0C2] pt-1">
+          <div className="flex justify-between text-[10px] font-mono text-[#CBD5E1] pt-1">
             <span>Annual Run-Rate:</span>
             <strong className="text-[#E9EDF8]">R{totalMonthlyArrZar.toLocaleString()} ARR</strong>
           </div>
@@ -375,7 +476,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
             <Building2 className="w-4 h-4 text-cyan-400" />
           </div>
           <p className="text-2xl font-bold text-[#E9EDF8]">{tenants.length} Institutions</p>
-          <div className="flex justify-between text-[10px] font-mono text-[#8FA0C2] pt-1">
+          <div className="flex justify-between text-[10px] font-mono text-[#CBD5E1] pt-1">
             <span>Capacity Monitored:</span>
             <strong className="text-cyan-300">{totalLearnersMonitored.toLocaleString()} Learners</strong>
           </div>
@@ -387,7 +488,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
             <FileText className="w-4 h-4 text-purple-400" />
           </div>
           <p className="text-2xl font-bold text-purple-300">{documents.length} Specifications</p>
-          <div className="flex justify-between text-[10px] font-mono text-[#8FA0C2] pt-1">
+          <div className="flex justify-between text-[10px] font-mono text-[#CBD5E1] pt-1">
             <span>Constitutional Status:</span>
             <strong className="text-emerald-400">100% L0 Synchronized</strong>
           </div>
@@ -399,7 +500,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="text-2xl font-bold text-[#22D3EE]">{auditLog.length} Chain Blocks</p>
-          <div className="flex justify-between text-[10px] font-mono text-[#8FA0C2] pt-1">
+          <div className="flex justify-between text-[10px] font-mono text-[#CBD5E1] pt-1">
             <span>Cryptographic Proof:</span>
             <strong className="text-emerald-400">SHA-256 Verified</strong>
           </div>
@@ -423,7 +524,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 activeTab === tab.id
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_12px_rgba(34,211,238,0.15)]'
-                  : 'bg-[#13203C] text-[#8FA0C2] hover:text-[#E9EDF8]'
+                  : 'bg-[#13203C] text-[#CBD5E1] hover:text-[#E9EDF8]'
               }`}
             >
               {tab.icon}
@@ -434,7 +535,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
         {activeTab !== 'sql' && (
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-[#8FA0C2] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-[#CBD5E1] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
@@ -452,24 +553,36 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(148,163,255,0.1)] pb-3">
             <div>
               <h2 className="text-base font-bold text-[#E9EDF8]">Customer Contracts &amp; School Agreements</h2>
-              <p className="text-xs text-[#8FA0C2] mt-0.5">
+              <p className="text-xs text-[#CBD5E1] mt-0.5">
                 Table: <span className="font-mono text-cyan-300">warehouse.customer_contracts</span> · Fixed baseline rate of <strong className="text-emerald-300">R4,000 / month</strong>
               </p>
             </div>
 
-            <button
-              onClick={() => setNewContractModal(true)}
-              className="btn btn-p text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-center"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Contract</span>
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              {contracts.length > 0 && (
+                <button
+                  onClick={handleClearAllContracts}
+                  className="btn btn-g text-xs py-1.5 px-3 border-rose-500/30 text-rose-400 hover:text-white hover:bg-rose-950/40 inline-flex items-center gap-1.5"
+                  title="Remove all contracts"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear All</span>
+                </button>
+              )}
+              <button
+                onClick={() => setNewContractModal(true)}
+                className="btn btn-p text-xs py-1.5 px-3 flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Contract</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#8FA0C2] font-mono text-[10px]">
+                <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#CBD5E1] font-mono text-[10px]">
                   <th className="pb-2.5">CONTRACT ID</th>
                   <th className="pb-2.5">TENANT / INSTITUTION</th>
                   <th className="pb-2.5">TYPE &amp; TIER</th>
@@ -480,7 +593,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                   <th className="pb-2.5 text-right">ACTION</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#8FA0C2]">
+              <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#CBD5E1]">
                 {contracts
                   .filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                                c.tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -492,7 +605,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                       </td>
                       <td className="py-3">
                         <span className="font-bold text-[#E9EDF8] block">{contract.tenantName}</span>
-                        <span className="text-[10px] text-[#8FA0C2] font-mono">{contract.tenantId}</span>
+                        <span className="text-[10px] text-[#CBD5E1] font-mono">{contract.tenantId}</span>
                       </td>
                       <td className="py-3 font-mono text-[11px]">
                         <span className="text-[#E9EDF8]">{contract.type}</span>
@@ -500,7 +613,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                       </td>
                       <td className="py-3 font-mono font-bold text-emerald-400">
                         R{contract.monthlyValueZar.toLocaleString()}
-                        <span className="text-[10px] font-normal text-[#8FA0C2] block">
+                        <span className="text-[10px] font-normal text-[#CBD5E1] block">
                           ARR: R{contract.annualValueZar.toLocaleString()}
                         </span>
                       </td>
@@ -526,16 +639,48 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                         </span>
                       </td>
                       <td className="py-3 text-right">
-                        <button
-                          onClick={() => onOpenDocInEditor(contract.documentRefId)}
-                          className="btn btn-s text-[11px] py-1 px-2.5 border-cyan-500/30 text-cyan-300 hover:bg-cyan-950/30 inline-flex items-center gap-1"
-                        >
-                          <Edit3 className="w-3 h-3" />
-                          <span>View Doc</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => onOpenDocInEditor(contract.documentRefId)}
+                            className="btn btn-s text-[11px] py-1 px-2.5 border-cyan-500/30 text-cyan-300 hover:bg-cyan-950/30 inline-flex items-center gap-1"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>View Doc</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteContract(contract.id)}
+                            title="Remove Contract"
+                            className="btn btn-g text-[11px] py-1 px-2 border-rose-500/30 text-rose-400 hover:text-white hover:bg-rose-950/40 inline-flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
+
+                {contracts.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                       c.tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                       c.id.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center">
+                      <div className="max-w-md mx-auto space-y-2">
+                        <FileCheck className="w-8 h-8 text-[#CBD5E1]/40 mx-auto" />
+                        <p className="text-sm font-semibold text-[#E9EDF8]">No active recurring contracts</p>
+                        <p className="text-xs text-[#CBD5E1]">
+                          All active recurring contracts have been removed. You can register a new agreement using the button below.
+                        </p>
+                        <button
+                          onClick={() => setNewContractModal(true)}
+                          className="btn btn-p text-xs py-1.5 px-3 inline-flex items-center gap-1.5 mt-2"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Register New Contract</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -548,7 +693,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(148,163,255,0.1)] pb-3">
             <div>
               <h2 className="text-base font-bold text-[#E9EDF8]">Business Operations &amp; Ecosystem Specifications</h2>
-              <p className="text-xs text-[#8FA0C2] mt-0.5">
+              <p className="text-xs text-[#CBD5E1] mt-0.5">
                 Table: <span className="font-mono text-cyan-300">warehouse.documents</span> · Stored markdown documentation and runbooks
               </p>
             </div>
@@ -557,7 +702,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#8FA0C2] font-mono text-[10px]">
+                <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#CBD5E1] font-mono text-[10px]">
                   <th className="pb-2.5">DOC ID</th>
                   <th className="pb-2.5">TITLE &amp; CLASSIFICATION</th>
                   <th className="pb-2.5">VERSION</th>
@@ -567,7 +712,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                   <th className="pb-2.5 text-right">STUDIO ACTION</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#8FA0C2]">
+              <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#CBD5E1]">
                 {documents
                   .filter(d => d.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                                d.id.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -580,7 +725,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                         <span className="font-bold text-[#E9EDF8] block">{doc.title}</span>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-purple-300 font-mono">{doc.category || doc.type}</span>
-                          <span className="text-[10px] text-[#8FA0C2]">· Last verified: {doc.lastUpdated}</span>
+                          <span className="text-[10px] text-[#CBD5E1]">· Last verified: {doc.lastUpdated}</span>
                         </div>
                       </td>
                       <td className="py-3 font-mono text-[11px] text-cyan-400">
@@ -598,7 +743,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                           {doc.status}
                         </span>
                       </td>
-                      <td className="py-3 font-mono text-[10px] text-[#8FA0C2] truncate max-w-[120px]" title={doc.hash}>
+                      <td className="py-3 font-mono text-[10px] text-[#CBD5E1] truncate max-w-[120px]" title={doc.hash}>
                         {doc.hash ? doc.hash.substring(0, 16) + '...' : 'Verified'}
                       </td>
                       <td className="py-3 text-right">
@@ -624,18 +769,30 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(148,163,255,0.1)] pb-3">
             <div>
               <h2 className="text-base font-bold text-[#E9EDF8]">Multi-Tenant Educational Institution Registry</h2>
-              <p className="text-xs text-[#8FA0C2] mt-0.5">
+              <p className="text-xs text-[#CBD5E1] mt-0.5">
                 Table: <span className="font-mono text-cyan-300">warehouse.tenants</span> · Database schema isolation with dedicated KMS encryption
               </p>
             </div>
 
-            <button
-              onClick={() => setNewTenantModal(true)}
-              className="btn btn-p text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-center"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Register School Tenant</span>
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              {tenants.length > 0 && (
+                <button
+                  onClick={handleClearAllTenants}
+                  className="btn btn-g text-xs py-1.5 px-3 border-rose-500/30 text-rose-400 hover:text-white hover:bg-rose-950/40 inline-flex items-center gap-1.5"
+                  title="Remove all registered school tenants"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear All</span>
+                </button>
+              )}
+              <button
+                onClick={() => setNewTenantModal(true)}
+                className="btn btn-p text-xs py-1.5 px-3 flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Register School Tenant</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -651,7 +808,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                         {tenant.id}
                       </span>
                       <h3 className="text-sm font-bold text-[#E9EDF8] mt-1.5">{tenant.name}</h3>
-                      <p className="text-[11px] text-[#8FA0C2]">{tenant.city}, {tenant.province}</p>
+                      <p className="text-[11px] text-[#CBD5E1]">{tenant.city}, {tenant.province}</p>
                     </div>
                     <span className="chip text-[10px] border-emerald-500/30 text-emerald-400 font-mono">
                       {tenant.complianceRating}
@@ -660,24 +817,24 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
                   <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-[rgba(148,163,255,0.08)]">
                     <div>
-                      <span className="text-[10px] text-[#8FA0C2] uppercase font-mono block">Learners:</span>
+                      <span className="text-[10px] text-[#CBD5E1] uppercase font-mono block">Learners:</span>
                       <span className="font-bold text-[#E9EDF8]">{tenant.learnersCount}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[#8FA0C2] uppercase font-mono block">Educators:</span>
+                      <span className="text-[10px] text-[#CBD5E1] uppercase font-mono block">Educators:</span>
                       <span className="font-bold text-[#E9EDF8]">{tenant.educatorsCount}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[#8FA0C2] uppercase font-mono block">Monthly Subscription:</span>
+                      <span className="text-[10px] text-[#CBD5E1] uppercase font-mono block">Monthly Subscription:</span>
                       <span className="font-bold text-emerald-400 font-mono">R{tenant.monthlyFeeZar.toLocaleString()}/mo</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[#8FA0C2] uppercase font-mono block">Health Score:</span>
+                      <span className="text-[10px] text-[#CBD5E1] uppercase font-mono block">Health Score:</span>
                       <span className="font-bold text-cyan-300 font-mono">{tenant.healthScore}%</span>
                     </div>
                   </div>
 
-                  <div className="panel2 p-2.5 bg-[#060A14] font-mono text-[10px] text-[#8FA0C2] space-y-1">
+                  <div className="panel2 p-2.5 bg-[#060A14] font-mono text-[10px] text-[#CBD5E1] space-y-1">
                     <div className="flex items-center justify-between">
                       <span>RDS Isolation Schema:</span>
                       <span className="text-cyan-300">{tenant.dbSchema}</span>
@@ -689,17 +846,47 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                   </div>
 
                   <div className="flex items-center justify-between text-[11px] pt-1">
-                    <span className="text-[#8FA0C2]">Contact: {tenant.contactPerson}</span>
-                    <button
-                      onClick={() => onOpenDocInEditor('CON-DOC-081')}
-                      className="text-cyan-400 hover:underline flex items-center gap-1 font-mono text-[10px]"
-                    >
-                      <span>Contracts</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </button>
+                    <span className="text-[#CBD5E1]">Contact: {tenant.contactPerson}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onOpenDocInEditor('CON-DOC-081')}
+                        className="text-cyan-400 hover:underline flex items-center gap-1 font-mono text-[10px]"
+                      >
+                        <span>Contracts</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTenant(tenant.id)}
+                        title="Remove School Tenant"
+                        className="text-rose-400 hover:text-white hover:bg-rose-950/40 p-1 rounded transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
+
+            {tenants.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                 t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                 t.province.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+              <div className="col-span-full py-12 text-center panel2 bg-[#0A1226]/60 border border-[rgba(148,163,255,0.1)] p-8">
+                <div className="max-w-md mx-auto space-y-2">
+                  <Building2 className="w-8 h-8 text-[#CBD5E1]/40 mx-auto" />
+                  <p className="text-sm font-semibold text-[#E9EDF8]">No registered school tenants</p>
+                  <p className="text-xs text-[#CBD5E1]">
+                    All registered school tenants have been removed. Onboard educational institutions to provision dedicated RDS schemas and KMS keys.
+                  </p>
+                  <button
+                    onClick={() => setNewTenantModal(true)}
+                    className="btn btn-p text-xs py-1.5 px-3 inline-flex items-center gap-1.5 mt-2"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Register School Tenant</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -710,7 +897,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(148,163,255,0.1)] pb-3">
             <div>
               <h2 className="text-base font-bold text-[#E9EDF8]">Statutory Policy Agreements &amp; Legal Compacts</h2>
-              <p className="text-xs text-[#8FA0C2] mt-0.5">
+              <p className="text-xs text-[#CBD5E1] mt-0.5">
                 Table: <span className="font-mono text-cyan-300">warehouse.policy_agreements</span> · Compliance with South African POPIA Act 4 of 2013
               </p>
             </div>
@@ -727,15 +914,15 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                     <span className="chip text-[10px] border-emerald-500/30 text-emerald-300 font-mono">
                       {pol.enforcementLevel}
                     </span>
-                    <span className="text-xs text-[#8FA0C2] font-mono">
+                    <span className="text-xs text-[#CBD5E1] font-mono">
                       Governing Body: <strong className="text-[#E9EDF8]">{pol.governingBody}</strong>
                     </span>
                   </div>
 
                   <h3 className="text-sm font-bold text-[#E9EDF8]">{pol.title}</h3>
-                  <p className="text-xs text-[#8FA0C2]">{pol.scope} · Jurisdiction: {pol.jurisdiction}</p>
+                  <p className="text-xs text-[#CBD5E1]">{pol.scope} · Jurisdiction: {pol.jurisdiction}</p>
 
-                  <div className="flex items-center gap-4 text-[11px] font-mono text-[#8FA0C2] pt-1">
+                  <div className="flex items-center gap-4 text-[11px] font-mono text-[#CBD5E1] pt-1">
                     <span>Effective: {pol.effectiveDate}</span>
                     <span>·</span>
                     <span>Next Review: {pol.nextReviewDate}</span>
@@ -765,7 +952,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(148,163,255,0.1)] pb-3">
             <div>
               <h2 className="text-base font-bold text-[#E9EDF8]">Append-Only Merkle Audit Ledger</h2>
-              <p className="text-xs text-[#8FA0C2] mt-0.5">
+              <p className="text-xs text-[#CBD5E1] mt-0.5">
                 Table: <span className="font-mono text-cyan-300">warehouse.audit_ledger</span> · Cryptographic proof chain for all state mutations
               </p>
             </div>
@@ -778,7 +965,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#8FA0C2] font-mono text-[10px]">
+                <tr className="border-b border-[rgba(148,163,255,0.12)] text-[#CBD5E1] font-mono text-[10px]">
                   <th className="pb-2.5">BLOCK ID</th>
                   <th className="pb-2.5">TIMESTAMP (SAST)</th>
                   <th className="pb-2.5">ENTITY &amp; ID</th>
@@ -788,11 +975,11 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                   <th className="pb-2.5 text-right">MERKLE HASH</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#8FA0C2]">
+              <tbody className="divide-y divide-[rgba(148,163,255,0.06)] text-[#CBD5E1]">
                 {auditLog.map((item) => (
                   <tr key={item.id} className="hover:bg-[#13203C]/40 transition-colors font-mono">
                     <td className="py-2.5 text-cyan-300 font-bold text-[11px]">{item.id}</td>
-                    <td className="py-2.5 text-[11px] text-[#8FA0C2] whitespace-nowrap">{item.timestamp}</td>
+                    <td className="py-2.5 text-[11px] text-[#CBD5E1] whitespace-nowrap">{item.timestamp}</td>
                     <td className="py-2.5 text-[11px] text-[#E9EDF8]">
                       <span>{item.entityType}</span>
                       <span className="text-[10px] text-cyan-400 block">{item.entityId}</span>
@@ -804,7 +991,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                     </td>
                     <td className="py-2.5 text-[11px] text-[#CBD5E1]">
                       <span>{item.actor}</span>
-                      <span className="text-[10px] text-[#8FA0C2] block">{item.actorRole}</span>
+                      <span className="text-[10px] text-[#CBD5E1] block">{item.actorRole}</span>
                     </td>
                     <td className="py-2.5 font-sans text-xs text-[#E9EDF8] max-w-xs">{item.details}</td>
                     <td className="py-2.5 text-right font-mono text-[10px] text-[#22D3EE] truncate max-w-[130px]">
@@ -824,7 +1011,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(148,163,255,0.1)] pb-3">
             <div>
               <h2 className="text-base font-bold text-[#E9EDF8]">Interactive Warehouse SQL Playground</h2>
-              <p className="text-xs text-[#8FA0C2] mt-0.5">
+              <p className="text-xs text-[#CBD5E1] mt-0.5">
                 Execute structured analytics against Amazon Aurora PostgreSQL 16 &amp; pgvector in AWS Cape Town
               </p>
             </div>
@@ -841,7 +1028,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
           {/* Quick Query Presets */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[10px] text-[#8FA0C2] font-mono uppercase mr-1">Sample Queries:</span>
+            <span className="text-[10px] text-[#CBD5E1] font-mono uppercase mr-1">Sample Queries:</span>
             <button
               onClick={() => handleRunQuery("SELECT * FROM customer_contracts WHERE status = 'ACTIVE' ORDER BY monthly_value_zar DESC;")}
               className="btn btn-s text-[10px] py-1 px-2.5 text-cyan-300 border-cyan-500/30"
@@ -870,7 +1057,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
           {/* SQL Input Area */}
           <div className="space-y-1">
-            <div className="flex justify-between items-center text-[10px] font-mono text-[#8FA0C2]">
+            <div className="flex justify-between items-center text-[10px] font-mono text-[#CBD5E1]">
               <span>SQL QUERY EDITOR:</span>
               <span>PostgreSQL 16 syntax</span>
             </div>
@@ -882,7 +1069,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
           </div>
 
           <div className="flex justify-between items-center">
-            <p className="text-[11px] text-[#8FA0C2]">
+            <p className="text-[11px] text-[#CBD5E1]">
               Queries execute against tenant-isolated schemas with Row-Level Security (RLS) enforcement.
             </p>
             <button
@@ -916,6 +1103,11 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                 ))}
               </tbody>
             </table>
+            {queryResults.length === 0 && (
+              <p className="text-center py-6 text-xs text-[#CBD5E1] font-mono">
+                0 rows returned. (No matching records in warehouse dataset)
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -931,7 +1123,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                   Contract Title:
                 </label>
                 <input
@@ -944,25 +1136,55 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
               </div>
 
               <div>
-                <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                   Designated School Tenant:
                 </label>
-                <select
-                  value={contractTenantId}
-                  onChange={(e) => setContractTenantId(e.target.value)}
-                  className="inp text-xs py-1.5 w-full bg-[#0E1830]"
-                >
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.id})
-                    </option>
-                  ))}
-                </select>
+                {tenants.length > 0 ? (
+                  <select
+                    value={contractTenantId}
+                    onChange={(e) => {
+                      setContractTenantId(e.target.value);
+                      if (e.target.value !== '__custom__') {
+                        setCustomTenantName('');
+                      }
+                    }}
+                    className="inp text-xs py-1.5 w-full bg-[#0E1830]"
+                  >
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.id})
+                      </option>
+                    ))}
+                    <option value="__custom__">+ Enter new school name...</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={customTenantName}
+                    onChange={(e) => setCustomTenantName(e.target.value)}
+                    placeholder="e.g., Paarl Valley Primary School"
+                    className="inp text-xs py-1.5 w-full"
+                  />
+                )}
+                {tenants.length > 0 && contractTenantId === '__custom__' && (
+                  <input
+                    type="text"
+                    value={customTenantName}
+                    onChange={(e) => setCustomTenantName(e.target.value)}
+                    placeholder="e.g., Paarl Valley Primary School"
+                    className="inp text-xs py-1.5 w-full mt-2"
+                  />
+                )}
+                {tenants.length === 0 && (
+                  <p className="text-[10px] text-cyan-300 mt-1 font-mono">
+                    No pre-registered school tenants. This agreement will automatically record this institution.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                  <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                     Contract Type:
                   </label>
                   <select
@@ -977,7 +1199,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                  <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                     Monthly Fee (ZAR):
                   </label>
                   <input
@@ -989,7 +1211,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                 </div>
               </div>
 
-              <div className="panel2 p-3 bg-[#060A14] text-[11px] text-[#8FA0C2] space-y-1">
+              <div className="panel2 p-3 bg-[#060A14] text-[11px] text-[#CBD5E1] space-y-1">
                 <span className="text-emerald-300 font-bold block">Annual Contract Value (ARR): R{(contractMonthlyZar * 12).toLocaleString()} ZAR</span>
                 <span>Includes POPIA Section 72 schedule &amp; AWS Cape Town residency.</span>
               </div>
@@ -1027,7 +1249,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                   School / Institution Name:
                 </label>
                 <input
@@ -1041,7 +1263,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                  <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                     Province:
                   </label>
                   <select
@@ -1058,7 +1280,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                  <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                     City / Suburb:
                   </label>
                   <input
@@ -1073,7 +1295,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                  <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                     Learners Count:
                   </label>
                   <input
@@ -1085,7 +1307,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                  <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                     Educators Count:
                   </label>
                   <input
@@ -1099,7 +1321,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                  <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                     Principal / SGB Contact:
                   </label>
                   <input
@@ -1112,7 +1334,7 @@ export const DataWarehouse: React.FC<DataWarehouseProps> = ({ onOpenDocInEditor 
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-[#8FA0C2] font-mono uppercase block mb-1">
+                  <label className="text-[10px] text-[#CBD5E1] font-mono uppercase block mb-1">
                     Monthly Fee (ZAR):
                   </label>
                   <input

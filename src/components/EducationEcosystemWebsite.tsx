@@ -179,43 +179,43 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
           <div className="hidden md:flex items-center gap-1 text-xs">
             <button
               onClick={() => navigateTo('home')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'home' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#8FA0C2] hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'home' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#CBD5E1] hover:text-white'}`}
             >
               Overview
             </button>
             <button
               onClick={() => navigateTo('problem')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'problem' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#8FA0C2] hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'problem' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#CBD5E1] hover:text-white'}`}
             >
               The Problem
             </button>
             <button
               onClick={() => navigateTo('ecosystem')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'ecosystem' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#8FA0C2] hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'ecosystem' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#CBD5E1] hover:text-white'}`}
             >
               7 Habitats
             </button>
             <button
               onClick={() => navigateTo('how')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'how' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#8FA0C2] hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'how' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#CBD5E1] hover:text-white'}`}
             >
               How It Works
             </button>
             <button
               onClick={() => navigateTo('roles')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'roles' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#8FA0C2] hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'roles' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#CBD5E1] hover:text-white'}`}
             >
               Who It's For
             </button>
             <button
               onClick={() => navigateTo('trust')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'trust' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#8FA0C2] hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'trust' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#CBD5E1] hover:text-white'}`}
             >
               Trust & Laws
             </button>
             <button
               onClick={() => navigateTo('pd')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'pd' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#8FA0C2] hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-md transition-colors ${activeChapter === 'pd' ? 'text-cyan-300 font-semibold bg-cyan-950/40' : 'text-[#CBD5E1] hover:text-white'}`}
             >
               PD Courses
             </button>
@@ -226,7 +226,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               href="https://github.com/Sarah-JaneHarding/infinite-ai-ecosystem"
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-g text-xs py-1 px-3 flex items-center gap-1.5 text-[#8FA0C2] hover:text-white border-[rgba(148,163,255,0.2)]"
+              className="btn btn-g text-xs py-1 px-3 flex items-center gap-1.5 text-[#CBD5E1] hover:text-white border-[rgba(148,163,255,0.2)]"
             >
               <GitPullRequest className="w-3.5 h-3.5 text-emerald-400" />
               <span className="hidden sm:inline font-mono">GitHub Repo</span>
@@ -276,7 +276,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   </span>
                 </h1>
 
-                <p className="text-base sm:text-lg text-[#8FA0C2] leading-relaxed max-w-2xl">
+                <p className="text-base sm:text-lg text-[#CBD5E1] leading-relaxed max-w-2xl">
                   INFINITE-AI is not another app for teachers to learn. It's the living system underneath the school day — the soil that holds your curriculum, the roots that remember every learner, and the quiet discipline that ensures a machine never makes a decision that belongs to a human.
                 </p>
 
@@ -322,19 +322,19 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-8 border-t border-[rgba(148,163,255,0.12)]">
                   <div className="panel2 p-3 text-center">
                     <p className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400">7</p>
-                    <p className="text-[11px] text-[#8FA0C2] mt-0.5">Living Habitats</p>
+                    <p className="text-[11px] text-[#CBD5E1] mt-0.5">Living Habitats</p>
                   </div>
                   <div className="panel2 p-3 text-center">
                     <p className="text-2xl sm:text-3xl font-bold text-emerald-400">46</p>
-                    <p className="text-[11px] text-[#8FA0C2] mt-0.5">Specialist Agents</p>
+                    <p className="text-[11px] text-[#CBD5E1] mt-0.5">Specialist Agents</p>
                   </div>
                   <div className="panel2 p-3 text-center">
                     <p className="text-2xl sm:text-3xl font-bold text-amber-400">4</p>
-                    <p className="text-[11px] text-[#8FA0C2] mt-0.5">Unbreakable Laws</p>
+                    <p className="text-[11px] text-[#CBD5E1] mt-0.5">Unbreakable Laws</p>
                   </div>
                   <div className="panel2 p-3 text-center">
                     <p className="text-2xl sm:text-3xl font-bold text-cyan-400">19</p>
-                    <p className="text-[11px] text-[#8FA0C2] mt-0.5">Gated Build Seasons</p>
+                    <p className="text-[11px] text-[#CBD5E1] mt-0.5">Gated Build Seasons</p>
                   </div>
                 </div>
               </div>
@@ -347,7 +347,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white">
                   Follow the water. <span className="grad">Meet the whole system.</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-[#8FA0C2]">
+                <p className="text-xs sm:text-sm text-[#CBD5E1]">
                   A platform is something you log into. An ecosystem is something you live inside — and it gets healthier the longer the school tends it.
                 </p>
               </div>
@@ -359,7 +359,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 >
                   <p className="kick text-amber-400">Chapter 01</p>
                   <h3 className="font-bold text-lg text-white mt-1 group-hover:text-amber-300">🌵 The Problem, In Plain Terms</h3>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">
                     Four cracks run through almost every school, rich or under-resourced — and buckets won't fix them. You fix the soil.
                   </p>
                   <div className="mt-4 flex items-center gap-1 text-xs text-amber-400 font-semibold">
@@ -374,7 +374,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 >
                   <p className="kick text-emerald-400">Chapter 02</p>
                   <h3 className="font-bold text-lg text-white mt-1 group-hover:text-emerald-300">🌍 The Product, As An Ecosystem</h3>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">
                     Seven habitats: Root Network, Growing Season, Watering Hole, Watershed, Workshop Grove, Nesting Ground, and Seasons.
                   </p>
                   <div className="mt-4 flex items-center gap-1 text-xs text-emerald-400 font-semibold">
@@ -389,7 +389,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 >
                   <p className="kick text-cyan-400">Chapter 03</p>
                   <h3 className="font-bold text-lg text-white mt-1 group-hover:text-cyan-300">⚖️ How We Solve It</h3>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">
                     Four laws written into code, not the brochure — then a full term inside the system with real-time student simulations.
                   </p>
                   <div className="mt-4 flex items-center gap-1 text-xs text-cyan-400 font-semibold">
@@ -404,7 +404,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 >
                   <p className="kick text-violet-400">Chapter 04</p>
                   <h3 className="font-bold text-lg text-white mt-1 group-hover:text-violet-300">🧑‍🤝‍🧑 Who It's For</h3>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">
                     The same ecosystem, distinct views: DBE and district, SMT, HoD, teachers, SBST, and families.
                   </p>
                   <div className="mt-4 flex items-center gap-1 text-xs text-violet-400 font-semibold">
@@ -419,7 +419,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 >
                   <p className="kick text-rose-400">Chapter 05</p>
                   <h3 className="font-bold text-lg text-white mt-1 group-hover:text-rose-300">🛡 Trust, Made Visible</h3>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">
                     Residency, consent, human oversight, auditability — an ecosystem you can inspect, verify, and mathematically audit.
                   </p>
                   <div className="mt-4 flex items-center gap-1 text-xs text-rose-400 font-semibold">
@@ -434,7 +434,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 >
                   <p className="kick text-amber-400">Chapter 06</p>
                   <h3 className="font-bold text-lg text-white mt-1 group-hover:text-amber-300">🎓 Grow the People</h3>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">
                     Four professional development courses with tangible teacher deliverables, aligned with SACE CPTD requirements.
                   </p>
                   <div className="mt-4 flex items-center gap-1 text-xs text-amber-400 font-semibold">
@@ -475,7 +475,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                       <span className="chip text-[10px] py-0 px-2 font-mono" style={{ color: z.hue }}>{z.tag}</span>
                     </div>
                     <p className="font-bold text-[#E9EDF8] text-sm pt-1">{z.name}</p>
-                    <p className="text-[#8FA0C2] text-[11px] leading-relaxed">{z.meta}</p>
+                    <p className="text-[#CBD5E1] text-[11px] leading-relaxed">{z.meta}</p>
                   </div>
                 ))}
                 
@@ -488,7 +488,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                     <span className="chip text-[10px] py-0 px-2 font-mono text-amber-400 border-amber-500/30">Laws</span>
                   </div>
                   <p className="font-bold text-amber-300 text-sm pt-1">Four Unbreakable Laws</p>
-                  <p className="text-[#8FA0C2] text-[11px] leading-relaxed">
+                  <p className="text-[#CBD5E1] text-[11px] leading-relaxed">
                     The software cannot break them — human apex governance written directly into code.
                   </p>
                 </div>
@@ -508,7 +508,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   They're short on soil.
                 </span>
               </h1>
-              <p className="text-sm sm:text-base text-[#8FA0C2] leading-relaxed">
+              <p className="text-sm sm:text-base text-[#CBD5E1] leading-relaxed">
                 Ask any Head of Department what's hardest about their job and it's rarely teaching itself. It's everything that's supposed to hold teaching up — and quietly doesn't. Four cracks run through almost every school, rich or under-resourced. Click a crack to uncover how the ecosystem resolves it.
               </p>
             </div>
@@ -528,7 +528,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                     </span>
                   </div>
                   <h3 className="font-bold text-lg text-white mt-2">{crack.t}</h3>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">{crack.d}</p>
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">{crack.d}</p>
 
                   {openCrack === crack.n && (
                     <div className="mt-4 pt-3 border-t border-amber-500/30 text-xs text-emerald-300 bg-emerald-950/20 p-3 rounded-lg animate-fadeIn">
@@ -545,7 +545,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <p className="text-xl sm:text-2xl font-serif italic text-amber-300 max-w-2xl mx-auto">
                 "You don't fix a drought by handing out buckets. You fix the soil, so water finds its own way to every root."
               </p>
-              <p className="text-xs text-[#8FA0C2] mt-3 uppercase tracking-widest font-mono">
+              <p className="text-xs text-[#CBD5E1] mt-3 uppercase tracking-widest font-mono">
                 — The core engineering principle behind Infinite-AI
               </p>
             </div>
@@ -558,10 +558,10 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   Most EdTech is buckets.<br />
                   <span className="text-emerald-400">Infinite-AI is ground.</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-[#8FA0C2] leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#CBD5E1] leading-relaxed">
                   Most EdTech tools are buckets: one app for lesson plans, another for tracking, another for worksheets — each one useful for a fleeting moment, none talking to each other, all adding one more login for an exhausted educator.
                 </p>
-                <p className="text-xs sm:text-sm text-[#8FA0C2] leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#CBD5E1] leading-relaxed">
                   Infinite-AI was built from the opposite principle. Everything a school runs on — CAPS, the DBE Annual Teaching Plans, the school’s own verified templates, the way the staffroom speaks — is planted into one shared root foundation first. Every tool grows from that same soil, so nothing is duplicated or contradicted.
                 </p>
                 <div className="pt-2">
@@ -576,7 +576,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
 
               <div className="panel p-6 border-cyan-500/30 bg-[#091428] space-y-4 text-xs">
                 <p className="font-bold text-sm text-cyan-300">Why An Ecosystem, Not A "Platform"?</p>
-                <div className="space-y-3 text-[#8FA0C2]">
+                <div className="space-y-3 text-[#CBD5E1]">
                   <div className="p-3 rounded-lg bg-[#060D1A] border border-[rgba(148,163,255,0.1)]">
                     <strong className="text-white block mb-1">A Platform:</strong>
                     A set of disjointed tools you log into and leave behind. If you stop using it for a week, you lose no compounding memory.
@@ -596,7 +596,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white">
                   Honest weather, <span className="text-amber-400">honestly named.</span>
                 </h2>
-                <p className="text-xs text-[#8FA0C2]">
+                <p className="text-xs text-[#CBD5E1]">
                   This is the climate the ecosystem was grown for — and why it was grown <em className="text-white">in</em> South Africa, not adapted from elsewhere.
                 </p>
               </div>
@@ -604,24 +604,24 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="panel2 p-4 text-center border-amber-500/20">
                   <p className="text-3xl font-bold text-amber-400 font-mono">81%</p>
-                  <p className="text-[11px] text-[#8FA0C2] mt-1">SA Grade 4 learners cannot read for meaning in any language (PIRLS 2021)</p>
+                  <p className="text-[11px] text-[#CBD5E1] mt-1">SA Grade 4 learners cannot read for meaning in any language (PIRLS 2021)</p>
                 </div>
                 <div className="panel2 p-4 text-center border-amber-500/20">
                   <p className="text-3xl font-bold text-amber-400 font-mono">288</p>
-                  <p className="text-[11px] text-[#8FA0C2] mt-1">SA mean PIRLS score vs international average of 500</p>
+                  <p className="text-[11px] text-[#CBD5E1] mt-1">SA mean PIRLS score vs international average of 500</p>
                 </div>
                 <div className="panel2 p-4 text-center border-amber-500/20">
                   <p className="text-3xl font-bold text-amber-400 font-mono">57th</p>
-                  <p className="text-[11px] text-[#8FA0C2] mt-1">Last of 57 nations — 32 pt drop = half a year lost learning</p>
+                  <p className="text-[11px] text-[#CBD5E1] mt-1">Last of 57 nations — 32 pt drop = half a year lost learning</p>
                 </div>
                 <div className="panel2 p-4 text-center border-amber-500/20">
                   <p className="text-3xl font-bold text-amber-400 font-mono">&lt;50%</p>
-                  <p className="text-[11px] text-[#8FA0C2] mt-1">Grade 1 no-fee learners know the alphabet by year-end</p>
+                  <p className="text-[11px] text-[#CBD5E1] mt-1">Grade 1 no-fee learners know the alphabet by year-end</p>
                 </div>
               </div>
 
               <div className="panel p-6 border-cyan-500/20 bg-[#081224] flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-xs text-[#8FA0C2] max-w-2xl">
+                <p className="text-xs text-[#CBD5E1] max-w-2xl">
                   No teacher is failing here. The scale is failing the teacher. One educator facing thirty-plus learners cannot individually coach oral reading fluency every day without a living support network.
                 </p>
                 <button
@@ -643,7 +643,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <h1 className="text-3xl sm:text-5xl font-bold">
                 Seven habitats. <span className="grad">One living system.</span>
               </h1>
-              <p className="text-xs sm:text-sm text-[#8FA0C2]">
+              <p className="text-xs sm:text-sm text-[#CBD5E1]">
                 Each module of Infinite-AI maps directly to an organic habitat. Click any habitat to explore its pipeline, purpose, and human gates.
               </p>
             </div>
@@ -665,7 +665,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                       </div>
                       <span className="chip text-[10px] font-mono py-0 px-2" style={{ color: z.hue }}>{z.tag}</span>
                     </div>
-                    <p className="text-[11px] text-[#8FA0C2] mt-1 line-clamp-1">{z.meta}</p>
+                    <p className="text-[11px] text-[#CBD5E1] mt-1 line-clamp-1">{z.meta}</p>
                   </div>
                 ))}
               </div>
@@ -684,7 +684,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   </div>
                 </div>
 
-                <p className="text-xs sm:text-sm text-[#8FA0C2] leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#CBD5E1] leading-relaxed">
                   {activeZoneObj.plain}
                 </p>
 
@@ -736,7 +736,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   >
                     <div className="text-2xl">{b.icon}</div>
                     <h3 className="font-bold text-sm text-white">{b.name}</h3>
-                    <p className="text-[#8FA0C2] leading-relaxed">{b.d}</p>
+                    <p className="text-[#CBD5E1] leading-relaxed">{b.d}</p>
                     <div className="pt-2 border-t border-[rgba(148,163,255,0.1)] text-[11px]" style={{ color: b.hue }}>
                       💡 {b.say}
                     </div>
@@ -750,7 +750,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <div className="space-y-2">
                 <p className="kick text-amber-400">Inside The Root Network · L0–L4 Strata</p>
                 <h2 className="text-2xl font-bold text-white">The soil, in five immutable strata</h2>
-                <p className="text-xs text-[#8FA0C2] max-w-3xl">
+                <p className="text-xs text-[#CBD5E1] max-w-3xl">
                   Like tree rings and deep bedrock, the Infinite Brain stores non-negotiable curriculum truths, temporal history, and procedural exemplars. Click a layer to inspect its storage mechanism:
                 </p>
               </div>
@@ -760,7 +760,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <button
                     key={s.id}
                     onClick={() => setSelectedStrata(s.id)}
-                    className={`p-3 rounded-lg text-left transition-all border ${selectedStrata === s.id ? 'border-amber-400 bg-amber-950/30 text-white' : 'border-[rgba(148,163,255,0.12)] bg-[#070E1E] text-[#8FA0C2] hover:border-amber-500/30'}`}
+                    className={`p-3 rounded-lg text-left transition-all border ${selectedStrata === s.id ? 'border-amber-400 bg-amber-950/30 text-white' : 'border-[rgba(148,163,255,0.12)] bg-[#070E1E] text-[#CBD5E1] hover:border-amber-500/30'}`}
                   >
                     <span className="font-mono font-bold text-sm block" style={{ color: s.hue }}>{s.id}</span>
                     <span className="text-[11px] font-medium block mt-0.5">{s.name.split('·')[0]}</span>
@@ -781,7 +781,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   </div>
                 </div>
 
-                <p className="text-[#8FA0C2] leading-relaxed text-xs sm:text-sm">{activeStrataObj.desc}</p>
+                <p className="text-[#CBD5E1] leading-relaxed text-xs sm:text-sm">{activeStrataObj.desc}</p>
                 <div className="p-2.5 rounded-lg bg-[#040812] border border-cyan-500/30 text-cyan-300 font-mono text-[11px]">
                   <strong>Real example:</strong> {activeStrataObj.ex}
                 </div>
@@ -806,7 +806,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <div className="text-center max-w-2xl mx-auto space-y-1">
                 <p className="kick text-cyan-400">Specialist Organisms</p>
                 <h2 className="text-2xl font-bold text-white">46 specialist agents, each with one niche</h2>
-                <p className="text-xs text-[#8FA0C2]">Registered, eval-gated (≥20 test cases), budget-capped, and human-supervised.</p>
+                <p className="text-xs text-[#CBD5E1]">Registered, eval-gated (≥20 test cases), budget-capped, and human-supervised.</p>
               </div>
 
               <div className="grid sm:grid-cols-5 gap-2">
@@ -814,7 +814,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <button
                     key={o.id}
                     onClick={() => setSelectedOrg(o.id)}
-                    className={`p-3 rounded-lg text-center transition-all border ${selectedOrg === o.id ? 'border-cyan-400 bg-cyan-950/30 text-white' : 'border-[rgba(148,163,255,0.12)] bg-[#070F22] text-[#8FA0C2] hover:border-cyan-500/30'}`}
+                    className={`p-3 rounded-lg text-center transition-all border ${selectedOrg === o.id ? 'border-cyan-400 bg-cyan-950/30 text-white' : 'border-[rgba(148,163,255,0.12)] bg-[#070F22] text-[#CBD5E1] hover:border-cyan-500/30'}`}
                   >
                     <span className="text-xl block">{o.icon}</span>
                     <span className="font-mono font-bold text-xs block mt-1">{o.id}</span>
@@ -854,7 +854,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <h1 className="text-3xl sm:text-5xl font-bold">
                 Every ecosystem runs on laws <span className="grad">that can't be broken.</span>
               </h1>
-              <p className="text-xs sm:text-sm text-[#8FA0C2]">
+              <p className="text-xs sm:text-sm text-[#CBD5E1]">
                 Ours has four. These are not marketing slogans — they are cryptographic assertions written directly into code. Ask the system to show its work, and it will.
               </p>
             </div>
@@ -877,7 +877,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                     <span>{law.icon}</span>
                     <span>{law.h}</span>
                   </h3>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">{law.d}</p>
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">{law.d}</p>
 
                   {selectedLaw === law.n && (
                     <div className="mt-4 pt-3 border-t border-[rgba(148,163,255,0.14)] text-xs text-cyan-300 font-mono bg-[#060D1A] p-3 rounded-lg animate-fadeIn">
@@ -894,7 +894,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <div className="space-y-1 text-center max-w-2xl mx-auto">
                 <p className="kick text-cyan-400">One Term Inside The System</p>
                 <h2 className="text-2xl font-bold text-white">Five harmonious movements</h2>
-                <p className="text-xs text-[#8FA0C2]">From Monday's lesson preparation to Friday's SBST case conference.</p>
+                <p className="text-xs text-[#CBD5E1]">From Monday's lesson preparation to Friday's SBST case conference.</p>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -902,7 +902,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <button
                     key={m.short}
                     onClick={() => setSelectedMove(idx)}
-                    className={`p-3 rounded-xl text-center transition-all border ${selectedMove === idx ? 'border-cyan-400 bg-cyan-950/40 text-white shadow-md' : 'border-[rgba(148,163,255,0.12)] bg-[#060E1E] text-[#8FA0C2] hover:border-cyan-500/30'}`}
+                    className={`p-3 rounded-xl text-center transition-all border ${selectedMove === idx ? 'border-cyan-400 bg-cyan-950/40 text-white shadow-md' : 'border-[rgba(148,163,255,0.12)] bg-[#060E1E] text-[#CBD5E1] hover:border-cyan-500/30'}`}
                   >
                     <span className="w-8 h-8 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 font-bold text-xs flex items-center justify-center mx-auto mb-1.5 font-mono">
                       {m.short}
@@ -916,7 +916,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 <h3 className="text-base font-bold text-white" style={{ color: activeMoveObj.hue }}>
                   {activeMoveObj.name}
                 </h3>
-                <p className="text-[#8FA0C2] leading-relaxed text-xs sm:text-sm">{activeMoveObj.d}</p>
+                <p className="text-[#CBD5E1] leading-relaxed text-xs sm:text-sm">{activeMoveObj.d}</p>
                 <div className="p-3 rounded-lg bg-[#03070E] border border-[rgba(148,163,255,0.12)] text-[#E9EDF8] font-mono text-[11px]">
                   {activeMoveObj.ex}
                 </div>
@@ -933,7 +933,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white">
                   A term inside <span className="text-amber-400">The Watering Hole</span>
                 </h2>
-                <p className="text-xs text-[#8FA0C2]">
+                <p className="text-xs text-[#CBD5E1]">
                   Select an anonymized student profile to observe how data sufficiency, whole-class core health checks, and mandatory human ratification gates function in real time:
                 </p>
               </div>
@@ -943,10 +943,10 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <button
                     key={l.ref}
                     onClick={() => setSelectedLearner(l.ref)}
-                    className={`p-3 rounded-lg text-left transition-all border ${selectedLearner === l.ref ? 'border-amber-400 bg-amber-950/30 text-white' : 'border-[rgba(148,163,255,0.12)] bg-[#070F22] text-[#8FA0C2] hover:border-amber-500/30'}`}
+                    className={`p-3 rounded-lg text-left transition-all border ${selectedLearner === l.ref ? 'border-amber-400 bg-amber-950/30 text-white' : 'border-[rgba(148,163,255,0.12)] bg-[#070F22] text-[#CBD5E1] hover:border-amber-500/30'}`}
                   >
                     <span className="font-bold text-sm block" style={{ color: l.hue }}>{l.ref}</span>
-                    <span className="text-[11px] text-[#8FA0C2] block mt-0.5">{l.ctx}</span>
+                    <span className="text-[11px] text-[#CBD5E1] block mt-0.5">{l.ctx}</span>
                   </button>
                 ))}
               </div>
@@ -982,11 +982,11 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <div className="p-2.5 rounded bg-[#0A162B] border font-mono font-bold text-xs" style={{ borderColor: activeLearnerObj.hue, color: activeLearnerObj.hue }}>
                     {activeLearnerObj.tier}
                   </div>
-                  <p className="text-[11px] text-[#8FA0C2] leading-relaxed">{activeLearnerObj.plan}</p>
+                  <p className="text-[11px] text-[#CBD5E1] leading-relaxed">{activeLearnerObj.plan}</p>
                   <div className="pt-1 text-[11px] text-amber-300 font-medium">
                     🧑‍🏫 {activeLearnerObj.gate}
                   </div>
-                  <p className="text-[10px] text-[#8FA0C2]">🗓 Review timeline: {activeLearnerObj.review}</p>
+                  <p className="text-[10px] text-[#CBD5E1]">🗓 Review timeline: {activeLearnerObj.review}</p>
                 </div>
               </div>
             </div>
@@ -997,7 +997,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 <div>
                   <p className="kick text-cyan-400">How It Was Grown</p>
                   <h3 className="font-bold text-lg text-white">Nineteen build seasons (00 to 18)</h3>
-                  <p className="text-xs text-[#8FA0C2]">No season begins until the previous season's exit gate passes.</p>
+                  <p className="text-xs text-[#CBD5E1]">No season begins until the previous season's exit gate passes.</p>
                 </div>
                 <span className="chip text-emerald-300 border-emerald-500/30 bg-emerald-950/40 text-[11px]">
                   All Gates Verified
@@ -1012,7 +1012,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   >
                     <span className="text-cyan-400 font-bold text-sm block">Season {num}</span>
                     <p className="text-[11px] text-[#E9EDF8] font-sans font-medium line-clamp-2">{name}</p>
-                    <p className="text-[10px] text-[#8FA0C2]">Dep: {dep}</p>
+                    <p className="text-[10px] text-[#CBD5E1]">Dep: {dep}</p>
                   </div>
                 ))}
               </div>
@@ -1028,7 +1028,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <h1 className="text-3xl sm:text-5xl font-bold">
                 The same ecosystem, <span className="grad">different views.</span>
               </h1>
-              <p className="text-xs sm:text-sm text-[#8FA0C2]">
+              <p className="text-xs sm:text-sm text-[#CBD5E1]">
                 Nobody sees the whole machine. Everyone sees what their role needs — and nothing more.
               </p>
             </div>
@@ -1039,7 +1039,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 <button
                   key={r.id}
                   onClick={() => setSelectedRole(r.id)}
-                  className={`p-3 rounded-xl text-center transition-all border ${selectedRole === r.id ? 'border-amber-400 bg-amber-950/40 text-white shadow-md' : 'border-[rgba(148,163,255,0.12)] bg-[#070F22] text-[#8FA0C2] hover:border-amber-500/30'}`}
+                  className={`p-3 rounded-xl text-center transition-all border ${selectedRole === r.id ? 'border-amber-400 bg-amber-950/40 text-white shadow-md' : 'border-[rgba(148,163,255,0.12)] bg-[#070F22] text-[#CBD5E1] hover:border-amber-500/30'}`}
                 >
                   <span className="text-2xl block mb-1">{r.icon}</span>
                   <span className="text-xs font-semibold block">{r.name}</span>
@@ -1102,7 +1102,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 {GLOSSARY.map(([term, def]) => (
                   <div key={term} className="panel2 p-3.5 bg-[#060D1A] space-y-1">
                     <span className="font-mono font-bold text-cyan-300 text-sm block">{term}</span>
-                    <p className="text-[#8FA0C2] text-[11px] leading-relaxed">{def}</p>
+                    <p className="text-[#CBD5E1] text-[11px] leading-relaxed">{def}</p>
                   </div>
                 ))}
               </div>
@@ -1118,7 +1118,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <h1 className="text-3xl sm:text-5xl font-bold">
                 An ecosystem you can <span className="grad">inspect</span>, not just believe.
               </h1>
-              <p className="text-xs sm:text-sm text-[#8FA0C2]">
+              <p className="text-xs sm:text-sm text-[#CBD5E1]">
                 Residency, POPIA consent, non-bypassable human oversight, and cryptographic auditability.
               </p>
             </div>
@@ -1134,7 +1134,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <span className="text-2xl">{tc.icon}</span>
                   <h3 className="font-bold text-base text-white mt-2">{tc.t}</h3>
                   <p className="text-xs text-cyan-400 mt-0.5">{tc.sub}</p>
-                  <p className="text-xs text-[#8FA0C2] mt-2 leading-relaxed">{tc.d}</p>
+                  <p className="text-xs text-[#CBD5E1] mt-2 leading-relaxed">{tc.d}</p>
 
                   {selectedTrust === tc.t && (
                     <div className="mt-3 pt-3 border-t border-[rgba(148,163,255,0.12)] text-[11px] text-cyan-300 font-mono bg-[#050C16] p-2.5 rounded">
@@ -1152,7 +1152,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <span>⚙️</span>
                   <span>What The AI Takes On (Always as Drafts)</span>
                 </h3>
-                <ul className="space-y-2 text-[#8FA0C2]">
+                <ul className="space-y-2 text-[#CBD5E1]">
                   <li className="panel2 p-2.5">📋 Drafting lesson plans, units, and assessments aligned to CAPS & ATP</li>
                   <li className="panel2 p-2.5">🔊 Universal screening and weekly progress trend calculations</li>
                   <li className="panel2 p-2.5">💬 First-pass formative feedback grounded in teacher rubrics</li>
@@ -1166,7 +1166,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <span>🧑‍🏫</span>
                   <span>What Stays Human — Non-Bypassable Gates</span>
                 </h3>
-                <ul className="space-y-2 text-[#8FA0C2]">
+                <ul className="space-y-2 text-[#CBD5E1]">
                   <li className="panel2 p-2.5">❤️ Relationships, belonging, and the pastoral knowledge of a child</li>
                   <li className="panel2 p-2.5">🏛 Tier placements, support referrals, and exits — ratified by SBST</li>
                   <li className="panel2 p-2.5">🧠 Critical thinking: debating, questioning, ethical judgment</li>
@@ -1181,7 +1181,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <div className="text-center max-w-2xl mx-auto space-y-1">
                 <p className="kick text-emerald-400">Engineering Rigour</p>
                 <h3 className="text-xl font-bold text-white">Eleven engineering rules that never bend</h3>
-                <p className="text-xs text-[#8FA0C2]">Enforced by CI tools and database triggers, not by optimistic trust.</p>
+                <p className="text-xs text-[#CBD5E1]">Enforced by CI tools and database triggers, not by optimistic trust.</p>
               </div>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
@@ -1196,7 +1196,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                       <span className="text-[10px] text-cyan-400">{selectedLaw11 === num ? 'Hide ▲' : 'Enforce ▼'}</span>
                     </div>
                     <p className="font-bold text-white text-xs">"{title}"</p>
-                    <p className="text-[#8FA0C2] text-[11px] leading-relaxed">{desc}</p>
+                    <p className="text-[#CBD5E1] text-[11px] leading-relaxed">{desc}</p>
                     {selectedLaw11 === num && (
                       <div className="pt-2 border-t border-[rgba(148,163,255,0.1)] text-[10px] font-mono text-cyan-300">
                         {enforce}
@@ -1212,7 +1212,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <div className="text-center max-w-2xl mx-auto space-y-1">
                 <p className="kick text-amber-400">What The Saved Time Is For</p>
                 <h3 className="text-xl font-bold text-white">Not one single metric. Eight ways to be brilliant.</h3>
-                <p className="text-xs text-[#8FA0C2]">
+                <p className="text-xs text-[#CBD5E1]">
                   Giving teachers their Sundays back unlocks space for every dimension of human intelligence:
                 </p>
               </div>
@@ -1230,7 +1230,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                         <span className="text-[9px] text-amber-400 uppercase tracking-widest font-mono">{it.sub}</span>
                       </div>
                     </div>
-                    <p className="text-[#8FA0C2] text-[11px] leading-relaxed">{it.d}</p>
+                    <p className="text-[#CBD5E1] text-[11px] leading-relaxed">{it.d}</p>
                     <div className="pt-1 text-[10px] text-cyan-300 font-mono">
                       ✦ {it.sup}
                     </div>
@@ -1249,7 +1249,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
               <h1 className="text-3xl sm:text-5xl font-bold">
                 Technology is half the story. <span className="grad">Teachers are the rest.</span>
               </h1>
-              <p className="text-xs sm:text-sm text-[#8FA0C2]">
+              <p className="text-xs sm:text-sm text-[#CBD5E1]">
                 A four-part professional development curriculum taking educators from their first prompt to whole-school, evidence-led AI governance. Self-paced with real deliverables for Monday morning.
               </p>
             </div>
@@ -1264,7 +1264,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                       <div className="space-y-1">
                         <span className="kick text-[10px]" style={{ color: course.hue }}>{course.part}</span>
                         <h2 className="text-xl font-bold text-white">{course.title}</h2>
-                        <p className="text-xs text-[#8FA0C2] max-w-2xl">{course.sub}</p>
+                        <p className="text-xs text-[#CBD5E1] max-w-2xl">{course.sub}</p>
                         <div className="flex flex-wrap gap-1.5 pt-2">
                           {course.chips.map((ch, i) => (
                             <span key={i} className="chip text-[10px] py-0.5 px-2">{ch}</span>
@@ -1326,7 +1326,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
             {/* SACE & POPIA Certification Note */}
             <div className="panel p-6 text-center border-amber-500/30 bg-[#0C162E] space-y-2">
               <p className="text-base font-bold text-white">Every Course Ends With Real Classroom Readiness 🎓</p>
-              <p className="text-xs text-[#8FA0C2] max-w-xl mx-auto">
+              <p className="text-xs text-[#CBD5E1] max-w-xl mx-auto">
                 CPTD points are calculated strictly against official SACE documentation, with human pastoral governance confirmed before any classroom deployment.
               </p>
             </div>
@@ -1344,7 +1344,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <h1 className="text-3xl sm:text-4xl font-bold text-white mt-1">
                     Let's grow this ecosystem <span className="grad">in your school.</span>
                   </h1>
-                  <p className="text-xs sm:text-sm text-[#8FA0C2] mt-3 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#CBD5E1] mt-3 leading-relaxed">
                     Whether you are an educator exploring what tomorrow's lesson preparation could look like, an SMT weighing a controlled pilot, or a DBE leader evaluating national cost-recovery models — the conversation begins with your school's verified CAPS documents and templates.
                   </p>
                 </div>
@@ -1359,7 +1359,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                     </div>
                     <div className="text-xs space-y-0.5">
                       <h4 className="font-bold text-white">Phase 1 · Seed & Baseline</h4>
-                      <p className="text-[#8FA0C2] leading-relaxed">
+                      <p className="text-[#CBD5E1] leading-relaxed">
                         One class, one focus subject. Ingest real screening data as baseline. No school-wide disruption.
                       </p>
                     </div>
@@ -1371,7 +1371,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                     </div>
                     <div className="text-xs space-y-0.5">
                       <h4 className="font-bold text-white">Phase 2 · Observed Movement</h4>
-                      <p className="text-[#8FA0C2] leading-relaxed">
+                      <p className="text-[#CBD5E1] leading-relaxed">
                         Track progress against your own baseline. First live SBST ratification review with full data quarantine.
                       </p>
                     </div>
@@ -1383,7 +1383,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                     </div>
                     <div className="text-xs space-y-0.5">
                       <h4 className="font-bold text-white">Phase 3 · SMT Expansion Gate</h4>
-                      <p className="text-[#8FA0C2] leading-relaxed">
+                      <p className="text-[#CBD5E1] leading-relaxed">
                         Formal SMT review of measured reading growth, language coverage, and teacher satisfaction before phase-by-phase expansion.
                       </p>
                     </div>
@@ -1401,7 +1401,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <p className="text-xs text-[#E9EDF8] font-bold">
                     Transparent Single-Subscription Rate Per Institution
                   </p>
-                  <p className="text-[11px] text-[#8FA0C2] leading-relaxed">
+                  <p className="text-[11px] text-[#CBD5E1] leading-relaxed">
                     Includes all 46 specialist AI agents, unlimited teacher lesson &amp; assessment drafts, SIAS case coordination, and af-south-1 POPIA data protection. No student-head taxes or hidden per-seat licensing.
                   </p>
                 </div>
@@ -1421,7 +1421,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                   <>
                     <div>
                       <h3 className="text-xl font-bold text-white">Initiate A School Conversation</h3>
-                      <p className="text-xs text-[#8FA0C2] mt-1">
+                      <p className="text-xs text-[#CBD5E1] mt-1">
                         Tell us about your institution. An educational specialist will respond within two working days.
                       </p>
                     </div>
@@ -1525,7 +1525,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                         <span>Transmit Pilot Enquiry</span>
                       </button>
 
-                      <p className="text-[10px] text-[#8FA0C2] text-center">
+                      <p className="text-[10px] text-[#CBD5E1] text-center">
                         Data is used exclusively to respond to this enquiry under strict POPIA compliance.
                       </p>
                     </form>
@@ -1536,7 +1536,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                       🎉
                     </div>
                     <h3 className="text-2xl font-bold text-white">Pilot Enquiry Received</h3>
-                    <p className="text-xs text-[#8FA0C2] max-w-md mx-auto leading-relaxed">
+                    <p className="text-xs text-[#CBD5E1] max-w-md mx-auto leading-relaxed">
                       Thank you, <strong className="text-white">{formData.name}</strong>. Our educational deployment team will reach out at <strong className="text-cyan-300">{formData.email}</strong> regarding <strong className="text-white">{formData.school}</strong>.
                     </p>
                     <div className="p-3 rounded-lg bg-[#060D1A] border border-emerald-500/30 text-[11px] text-emerald-300">
@@ -1568,7 +1568,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
       </main>
 
       {/* Website Footer */}
-      <footer className="border-t border-[rgba(148,163,255,0.12)] bg-[#070D1C] py-10 mt-20 text-xs text-[#8FA0C2]">
+      <footer className="border-t border-[rgba(148,163,255,0.12)] bg-[#070D1C] py-10 mt-20 text-xs text-[#CBD5E1]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 grid sm:grid-cols-3 gap-8">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -1577,7 +1577,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
                 Product Showcase
               </span>
             </div>
-            <p className="text-[11px] leading-relaxed text-[#8FA0C2]">
+            <p className="text-[11px] leading-relaxed text-[#CBD5E1]">
               Brain-Powered Education Ecosystem · Multi-tenant SaaS for South African schools. Grounded in CAPS canon, ATP pacing, SIAS guidance, and strict POPIA compliance.
             </p>
             <p className="text-[10px] text-emerald-400 font-mono">
@@ -1603,7 +1603,7 @@ export const EducationEcosystemWebsite: React.FC<Props> = ({ onSwitchToOps }) =>
             <p className="text-[11px] text-[#E9EDF8] italic border-l-2 border-amber-400 pl-2.5 py-0.5">
               "AI drafts. The teacher decides. Always."
             </p>
-            <p className="text-[10px] text-[#8FA0C2]">
+            <p className="text-[10px] text-[#CBD5E1]">
               Nothing reaches a learner or guardian without explicit human countersignature. A gate that cannot be bypassed in production.
             </p>
           </div>

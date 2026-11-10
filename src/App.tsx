@@ -1,418 +1,294 @@
-import React, { useState, useEffect } from 'react';
-import { NavTab, StageGate, OpenQuestion } from './types';
-import { INITIAL_STAGES, INITIAL_OPEN_QUESTIONS } from './data/mockData';
+import React, { useState } from 'react';
+import { NavTab } from './types';
+import { OpsProvider, useOps } from './ui/store';
 import { Navbar } from './components/Navbar';
-import { CommandCenter } from './components/CommandCenter';
-import { InfiniteBrainModules } from './components/InfiniteBrainModules';
-import { AgentDirectory } from './components/AgentDirectory';
-import { DynamicWebsite } from './components/DynamicWebsite';
-import { EducationEcosystemWebsite } from './components/EducationEcosystemWebsite';
-import { DeveloperStudio } from './components/DeveloperStudio';
-import { ModelGateway } from './components/ModelGateway';
-import { CloudAndFinance } from './components/CloudAndFinance';
-import { GovernanceAndRisk } from './components/GovernanceAndRisk';
-import { CrmSystem } from './components/CrmSystem';
-import { IntegrationsDashboard } from './components/IntegrationsDashboard';
 import { DocsAndRatify } from './components/DocsAndRatify';
-import { ProductDevelopmentManager } from './components/ProductDevelopmentManager';
-import { INITIAL_REPO_CONNECTION, INITIAL_EPICS, INITIAL_AUTONOMOUS_TASKS } from './data/productDevData';
-import { RepoConnection, ProductEpic, AutonomousTask } from './types';
-import { ShieldCheck, CheckCircle2, Lock, Cpu, ArrowUpRight } from 'lucide-react';
+import { DataWarehouse } from './components/DataWarehouse';
+import { CloudAndFinance } from './components/CloudAndFinance';
+import { EducationEcosystemWebsite } from './components/EducationEcosystemWebsite';
+import { Studio } from './ui/Studio';
+import { 
+  Overview, 
+  Dept, 
+  BrainView, 
+  LedgerView, 
+  WarehouseView, 
+  ConnectorView, 
+  GuardrailLab 
+} from './ui/Views';
+import { DEPARTMENTS } from './departments';
+import { 
+  ShieldCheck, 
+  Lock, 
+  Cpu, 
+  FileText, 
+  Database, 
+  PenTool, 
+  ArrowRight, 
+  CheckCircle2, 
+  Layers,
+  Users
+} from 'lucide-react';
 
-export default function App() {
-  // Navigation State
+function AppContent() {
   const [activeTab, setActiveTab] = useState<NavTab>('command');
-
-  // Product Development & Infinite-AI Education Ecosystem Connection State
-  const [repoConnection, setRepoConnection] = useState<RepoConnection>(() => {
-    try {
-      const saved = localStorage.getItem('ia_repo_connection');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.productRepo?.name?.includes('Sarah-JaneHarding')) {
-          return parsed;
-        }
-      }
-      return INITIAL_REPO_CONNECTION;
-    } catch {
-      return INITIAL_REPO_CONNECTION;
-    }
-  });
-
-  const [epics, setEpics] = useState<ProductEpic[]>(() => {
-    try {
-      const saved = localStorage.getItem('ia_epics');
-      return saved ? JSON.parse(saved) : INITIAL_EPICS;
-    } catch {
-      return INITIAL_EPICS;
-    }
-  });
-
-  const [autonomousTasks, setAutonomousTasks] = useState<AutonomousTask[]>(() => {
-    try {
-      const saved = localStorage.getItem('ia_autonomous_tasks');
-      if (saved) {
-        const parsed: AutonomousTask[] = JSON.parse(saved);
-        // Ensure tasks reference the connected Sarah-JaneHarding/infinite-ai-ecosystem repo
-        return parsed.map(t => ({
-          ...t,
-          repo: t.repo === 'tecosystem' ? 'Sarah-JaneHarding/infinite-ai-ecosystem' : t.repo,
-          releaseVersion: t.releaseVersion.replace('tecosystem', 'infinite-ai-ecosystem')
-        }));
-      }
-      return INITIAL_AUTONOMOUS_TASKS;
-    } catch {
-      return INITIAL_AUTONOMOUS_TASKS;
-    }
-  });
-
-  const pendingApprovalsCount = autonomousTasks.filter(t => t.status === 'AWAITING_APPROVAL').length;
-
-  const handleSyncRepos = () => {
-    setRepoConnection(prev => {
-      const updated: RepoConnection = {
-        ...prev,
-        lastSynced: 'Just now',
-        syncStatus: 'CONNECTED',
-        stats: {
-          ...prev.stats,
-          autonomousCommitsToday: prev.stats.autonomousCommitsToday + 1
-        }
-      };
-      try {
-        localStorage.setItem('ia_repo_connection', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-  };
-
-  const handleApproveTask = (taskId: string, comment: string, approverName: string) => {
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
-    const signatureHash = 'sha256:' + Array.from({ length: 4 }, () => Math.random().toString(16).substring(2, 8)).join('');
-
-    setAutonomousTasks(prev => {
-      const next = prev.map(task => {
-        if (task.id === taskId) {
-          return {
-            ...task,
-            status: 'MERGED' as const,
-            approvalCheck: {
-              ...task.approvalCheck,
-              status: 'APPROVED' as const,
-              signedBy: approverName,
-              signedAt: timestamp,
-              signatureHash,
-              comments: comment
-            }
-          };
-        }
-        return task;
-      });
-      try {
-        localStorage.setItem('ia_autonomous_tasks', JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
-    // Update repository latest commit
-    setRepoConnection(prev => {
-      const updated: RepoConnection = {
-        ...prev,
-        productRepo: {
-          ...prev.productRepo,
-          commitHash: signatureHash.substring(7, 14),
-          lastCommitMsg: `merge(pr): approve autonomous agent pull request #${taskId.replace(/[^0-9]/g, '')}`
-        },
-        stats: {
-          ...prev.stats,
-          openPrs: Math.max(0, prev.stats.openPrs - 1),
-          pendingApprovals: Math.max(0, prev.stats.pendingApprovals - 1)
-        }
-      };
-      try {
-        localStorage.setItem('ia_repo_connection', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-  };
-
-  const handleRejectTask = (taskId: string, reason: string) => {
-    setAutonomousTasks(prev => {
-      const next = prev.map(task => {
-        if (task.id === taskId) {
-          return {
-            ...task,
-            status: 'AUTONOMOUS_DEV' as const,
-            approvalCheck: {
-              ...task.approvalCheck,
-              status: 'CHANGES_REQUESTED' as const,
-              comments: reason
-            }
-          };
-        }
-        return task;
-      });
-      try {
-        localStorage.setItem('ia_autonomous_tasks', JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  };
-
-  const handleAddTask = (newTaskData: Omit<AutonomousTask, 'id' | 'createdAt' | 'updatedAt' | 'releaseVersion'>) => {
-    const taskId = `TASK-TEC-${210 + autonomousTasks.length}`;
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
-
-    const newTask: AutonomousTask = {
-      ...newTaskData,
-      id: taskId,
-      releaseVersion: 'infinite-ai-ecosystem v2.4.0-rc1',
-      createdAt: timestamp,
-      updatedAt: timestamp
-    };
-
-    setAutonomousTasks(prev => {
-      const next = [newTask, ...prev];
-      try {
-        localStorage.setItem('ia_autonomous_tasks', JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  };
-
-  const handleRunTestTask = (taskId: string) => {
-    setAutonomousTasks(prev => {
-      const next = prev.map(task => {
-        if (task.id === taskId) {
-          return {
-            ...task,
-            status: 'AWAITING_APPROVAL' as const,
-            testResults: {
-              ...task.testResults,
-              passed: task.testResults.totalTests,
-              failed: 0
-            }
-          };
-        }
-        return task;
-      });
-      try {
-        localStorage.setItem('ia_autonomous_tasks', JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  };
-
-  // Stage 02 Resolution State (Persisted)
-  const [stage02Resolved, setStage02Resolved] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('ia_stage02_resolved') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  // Ratified Policies Count (starts at 38, up to 136)
+  const [selectedDeptId, setSelectedDeptId] = useState<string>('ai');
+  const [selectedStudioDocId, setSelectedStudioDocId] = useState<string | null>(null);
+  const [studioSubView, setStudioSubView] = useState<'ops_docs' | 'artefacts'>('ops_docs');
   const [ratifiedCount, setRatifiedCount] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('ia_ratified_count');
-      return saved ? parseInt(saved, 10) : 38;
+      return saved ? parseInt(saved, 10) : 42;
     } catch {
-      return 38;
+      return 42;
     }
   });
 
-  // Stages List
-  const [stages, setStages] = useState<StageGate[]>(() => {
-    return INITIAL_STAGES.map(s => {
-      if (s.id === '02' && stage02Resolved) {
-        return {
-          ...s,
-          status: 'PASS',
-          summary: 'PASSED · Retroactive exit gate verified. Merkle audit ledger active with SHA-256 hash chains.',
-          testCount: 48
-        };
-      }
-      return s;
-    });
-  });
-
-  // Open Questions Register
-  const [openQuestions, setOpenQuestions] = useState<OpenQuestion[]>(() => {
-    try {
-      const saved = localStorage.getItem('ia_open_questions');
-      return saved ? JSON.parse(saved) : INITIAL_OPEN_QUESTIONS;
-    } catch {
-      return INITIAL_OPEN_QUESTIONS;
-    }
-  });
-
-  // Handle Stage 02 Resolution
-  const handleResolveStage02 = () => {
-    setStage02Resolved(true);
-    try {
-      localStorage.setItem('ia_stage02_resolved', 'true');
-    } catch {}
-
-    setStages(prev => prev.map(s => {
-      if (s.id === '02') {
-        return {
-          ...s,
-          status: 'PASS',
-          summary: 'PASSED · Retroactive exit gate verified. Merkle audit ledger active with SHA-256 hash chains.',
-          testCount: 48
-        };
-      }
-      return s;
-    }));
-
-    // Also mark OQ-001 as DONE
-    setOpenQuestions(prev => {
-      const updated = prev.map(q => q.id === 'OQ-001' ? { ...q, status: 'DONE' as const } : q);
-      try {
-        localStorage.setItem('ia_open_questions', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-  };
-
-  // Handle Policy Ratification
   const handleRatifyPolicy = () => {
     setRatifiedCount(prev => {
-      const next = Math.min(136, prev + 5);
-      try {
-        localStorage.setItem('ia_ratified_count', next.toString());
-      } catch {}
-      return next;
-    });
-  };
-
-  const handleRatifyAll = () => {
-    setRatifiedCount(136);
-    try {
-      localStorage.setItem('ia_ratified_count', '136');
-    } catch {}
-  };
-
-  // Handle Cycling Open Question Status
-  const handleCycleOq = (id: string) => {
-    setOpenQuestions(prev => {
-      const next = prev.map(q => {
-        if (q.id !== id) return q;
-        const cycleMap: Record<string, OpenQuestion['status']> = {
-          'OPEN': 'PROG',
-          'PROG': 'DONE',
-          'DONE': 'OPEN',
-          'CRITICAL': 'PROG',
-          'BLOCKED': 'PROG',
-          'DECISION': 'DONE'
-        };
-        const newStatus = cycleMap[q.status] || 'OPEN';
-        return { ...q, status: newStatus };
-      });
-      try {
-        localStorage.setItem('ia_open_questions', JSON.stringify(next));
-      } catch {}
+      const next = Math.min(136, prev + 1);
+      try { localStorage.setItem('ia_ratified_count', next.toString()); } catch {}
       return next;
     });
   };
 
   return (
-    <div className="min-h-screen bg-[#070B14] text-[#E9EDF8] flex flex-col font-sans selection:bg-[#22D3EE]/30 selection:text-white">
+    <div className="min-h-screen bg-[#070B14] text-[#E9EDF8] flex flex-col font-sans selection:bg-cyan-500/30 selection:text-white">
       {/* Top Fixed Navbar */}
       <Navbar 
         activeTab={activeTab} 
         onSelectTab={setActiveTab}
-        stage02Resolved={stage02Resolved}
         ratifiedCount={ratifiedCount}
-        pendingApprovalsCount={pendingApprovalsCount}
       />
 
       {/* Main Workspace Canvas */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-20">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-20 pb-16">
+        {/* TAB 1: COMMAND CENTRE */}
         {activeTab === 'command' && (
-          <CommandCenter 
-            onNavigate={setActiveTab}
-            stage02Resolved={stage02Resolved}
-            ratifiedCount={ratifiedCount}
-            onRatifyAll={handleRatifyAll}
-            pendingApprovalsCount={pendingApprovalsCount}
-          />
+          <div className="space-y-6">
+            {/* Quick Navigation Cards */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <button 
+                onClick={() => setActiveTab('studio')}
+                className="card p-4 text-left hover:border-cyan-400 transition-all group bg-[#0A1226]/80"
+              >
+                <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-1">
+                  <span className="font-mono text-cyan-400 font-bold">DOCUMENT STUDIO</span>
+                  <FileText className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+                </div>
+                <h3 className="text-sm font-bold text-[#E9EDF8]">Viewer, Editor &amp; Ratify</h3>
+                <p className="text-[11px] text-[#CBD5E1] mt-1">
+                  Read, review, edit markdown, and execute countersignatures.
+                </p>
+                <span className="text-[10px] text-cyan-400 flex items-center gap-1 mt-2 font-mono">
+                  <span>Open Studio</span>
+                  <ArrowRight className="w-3 h-3" />
+                </span>
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('warehouse')}
+                className="card p-4 text-left hover:border-cyan-400 transition-all group bg-[#0A1226]/80"
+              >
+                <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-1">
+                  <span className="font-mono text-cyan-400 font-bold">MOD-03 WAREHOUSE</span>
+                  <Database className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+                </div>
+                <h3 className="text-sm font-bold text-[#E9EDF8]">Multi-Tenant Store</h3>
+                <p className="text-[11px] text-[#CBD5E1] mt-1">
+                  Contracts, primary school tenants, policies &amp; SQL console.
+                </p>
+                <span className="text-[10px] text-cyan-400 flex items-center gap-1 mt-2 font-mono">
+                  <span>Open Warehouse</span>
+                  <ArrowRight className="w-3 h-3" />
+                </span>
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('infra')}
+                className="card p-4 text-left hover:border-emerald-400 transition-all group bg-[#0A1226]/80"
+              >
+                <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-1">
+                  <span className="font-mono text-emerald-400 font-bold">R4k / MO SAAS</span>
+                  <span className="text-xs font-bold text-emerald-400">ZAR</span>
+                </div>
+                <h3 className="text-sm font-bold text-[#E9EDF8]">Cost &amp; Finance Model</h3>
+                <p className="text-[11px] text-[#CBD5E1] mt-1">
+                  Primary school unit economics &amp; AWS Cape Town bills.
+                </p>
+                <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-2 font-mono">
+                  <span>View Calculator</span>
+                  <ArrowRight className="w-3 h-3" />
+                </span>
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('depts')}
+                className="card p-4 text-left hover:border-purple-400 transition-all group bg-[#0A1226]/80"
+              >
+                <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-1">
+                  <span className="font-mono text-purple-400 font-bold">16 DEPARTMENTS</span>
+                  <Users className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                </div>
+                <h3 className="text-sm font-bold text-[#E9EDF8]">48 Specialist Agents</h3>
+                <p className="text-[11px] text-[#CBD5E1] mt-1">
+                  Run agents, inspect widgets, and view departmental missions.
+                </p>
+                <span className="text-[10px] text-purple-400 flex items-center gap-1 mt-2 font-mono">
+                  <span>Explore Agents</span>
+                  <ArrowRight className="w-3 h-3" />
+                </span>
+              </button>
+            </div>
+
+            {/* Core Overview Platform Engine */}
+            <Overview />
+          </div>
         )}
 
-        {activeTab === 'product' && (
-          <ProductDevelopmentManager
-            repoConnection={repoConnection}
-            epics={epics}
-            tasks={autonomousTasks}
-            onSyncRepos={handleSyncRepos}
-            onApproveTask={handleApproveTask}
-            onRejectTask={handleRejectTask}
-            onAddTask={handleAddTask}
-            onRunTestTask={handleRunTestTask}
-          />
+        {/* TAB 2: DOCUMENT STUDIO & RATIFICATION */}
+        {activeTab === 'studio' && (
+          <div className="space-y-4">
+            {/* Studio Mode Toggle Bar */}
+            <div className="flex items-center justify-between p-2 rounded-xl bg-[#0E1830] border border-[rgba(148,163,255,0.1)]">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setStudioSubView('ops_docs')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    studioSubView === 'ops_docs' 
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' 
+                      : 'text-[#CBD5E1] hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Operations &amp; Policy Document Editor</span>
+                </button>
+
+                <button
+                  onClick={() => setStudioSubView('artefacts')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    studioSubView === 'artefacts' 
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' 
+                      : 'text-[#CBD5E1] hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Agent Generative Artefacts Studio</span>
+                </button>
+              </div>
+
+              <span className="text-[11px] font-mono text-[#CBD5E1] hidden sm:block">
+                Non-bypassable Human Decision Gate (Law 02)
+              </span>
+            </div>
+
+            {studioSubView === 'ops_docs' ? (
+              <DocsAndRatify 
+                ratifiedCount={ratifiedCount}
+                onRatifyPolicy={handleRatifyPolicy}
+                onNavigateToWarehouse={() => setActiveTab('warehouse')}
+                initialDocId={selectedStudioDocId}
+              />
+            ) : (
+              <Studio id={selectedStudioDocId || undefined} />
+            )}
+          </div>
         )}
 
+        {/* TAB 3: DATA WAREHOUSE */}
+        {activeTab === 'warehouse' && (
+          <div className="space-y-6">
+            <DataWarehouse 
+              onOpenDocInEditor={(docId) => {
+                setSelectedStudioDocId(docId);
+                setStudioSubView('ops_docs');
+                setActiveTab('studio');
+              }}
+            />
+            
+            {/* Raw System Warehouse Collections */}
+            <div className="pt-6 border-t border-[rgba(148,163,255,0.1)]">
+              <WarehouseView />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: 16 DEPARTMENTS & AGENTS */}
+        {activeTab === 'depts' && (
+          <div className="space-y-6">
+            {/* Department Navigation Strip */}
+            <div className="card p-3 space-y-2 bg-[#0A1226]/80">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono text-cyan-400 uppercase font-bold">
+                  Select Department (16 Operational Divisions)
+                </span>
+                <span className="text-xs text-[#CBD5E1]">
+                  Active: <strong className="text-[#E9EDF8]">{DEPARTMENTS.find(d => d.id === selectedDeptId)?.name}</strong>
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                {DEPARTMENTS.map(d => (
+                  <button
+                    key={d.id}
+                    onClick={() => setSelectedDeptId(d.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                      selectedDeptId === d.id
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                        : 'bg-[#13203C] text-[#CBD5E1] hover:text-white'
+                    }`}
+                  >
+                    {d.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Department View with Agents & Widgets */}
+            <Dept id={selectedDeptId} />
+          </div>
+        )}
+
+        {/* TAB 5: INFINITE BRAIN L0-L4 */}
         {activeTab === 'brain' && (
-          <InfiniteBrainModules />
+          <BrainView />
         )}
 
-        {activeTab === 'agents' && (
-          <AgentDirectory />
+        {/* TAB 6: AUDIT LEDGER */}
+        {activeTab === 'ledger' && (
+          <LedgerView />
         )}
 
-        {activeTab === 'website' && (
-          <EducationEcosystemWebsite onSwitchToOps={() => setActiveTab('command')} />
-        )}
-
-        {activeTab === 'dev' && (
-          <DeveloperStudio 
-            stages={stages}
-            stage02Resolved={stage02Resolved}
-            onResolveStage02={handleResolveStage02}
-            openQuestions={openQuestions}
-            onCycleOq={handleCycleOq}
-          />
-        )}
-
-        {activeTab === 'gateway' && (
-          <ModelGateway />
-        )}
-
+        {/* TAB 7: COST & FINANCE */}
         {activeTab === 'infra' && (
           <CloudAndFinance />
         )}
 
-        {activeTab === 'gov' && (
-          <GovernanceAndRisk />
+        {/* TAB 8: ECOSYSTEM SHOWCASE */}
+        {activeTab === 'website' && (
+          <EducationEcosystemWebsite onSwitchToOps={() => setActiveTab('command')} />
         )}
 
-        {activeTab === 'crm' && (
-          <CrmSystem />
+        {/* TAB 9: GUARDRAIL LAB */}
+        {activeTab === 'guardrails' && (
+          <GuardrailLab />
         )}
 
-        {activeTab === 'integrations' && (
-          <IntegrationsDashboard />
-        )}
-
-        {activeTab === 'docs' && (
-          <DocsAndRatify 
-            ratifiedCount={ratifiedCount}
-            onRatifyPolicy={handleRatifyPolicy}
-          />
+        {/* TAB 10: GITHUB CONNECTOR */}
+        {activeTab === 'connector' && (
+          <ConnectorView />
         )}
       </main>
 
       {/* System Footer */}
       <footer className="border-t border-[rgba(148,163,255,0.08)] bg-[#0A1226]/80 backdrop-blur py-6 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8FA0C2]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#CBD5E1]">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 font-bold text-[#E9EDF8]">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span>INFINITE-AI OPS PLATFORM</span>
             </div>
             <span>·</span>
-            <span className="font-mono text-[11px]">Nine-Layer Enforcement Stack (L0–L8)</span>
+            <span className="font-mono text-[11px]">AI drafts. The human decides.</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono">
@@ -421,7 +297,7 @@ export default function App() {
               POPIA Section 72 Compliant
             </span>
             <span>·</span>
-            <span className="text-[#22D3EE] flex items-center gap-1">
+            <span className="text-cyan-400 flex items-center gap-1">
               <Lock className="w-3.5 h-3.5" />
               Non-Bypassable HITL Gates
             </span>
@@ -434,5 +310,13 @@ export default function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <OpsProvider>
+      <AppContent />
+    </OpsProvider>
   );
 }
