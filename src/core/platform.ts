@@ -1,5 +1,5 @@
 import { newId, sha256Hex, canonical } from './crypto';
-import { Ledger } from './ledger';
+import { Ledger, type Sequencer } from './ledger';
 import { Brain, type Fact } from './brain';
 import { Warehouse, MemoryAdapter, type StorageAdapter, type Rec } from './warehouse';
 import { Gateway, type Engine } from './gateway';
@@ -41,6 +41,8 @@ export interface PlatformOptions {
   knownNames?: string[];
   /** Called when the storage adapter refuses or loses a ledger/Brain record, which is otherwise written in the background. */
   onPersistError?: (e: Error) => void;
+  /** When set, the server authors and stores every ledger entry; the platform does not write the ledger itself. */
+  sequencer?: Sequencer;
 }
 
 /** One object wiring departments → guardrails → brain → gateway → warehouse → ledger → HITL → learning. */
@@ -56,12 +58,14 @@ export class Platform {
   /** sha-256 of each erased subject id. The raw id is never stored. */
   private tombstoned = new Set<string>();
   private onPersistError: (e: Error) => void;
+  private sequencer?: Sequencer;
   private persistTail: Promise<void> = Promise.resolve();
 
   constructor(o: PlatformOptions = {}) {
     this.orgId = o.orgId ?? 'infinite-ai';
     this.warehouse = new Warehouse(o.adapter ?? new MemoryAdapter());
     this.engine = o.engine;
+    this.sequencer = o.sequencer;
     this.wire([], []);
     this.factsFn = o.facts ?? (() => ({}));
     this.knownNames = o.knownNames ?? [];
@@ -71,11 +75,11 @@ export class Platform {
   /** (Re)build ledger, Brain and gateway over the warehouse so state survives a reload. */
   private wire(ledger: LedgerEntry[], facts: Fact[]) {
     const fail = (e: unknown) => this.onPersistError(e instanceof Error ? e : new Error(String(e)));
-    // Background writes go out one at a time, in order: the server checks that each ledger entry chains onto the last.
+    // Background writes go out one at a time, in order.
     const queue = (collection: string, rec: Rec) => {
       this.persistTail = this.persistTail.then(() => this.warehouse.putRaw(collection, rec)).catch(fail);
     };
-    this.ledger = new Ledger(ledger, (e) => queue('ledger', { ...e, id: `L${e.seq}` } as unknown as Rec));
+    this.ledger = new Ledger(ledger, this.sequencer ? undefined : (e) => queue('ledger', { ...e, id: `L${e.seq}` } as unknown as Rec), this.sequencer);
     this.brain = new Brain(this.ledger, this.orgId, facts, (f) => queue('brain', { ...f } as unknown as Rec));
     this.gateway = new Gateway(this.ledger, this.engine);
   }
