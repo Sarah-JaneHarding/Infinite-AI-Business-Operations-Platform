@@ -1,4 +1,4 @@
-import { defineAgent as A, long, pick, src, txt, v, blankRows, TBC } from './kit';
+import { defineAgent as A, long, pick, src, txt, v, blankRows, TBC, rows, lines } from './kit';
 import type { Department } from './types';
 import { priority } from './calc';
 import { FUNDING_LEAD_SEED } from './fundingLeads';
@@ -22,6 +22,16 @@ export const marketing: Department = {
     A('marketing', 'MKT', { n: 3, name: 'Brand and claims review', summary: 'Check a piece of copy against voice and claim rules.', framework: 'Brand voice guardrails', purpose: 'marketing_content',
       inputs: [long('copy', 'Copy to review', true)],
       sections: (c) => [{ h: 'Copy', input: c.input.copy ?? '' }, { h: 'Review', table: { headers: ['Rule', 'Pass?', 'Note'], rows: [['The teacher decides; AI assists', '', ''], ['Every claim has a cited source', '', ''], ['No guaranteed outcomes', '', ''], ['POPIA: no personal data, opt-out present', '', ''], ['Plain South African English', '', '']] } }] }),
+    A('marketing', 'MKT', { n: 4, name: 'Content calendar builder', summary: 'A month of posts across channels, ready for the calendar tracker.', framework: 'Content pillars and calendar', purpose: 'marketing_content', formats: ['md', 'csv'],
+      inputs: [txt('month', 'Month', true), long('pillars', 'Content pillars', true), txt('channels', 'Channels', true), long('posts', 'Posts, one per line: date | channel | topic')],
+      sections: (c) => [{ h: 'Plan', kv: [['Month', v(c, 'month')], ['Channels', v(c, 'channels')]] }, { h: 'Pillars', input: c.input.pillars ?? '' }, { h: 'Calendar', table: { headers: ['Date', 'Channel', 'Topic', 'Pillar', 'Owner (role)', 'Claims checked'], rows: rows(c.input.posts).length ? rows(c.input.posts).map((p) => [p[0], p[1] ?? '', p[2] ?? '', '', '', 'No']) : blankRows(['Week 1', 'Week 2', 'Week 3', 'Week 4'], 6) } }, { h: 'Checks', checks: ['Every post passed the brand and claims review', 'Direct messages follow POPIA section 69', 'Entries copied to the content calendar tracker'] }] }),
+    A('marketing', 'MKT', { n: 5, name: 'Case study draft', summary: 'Case study built only from evidence you supply, with a consent check.', framework: 'Case study structure', purpose: 'marketing_content', formats: ['md', 'docx'],
+      inputs: [txt('school', 'School', true), pick('consent', 'Written consent to publish', ['Obtained', 'Not yet'], true), long('evidence', 'Evidence: what changed, with sources', true)],
+      sections: (c) => [...(c.input.consent === 'Obtained' ? [] : [{ h: 'Stop', callout: { tone: 'warn' as const, text: 'Written consent has not been obtained. Do not publish this case study.' } }]), { h: 'School', kv: [['School', v(c, 'school')], ['Consent', v(c, 'consent')]] }, { h: 'Challenge', input: '' }, { h: 'What the school did', input: '' }, { h: 'What changed (evidence you supplied)', input: c.input.evidence ?? '' }, { h: 'In the teacher’s words', input: '' }, { h: 'Before publishing', checks: ['Written consent from the school and any person quoted', 'No learner names, images or identifying detail', 'Every result traced to a source', 'Brand and claims review done'] }] }),
+    A('marketing', 'MKT', { n: 6, name: 'Direct-marketing consent audit (POPIA s69)', summary: 'Checks a list and message against the section 69 conditions.', framework: 'POPIA s69', purpose: 'marketing_content', formats: ['md', 'docx'],
+      warning: 'Counsel confirms the current conditions. This is a working checklist.',
+      inputs: [long('source', 'Where the list came from', true), long('message', 'The message', true), pick('basis', 'Basis for contact', ['Opted in', 'Existing customer, similar products', 'Neither, or not sure'], true)],
+      sections: (c) => [...(c.input.basis === 'Neither, or not sure' ? [{ h: 'Stop', callout: { tone: 'warn' as const, text: 'No opt-in or customer relationship. Do not send.' } }] : []), { h: 'List source', input: c.input.source ?? '' }, { h: 'Message', input: c.input.message ?? '' }, { h: 'Conditions to check', checks: ['Recipient opted in, or is an existing customer for similar products', 'Message identifies the sender', 'Message has an easy way to opt out', 'Opt-outs are honoured and recorded', 'Record of consent kept', 'Opt-out offered at the first contact and in each message'] }] }),
   ],
 };
 
@@ -32,6 +42,7 @@ export const success: Department = {
   widgets: [
     { id: 'pilots', title: 'Pilot tracker', type: 'tracker', collection: 'pilots', columns: [{ key: 'school', label: 'School', kind: 'text' }, { key: 'phase', label: 'Phase', kind: 'select', options: ['Agreed', 'Onboarding', 'Running', 'Review', 'Decision'] }, { key: 'start', label: 'Start', kind: 'date' }, { key: 'champion', label: 'Champion (role)', kind: 'text' }, { key: 'health', label: 'Health', kind: 'select', options: ['Green', 'Amber', 'Red'] }, { key: 'note', label: 'Note', kind: 'text' }] },
     { id: 'onboard', title: 'Onboarding checklist', type: 'checklist', collection: 'onboarding', items: ['Operator agreement signed', 'Administrator accounts created', 'Teachers invited', 'Training session held', 'First lesson planned with the tool', 'Success criteria agreed in writing', 'Review date booked'] },
+    { id: 'onboard', title: 'School onboarding', type: 'checklist', collection: 'school_onboarding', items: ['Agreement signed', 'School administrator named by role', 'School profile set up', 'Teachers invited', 'Training session held', 'First lesson delivered', 'First check-in booked'] },
   ],
   agents: [
     A('success', 'CS', { n: 1, name: 'Pilot plan', summary: 'A pilot plan for one school with success criteria they agree to.', framework: 'Pilot protocol + onboarding milestones', purpose: 'customer_success',
@@ -43,6 +54,15 @@ export const success: Department = {
     A('success', 'CS', { n: 3, name: 'Renewal playbook', summary: 'Plan for a renewal conversation, risks and asks.', framework: 'Renewal playbook', purpose: 'customer_success',
       inputs: [txt('school', 'School', true), long('value', 'Value the school has gained (their words)'), long('risks', 'Risks to renewal')],
       sections: (c) => [{ h: 'Value delivered', input: c.input.value ?? '' }, { h: 'Risks', input: c.input.risks ?? '' }, { h: 'Plan', table: { headers: ['Action', 'Owner', 'Date'], rows: blankRows(['Review with sponsor', 'Confirm budget cycle', 'Send renewal paperwork'], 3) } }] }),
+    A('success', 'CS', { n: 4, name: 'School onboarding checklist', summary: 'Checklist from agreement to first lesson, with owners.', framework: 'Customer onboarding', purpose: 'customer_success', formats: ['md', 'xlsx'],
+      inputs: [txt('school', 'School', true), txt('start', 'Start date')],
+      sections: (c) => [{ h: 'School', kv: [['School', v(c, 'school')], ['Start', v(c, 'start')]] }, { h: 'Steps', checks: ['Agreement signed', 'School administrator named by role', 'School profile set up', 'Teachers invited', 'Training session held', 'First lesson delivered with the platform', 'First check-in booked'] }, { h: 'Owners', table: { headers: ['Step', 'Owner (role)', 'Due', 'Done'], rows: blankRows(['Agreement', 'Set-up', 'Training', 'First lesson', 'Check-in'], 4) } }] }),
+    A('success', 'CS', { n: 5, name: 'Teacher training session plan', summary: 'Session plan with outcomes, activities and a short feedback form.', framework: 'Training design', purpose: 'customer_success', formats: ['md', 'docx'],
+      inputs: [txt('audience', 'Audience (roles)', true), txt('duration', 'Duration', true), long('outcomes', 'What teachers should be able to do afterwards', true)],
+      sections: (c) => [{ h: 'Session', kv: [['Audience', v(c, 'audience')], ['Duration', v(c, 'duration')]] }, { h: 'Outcomes', input: c.input.outcomes ?? '' }, { h: 'Agenda', table: { headers: ['Segment', 'Activity', 'Time', 'Materials'], rows: blankRows(['Welcome', 'Demonstration', 'Hands-on practice', 'Questions', 'Close'], 4) } }, { h: 'Feedback form (edit)', ol: ['What was most useful?', 'What was unclear?', 'What would you like help with next?'] }, { h: 'Checks', checks: ['Practice uses fictional learner data', 'Materials tested on the school’s devices', 'Feedback form ready'] }] }),
+    A('success', 'CS', { n: 6, name: 'Training feedback summary', summary: 'Summary of feedback results you type in, with no names.', framework: 'Feedback analysis', purpose: 'customer_success', formats: ['md', 'docx', 'csv'],
+      inputs: [txt('session', 'Session', true), long('results', 'Results, one per line: question | result | comment', true)],
+      sections: (c) => [{ h: 'Session', input: c.input.session ?? '' }, { h: 'Results as typed', table: { headers: ['Question', 'Result', 'Comment'], rows: rows(c.input.results).map((p) => [p[0], p[1] ?? '', p[2] ?? '']) } }, { h: 'Themes', bullets: ['— to complete —'] }, { h: 'Actions', table: { headers: ['Action', 'Owner (role)', 'By when'], rows: blankRows(['Action 1', 'Action 2'], 3) } }, { h: 'Checks', checks: ['No names or identifying comments included', 'Themes drawn from the results above, not added'] }] }),
   ],
 };
 
@@ -69,6 +89,15 @@ export const support: Department = {
     A('support', 'SUP', { n: 3, name: 'Incident update', summary: 'Plain-language status update for users during an incident.', framework: 'ITIL incident communication', purpose: 'service_desk',
       inputs: [long('what', 'What is happening', true), long('impact', 'Who is affected'), long('next', 'Next update when')],
       sections: (c) => [{ h: 'What is happening', input: c.input.what ?? '' }, { h: 'Who is affected', input: c.input.impact ?? '' }, { h: 'What we are doing', input: '' }, { h: 'Next update', input: c.input.next ?? '' }] }),
+    A('support', 'SUP', { n: 4, name: 'Escalation handoff note', summary: 'Handoff from support to engineering with the facts and what has been tried.', framework: 'Escalation handoff', purpose: 'service_desk', formats: ['md', 'docx'],
+      inputs: [long('ticket', 'Ticket summary (no personal data)', true), long('steps', 'What has been tried', true), pick('severity', 'Severity', ['P1', 'P2', 'P3', 'P4'], true)],
+      sections: (c) => [{ h: 'Severity', kv: [['Severity', v(c, 'severity')]] }, { h: 'What is happening', input: c.input.ticket ?? '' }, { h: 'What has been tried', input: c.input.steps ?? '' }, { h: 'Hand-off', table: { headers: ['Item', 'Detail'], rows: [['Handed to (role)', ''], ['Time handed over', ''], ['Next update due', '']] } }, { h: 'Checks', checks: ['No learner or personal data in the note', 'Steps to reproduce included', 'Customer told what happens next'] }] }),
+    A('support', 'SUP', { n: 5, name: 'Response macro library', summary: 'Reusable reply wording for common questions, for the support lead to approve.', framework: 'Response templates', purpose: 'service_desk', formats: ['md', 'docx'],
+      inputs: [long('questions', 'Common questions, one per line', true)],
+      sections: (c) => [{ h: 'Macros', table: { headers: ['Question', 'Draft reply', 'Approved by (role)'], rows: lines(c.input.questions).map((q) => [q, '— to complete —', '']) } }, { h: 'Shape of a good reply', bullets: ['Greet the teacher by role or name they gave.', 'Answer the question first.', 'Give one next step.', 'Never ask for learner data.'] }] }),
+    A('support', 'SUP', { n: 6, name: 'Ticket trend review', summary: 'Themes and shares from ticket categories you type.', framework: 'Ticket trend analysis', purpose: 'service_desk', formats: ['md', 'xlsx', 'csv'],
+      inputs: [txt('period', 'Period', true), long('counts', 'Counts, one per line: category | number of tickets', true)],
+      sections: (c) => { const r = rows(c.input.counts).map((p) => [p[0], Number(p[1])] as [string, number]).filter((p) => Number.isFinite(p[1])); const total = r.reduce((a, p) => a + p[1], 0); r.sort((a, b) => b[1] - a[1]); return [{ h: 'Period', input: c.input.period ?? '' }, { h: 'Categories, largest first', table: { headers: ['Category', 'Tickets', 'Share'], rows: r.length ? [...r.map((p) => [p[0], p[1], total ? `${((p[1] / total) * 100).toFixed(1)}% [src:computed from your inputs]` : 'n/a']), ['Total', total, '']] : [[TBC, '', '']] } }, { h: 'What to do about the top categories', table: { headers: ['Category', 'Action (article, fix or training)', 'Owner (role)'], rows: blankRows(['Top category', 'Second category'], 3) } }]; } }),
   ],
 };
 

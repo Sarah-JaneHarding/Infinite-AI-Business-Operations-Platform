@@ -19,12 +19,10 @@ describe('agent catalogue stays in step with the code', () => {
       expect(!!t!.two, `${a.id} second approver`).toBe(!!a.secondApprover);
     }
   });
-  it('batch 0 tasks are exactly the agents that existed first; batch 1 tasks are built', () => {
+  it('every catalogued task is built', () => {
     const built = new Set(DEPARTMENTS.flatMap((d) => d.agents.map((a) => a.id)));
-    for (const t of tasks) {
-      if (t.batch === 0 || t.batch === 1) expect(built.has(t.id), t.id).toBe(true);
-      else expect(built.has(t.id), `${t.id} is not built yet`).toBe(false);
-    }
+    for (const t of tasks) expect(built.has(t.id), t.id).toBe(true);
+    expect(built.size).toBe(tasks.length);
   });
   it('numbers continue without gaps within a department', () => {
     for (const d of CATALOGUE) {

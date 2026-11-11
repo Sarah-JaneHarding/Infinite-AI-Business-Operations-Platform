@@ -1,4 +1,4 @@
-import { defineAgent as A, long, num, pick, src, txt, v, blankRows, TBC } from './kit';
+import { defineAgent as A, long, num, pick, src, txt, v, blankRows, TBC, rows, lines } from './kit';
 import type { Department } from './types';
 import { weightedScore } from './calc';
 
@@ -22,6 +22,16 @@ export const people: Department = {
     A('people', 'PPL', { n: 3, name: '30-60-90 onboarding plan', summary: 'First three months with outcomes and check-ins.', framework: '30-60-90 plan', purpose: 'people_ops',
       inputs: [txt('role', 'Role', true), long('priorities', 'Priorities for the first three months')],
       sections: (c) => [{ h: 'Priorities', input: c.input.priorities ?? '' }, { h: 'Plan', table: { headers: ['Period', 'Learn', 'Contribute', 'Check-in'], rows: [['First month', '', '', ''], ['Second month', '', '', ''], ['Third month', '', '', '']] } }] }),
+    A('people', 'PPL', { n: 4, name: 'Offer and contract checklist', summary: 'Checklist for a labour lawyer to review before an offer goes out.', framework: 'Offer review', purpose: 'people_ops', secondApprover: true, formats: ['md', 'docx'],
+      warning: 'Employment terms are checked by a labour lawyer. This agent sets none of them.',
+      inputs: [txt('role', 'Role', true), long('terms', 'Terms you propose (you set every one)', true)],
+      sections: (c) => [{ h: 'Role', input: c.input.role ?? '' }, { h: 'Proposed terms', input: c.input.terms ?? '' }, { h: 'For the labour lawyer', checks: ['Written particulars of employment complete', 'Probation, notice and leave terms checked against the law', 'Restraint or confidentiality clauses reviewed', 'Consent and notice for the employee’s personal information', 'Role description matches the job'] }] }),
+    A('people', 'PPL', { n: 5, name: 'Performance review guide', summary: 'Structured review guide. Ratings are the manager’s alone.', framework: 'Goal-based performance review', purpose: 'people_ops', secondApprover: true, formats: ['md', 'docx'],
+      inputs: [txt('role', 'Role', true), long('goals', 'Goals for the period, one per line: goal | evidence', true)],
+      sections: (c) => [{ h: 'Role', input: c.input.role ?? '' }, { h: 'Goals and evidence', table: { headers: ['Goal', 'Evidence', 'Manager’s rating (manager only)', 'Employee’s comment'], rows: rows(c.input.goals).map((p) => [p[0], p[1] ?? '', '', '']) } }, { h: 'Strengths and development', table: { headers: ['Strengths', 'Development areas'], rows: [['', '']] } }, { h: 'Fairness checks', checks: ['Same criteria used for people in the same role', 'Judgements rest on evidence', 'Employee had the chance to reply', 'HR or a second approver has read it'] }] }),
+    A('people', 'PPL', { n: 6, name: 'Staff development plan', summary: 'Development plan from goals the person and manager agree.', framework: 'Development planning', purpose: 'people_ops', formats: ['md', 'docx'],
+      inputs: [txt('role', 'Role', true), long('goals', 'Development goals, one per line: goal | support needed', true)],
+      sections: (c) => [{ h: 'Role', input: c.input.role ?? '' }, { h: 'Plan', table: { headers: ['Goal', 'Action', 'Support needed', 'By when', 'Check-in'], rows: rows(c.input.goals).map((p) => [p[0], '', p[1] ?? '', '', '']) } }, { h: 'Checks', checks: ['Goals agreed by the person and manager', 'Support is available and costed', 'Review date set'] }] }),
   ],
 };
 
@@ -33,6 +43,7 @@ export const devops: Department = {
     { id: 'ci', title: 'CI runs (live)', type: 'live', source: 'ci' },
     { id: 'runbooks', title: 'Ecosystem runbooks', type: 'live', source: 'runbooks' },
     { id: 'changes', title: 'Change log', type: 'tracker', collection: 'changes', columns: [{ key: 'change', label: 'Change', kind: 'text' }, { key: 'risk', label: 'Risk', kind: 'select', options: ['Low', 'Medium', 'High'] }, { key: 'rollback', label: 'Rollback plan', kind: 'text' }, { key: 'approver', label: 'Approver (role)', kind: 'text' }, { key: 'when', label: 'When', kind: 'date' }] },
+    { id: 'restore-log', title: 'Restore tests', type: 'tracker', collection: 'restore_tests', columns: [{ key: 'system', label: 'System', kind: 'text' }, { key: 'date', label: 'Date', kind: 'date' }, { key: 'result', label: 'Result', kind: 'select', options: ['Passed', 'Failed', 'Partly'] }, { key: 'note', label: 'Note', kind: 'text' }] },
   ],
   agents: [
     A('devops', 'SRE', { n: 1, name: 'Change request', summary: 'Change record with risk, test and rollback.', framework: 'ITIL change enablement', purpose: 'infrastructure_ops', secondApprover: true,
@@ -44,6 +55,15 @@ export const devops: Department = {
     A('devops', 'SRE', { n: 3, name: 'SLO and recovery targets', summary: 'Define SLOs and recovery objectives from targets you choose.', framework: 'SRE SLOs + DR', purpose: 'infrastructure_ops',
       inputs: [long('services', 'Services in scope', true), long('targets', 'Availability / recovery targets you have decided, with reasoning')],
       sections: (c) => [{ h: 'Services', input: c.input.services ?? '' }, { h: 'Targets', input: c.input.targets ?? '' }, { h: 'Definitions', table: { headers: ['Service', 'SLI (what is measured)', 'SLO (target you set)', 'RPO', 'RTO', 'Test of recovery (date)'], rows: blankRows(['Service 1', 'Service 2'], 6) } }, { h: 'Error budget policy', p: 'When the budget is spent, reliability work takes priority over new features until it recovers.' }] }),
+    A('devops', 'SRE', { n: 4, name: 'Backup and restore test record', summary: 'Record of a restore test with the result and evidence.', framework: 'Restore testing', purpose: 'infrastructure_ops', formats: ['md', 'xlsx'],
+      inputs: [txt('system', 'System', true), txt('date', 'Date tested', true), pick('result', 'Result', ['Passed', 'Failed', 'Partly'], true), long('notes', 'What you did and saw')],
+      sections: (c) => [{ h: 'Test', kv: [['System', v(c, 'system')], ['Date', v(c, 'date')], ['Result', v(c, 'result')]] }, { h: 'What happened', input: c.input.notes ?? '' }, { h: 'Steps to confirm', checks: ['Backup identified and its date recorded', 'Restored to an isolated environment', 'Data integrity checked', 'Time taken recorded against the recovery target', 'No production data exposed during the test'] }, { h: 'If it failed or partly passed', table: { headers: ['Problem', 'Fix', 'Owner (role)', 'Retest date'], rows: blankRows(['Problem 1'], 4) } }] }),
+    A('devops', 'SRE', { n: 5, name: 'Release runbook', summary: 'Step-by-step runbook for a release.', framework: 'Runbook', purpose: 'infrastructure_ops', formats: ['md', 'docx'],
+      inputs: [txt('release', 'Release', true), txt('env', 'Environment', true), long('steps', 'Steps, one per line', true)],
+      sections: (c) => [{ h: 'Release', kv: [['Release', v(c, 'release')], ['Environment', v(c, 'env')]] }, { h: 'Before you start', checks: ['Change request approved', 'Backup taken and verified', 'Rollback steps read', 'Stakeholders told'] }, { h: 'Steps', ol: lines(c.input.steps).length ? lines(c.input.steps) : [TBC] }, { h: 'Rollback', input: '' }, { h: 'After', checks: ['Health checks green', 'Smoke test done', 'Release recorded'] }] }),
+    A('devops', 'SRE', { n: 6, name: 'Cloud cost review', summary: 'Budget against actual from bill figures you type. Never estimated.', framework: 'Budget vs actual', purpose: 'infrastructure_ops', formats: ['md', 'xlsx', 'csv'],
+      inputs: [txt('period', 'Period', true), long('lines', 'Lines, one per line: service | budget (R) | actual (R)', true)],
+      sections: (c) => { const n = (s: string) => Number(s.replace(/[R,\s]/g, '')); const r = rows(c.input.lines).map((p) => { const [b, a] = [n(p[1] ?? ''), n(p[2] ?? '')]; const ok = Number.isFinite(b) && Number.isFinite(a); return [p[0], p[1] ?? '', p[2] ?? '', ok ? a - b : 'n/a', ok && b !== 0 ? `${(((a - b) / b) * 100).toFixed(1)}% [src:computed from your inputs]` : 'n/a'] as (string | number)[]; }); return [{ h: 'Period', input: c.input.period ?? '' }, { h: 'Cost against budget', table: { headers: ['Service', 'Budget', 'Actual', 'Variance', 'Variance %'], rows: r.length ? r : [[TBC, '', '', '', '']] } }, { h: 'Actions', table: { headers: ['Service', 'Action', 'Owner (role)'], rows: blankRows(['Largest overspend'], 3) } }]; } }),
   ],
 };
 
@@ -54,6 +74,8 @@ export const procurement: Department = {
   widgets: [
     { id: 'vendors', title: 'Vendor register', type: 'tracker', collection: 'vendors', columns: [{ key: 'vendor', label: 'Vendor', kind: 'text' }, { key: 'service', label: 'Service', kind: 'text' }, { key: 'data', label: 'Touches personal data?', kind: 'select', options: ['No', 'Yes', 'Unknown'] }, { key: 'contract', label: 'Written operator contract?', kind: 'select', options: ['N/A', 'Yes', 'No'] }, { key: 'location', label: 'Data location', kind: 'text' }, { key: 'review', label: 'Next review', kind: 'date' }] },
     { id: 'score', title: 'Weighted score (3 criteria)', type: 'calc', note: 'Weights and scores are yours.', inputs: [{ key: 'w1', label: 'Weight 1' }, { key: 's1', label: 'Score 1' }, { key: 'w2', label: 'Weight 2' }, { key: 's2', label: 'Score 2' }, { key: 'w3', label: 'Weight 3' }, { key: 's3', label: 'Score 3' }], compute: (x) => weightedScore([{ weight: x.w1 || 0, score: x.s1 || 0 }, { weight: x.w2 || 0, score: x.s2 || 0 }, { weight: x.w3 || 0, score: x.s3 || 0 }]) },
+    { id: 'purchases', title: 'Purchase log', type: 'tracker', collection: 'purchases', columns: [{ key: 'item', label: 'Item', kind: 'text' }, { key: 'cost', label: 'Cost (R)', kind: 'number' }, { key: 'approver', label: 'Approver (role)', kind: 'text' }, { key: 'status', label: 'Status', kind: 'select', options: ['Requested', 'Approved', 'Declined', 'Paid'] }] },
+    { id: 'operator-register', title: 'Operator register', type: 'tracker', collection: 'operator_register', columns: [{ key: 'operator', label: 'Operator', kind: 'text' }, { key: 'service', label: 'Service', kind: 'text' }, { key: 'data', label: 'Data types', kind: 'text' }, { key: 'agreement', label: 'Agreement', kind: 'select', options: ['Signed', 'In progress', 'None'] }] },
   ],
   agents: [
     A('procurement', 'PRO', { n: 1, name: 'Vendor due diligence', summary: 'Due-diligence questionnaire for a supplier that may touch personal data.', framework: 'POPIA operator due diligence', purpose: 'vendor_management', secondApprover: true,
@@ -65,6 +87,15 @@ export const procurement: Department = {
     A('procurement', 'PRO', { n: 3, name: 'Supplier review', summary: 'Periodic performance and risk review of an existing supplier.', framework: 'Supplier performance review', purpose: 'vendor_management',
       inputs: [txt('vendor', 'Vendor', true), long('performance', 'How they have performed')],
       sections: (c) => [{ h: 'Performance', input: c.input.performance ?? '' }, { h: 'Review', table: { headers: ['Area', 'Rating', 'Evidence', 'Action'], rows: blankRows(['Delivery', 'Quality', 'Security / data protection', 'Cost', 'Relationship'], 4) } }, { h: 'Decision', kv: [['Continue / change / exit', TBC], ['Decided by (role)', TBC]] }] }),
+    A('procurement', 'PRO', { n: 4, name: 'Operator register update', summary: 'Updates the register of operators and their written agreements.', framework: 'POPIA operator register', purpose: 'vendor_management', secondApprover: true, formats: ['md', 'xlsx', 'csv'],
+      inputs: [long('operators', 'Operators, one per line: operator | service | data types | agreement status', true)],
+      sections: (c) => [{ h: 'Register', table: { headers: ['Operator', 'Service', 'Data types', 'Agreement status', 'Reviewed by (role)', 'Date'], rows: rows(c.input.operators).map((p) => [p[0], p[1] ?? '', p[2] ?? '', p[3] ?? '', '', '']) } }, { h: 'Checks', checks: ['Every operator touching personal information has a written agreement', 'Security measures recorded for each', 'Register matches the vendors really in use', 'Second approver has reviewed changes'] }] }),
+    A('procurement', 'PRO', { n: 5, name: 'Purchase request and approval log', summary: 'Purchase request with the approval recorded.', framework: 'Purchase approval', purpose: 'vendor_management', formats: ['md', 'csv'],
+      inputs: [txt('item', 'Item or service', true), long('reason', 'Why it is needed', true), txt('cost', 'Cost as quoted (R)'), txt('approver', 'Approver (role)', true)],
+      sections: (c) => [{ h: 'Request', table: { headers: ['Item', 'Cost as quoted (R)', 'Approver (role)', 'Status'], rows: [[v(c, 'item'), c.input.cost ? `R ${c.input.cost}` : TBC, v(c, 'approver'), 'Requested']] } }, { h: 'Reason', input: c.input.reason ?? '' }, { h: 'Checks', checks: ['A budget line exists', 'Quotes compared where the value warrants it', 'Operator review done if personal information is touched', 'Approval recorded below'] }, { h: 'Approval', table: { headers: ['Decision', 'By (role)', 'Date', 'Conditions'], rows: [['', '', '', '']] } }] }),
+    A('procurement', 'PRO', { n: 6, name: 'Exit and data-return plan', summary: 'Plan to leave a supplier and get data returned or deleted.', framework: 'Supplier exit', purpose: 'vendor_management', secondApprover: true, formats: ['md', 'docx'],
+      inputs: [txt('supplier', 'Supplier', true), long('data', 'Data the supplier holds', true)],
+      sections: (c) => [{ h: 'Supplier', input: c.input.supplier ?? '' }, { h: 'Data held', input: c.input.data ?? '' }, { h: 'Exit steps', checks: ['Notice given as the agreement requires', 'Data exported in a usable format', 'Replacement in place before cut-over', 'Supplier confirms deletion in writing', 'Access and keys revoked', 'Register updated'] }] }),
   ],
 };
 
@@ -74,6 +105,7 @@ export const research: Department = {
   frameworks: ['Theory of change', 'Kirkpatrick levels', 'Pre-registered evaluation plan', 'Evidence log with source grading'],
   widgets: [
     { id: 'evidence', title: 'Evidence log', type: 'tracker', collection: 'evidence', columns: [{ key: 'claim', label: 'Claim', kind: 'text' }, { key: 'source', label: 'Source (cite)', kind: 'text' }, { key: 'grade', label: 'Strength', kind: 'select', options: ['Anecdote', 'Internal data', 'Pilot study', 'Independent study'] }, { key: 'usable', label: 'OK to use externally?', kind: 'select', options: ['No', 'With caveat', 'Yes'] }] },
+    { id: 'claims', title: 'Claims register', type: 'tracker', collection: 'claims_register', columns: [{ key: 'claim', label: 'Claim', kind: 'text' }, { key: 'evidence', label: 'Evidence', kind: 'text' }, { key: 'used', label: 'Where used', kind: 'text' }, { key: 'status', label: 'Status', kind: 'select', options: ['No evidence', 'Evidence given', 'Checked'] }] },
   ],
   agents: [
     A('research', 'RES', { n: 1, name: 'Theory of change', summary: 'Pathway from activities to outcomes with assumptions to test.', framework: 'Theory of change', purpose: 'research_evaluation',
@@ -85,6 +117,16 @@ export const research: Department = {
     A('research', 'RES', { n: 3, name: 'Impact report skeleton', summary: 'Report structure that holds only evidence you supply.', framework: 'Evidence log with source grading', purpose: 'research_evaluation', secondApprover: true,
       inputs: [txt('title', 'Report title', true), long('findings', 'Findings, each with its source', true), long('limits', 'Limitations')],
       sections: (c) => [{ h: 'Findings (sourced)', input: c.input.findings ?? '' }, { h: 'Limitations', input: c.input.limits ?? '' }, { h: 'Claims check', callout: { tone: 'warn', text: 'Each claim above must appear in the evidence log with a source and a strength grade before external use.' } }, { h: 'Repository context', p: `Product facts come from the ecosystem snapshot: ${src(c, 'eco.stages')} logged stages at commit ${src(c, 'eco.head')}.` }] }),
+    A('research', 'RES', { n: 4, name: 'Literature scan summary', summary: 'Summary of sources you supply, each cited. Nothing added from memory.', framework: 'Structured literature scan', purpose: 'research_evaluation', formats: ['md', 'docx'],
+      inputs: [txt('question', 'Question', true), long('sources', 'Sources, one per line: citation | key finding | link', true)],
+      sections: (c) => [{ h: 'Question', input: c.input.question ?? '' }, { h: 'Sources', table: { headers: ['Citation', 'Key finding', 'Link', 'Quality note (you assess)', 'Status'], rows: rows(c.input.sources).map((p) => [p[0], p[1] ?? '', p[2] ?? '', '', p[2] ? 'Linked' : 'No link: add one or drop']) } }, { h: 'Synthesis (written by you)', input: '' }, { h: 'Checks', checks: ['Every finding traced to its source', 'Nothing added from memory', 'Gaps in the evidence stated'] }] }),
+    A('research', 'RES', { n: 5, name: 'Pilot data collection plan', summary: 'What to collect, from whom, with a consent checklist.', framework: 'Data collection plan', purpose: 'research_evaluation', secondApprover: true, formats: ['md', 'docx'],
+      warning: 'Learner-identifying data never enters this platform. Collect only what the evaluation needs, with consent.',
+      inputs: [txt('pilot', 'Pilot', true), long('measures', 'Measures, one per line: measure | source | how collected', true)],
+      sections: (c) => [{ h: 'Pilot', input: c.input.pilot ?? '' }, { h: 'Measures', table: { headers: ['Measure', 'Source', 'How collected', 'When', 'Stored where'], rows: rows(c.input.measures).map((p) => [p[0], p[1] ?? '', p[2] ?? '', '', '']) } }, { h: 'Consent and ethics', checks: ['Consent from the school and from parents or guardians where required', 'Only data the evaluation needs', 'De-identified before analysis', 'Storage and deletion date agreed', 'Second approver has reviewed'] }] }),
+    A('research', 'RES', { n: 6, name: 'Evidence claims register', summary: 'Register tying each public claim to its evidence.', framework: 'Claims and evidence register', purpose: 'research_evaluation', formats: ['md', 'xlsx', 'csv'],
+      inputs: [long('claims', 'Claims, one per line: claim | evidence | where it is used', true)],
+      sections: (c) => [{ h: 'Register', table: { headers: ['Claim', 'Evidence', 'Where used', 'Status'], rows: rows(c.input.claims).map((p) => [p[0], p[1] ?? 'None', p[2] ?? '', p[1] ? 'Evidence given: check it supports the claim' : 'No evidence: do not publish']) } }, { h: 'Checks', checks: ['Evidence supports the claim as worded', 'Marketing has the current version', 'Claims without evidence removed'] }] }),
   ],
 };
 void num; void pick; void txt; void long; void v;

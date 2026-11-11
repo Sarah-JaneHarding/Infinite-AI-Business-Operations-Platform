@@ -12,7 +12,7 @@ L.push('Roles, tasks and specialist agents for the 16 business operations depart
 L.push(`- ${tasks.length} agents in total: ${tasks.filter((t) => built.has(t.id)).length} built, ${tasks.filter((t) => !built.has(t.id)).length} planned.`);
 L.push('- Every agent drafts for a human, needs approval, and invents no numbers or policy. Agents marked **2nd** need a second approver.');
 L.push('- Ids follow `OPS-<CODE>-nn`. Existing agents keep their numbers. New ones continue from 04.');
-L.push('- Build order: batch 1 is Finance and Government (built). Later batches are one department each, in the order of the Batch column, when you say “continue”.', '');
+L.push('- All 100 agents are built. The Batch number in the source is the order they were built: Finance and Government first, then one department per batch.', '');
 L.push('| Department | Roles | Agents | Built | Planned |', '|---|---|---|---|---|');
 for (const d of CATALOGUE) { const t = tasks.filter((x) => x.dept === d.dept); L.push(`| ${name(d.dept)} | ${d.roles.length} | ${t.length} | ${t.filter((x) => built.has(x.id)).length} | ${t.filter((x) => !built.has(x.id)).length} |`); }
 L.push('');

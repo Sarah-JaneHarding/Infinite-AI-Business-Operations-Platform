@@ -2,29 +2,29 @@
 
 Roles, tasks and specialist agents for the 16 business operations departments. **Roles are drafted for the founder to review**: the repository defines none, so rename, merge or drop any of them. Each role has two tasks, and each task has one agent.
 
-- 100 agents in total: 58 built, 42 planned.
+- 100 agents in total: 100 built, 0 planned.
 - Every agent drafts for a human, needs approval, and invents no numbers or policy. Agents marked **2nd** need a second approver.
 - Ids follow `OPS-<CODE>-nn`. Existing agents keep their numbers. New ones continue from 04.
-- Build order: batch 1 is Finance and Government (built). Later batches are one department each, in the order of the Batch column, when you say “continue”.
+- All 100 agents are built. The Batch number in the source is the order they were built: Finance and Government first, then one department per batch.
 
 | Department | Roles | Agents | Built | Planned |
 |---|---|---|---|---|
-| Executive & Strategy | 3 | 6 | 3 | 3 |
-| Product & Engineering | 3 | 6 | 3 | 3 |
-| Curriculum & Pedagogy QA | 3 | 6 | 3 | 3 |
-| AI, Brain & Evals | 3 | 6 | 3 | 3 |
-| Security & POPIA Compliance | 3 | 6 | 3 | 3 |
-| Legal & Contracts | 3 | 6 | 3 | 3 |
+| Executive & Strategy | 3 | 6 | 6 | 0 |
+| Product & Engineering | 3 | 6 | 6 | 0 |
+| Curriculum & Pedagogy QA | 3 | 6 | 6 | 0 |
+| AI, Brain & Evals | 3 | 6 | 6 | 0 |
+| Security & POPIA Compliance | 3 | 6 | 6 | 0 |
+| Legal & Contracts | 3 | 6 | 6 | 0 |
 | Finance | 4 | 8 | 8 | 0 |
-| Sales & CRM | 3 | 6 | 3 | 3 |
-| Marketing & Brand | 3 | 6 | 3 | 3 |
-| Customer Success & Pilots | 3 | 6 | 3 | 3 |
-| Support & Service Desk | 3 | 6 | 3 | 3 |
+| Sales & CRM | 3 | 6 | 6 | 0 |
+| Marketing & Brand | 3 | 6 | 6 | 0 |
+| Customer Success & Pilots | 3 | 6 | 6 | 0 |
+| Support & Service Desk | 3 | 6 | 6 | 0 |
 | Government & Partnerships | 4 | 8 | 8 | 0 |
-| People & Culture | 3 | 6 | 3 | 3 |
-| IT, DevOps & SRE | 3 | 6 | 3 | 3 |
-| Procurement & Vendors | 3 | 6 | 3 | 3 |
-| Research, Impact & Knowledge | 3 | 6 | 3 | 3 |
+| People & Culture | 3 | 6 | 6 | 0 |
+| IT, DevOps & SRE | 3 | 6 | 6 | 0 |
+| Procurement & Vendors | 3 | 6 | 6 | 0 |
+| Research, Impact & Knowledge | 3 | 6 | 6 | 0 |
 
 ## Executive & Strategy
 
@@ -40,14 +40,14 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-EXEC-03 | Decision memo | Six-page-style memo with options, the one-way or two-way door call and a decision record. | Decision; Options; Evidence | md, docx, pdf | Decision log | Built |
-| OPS-EXEC-04 | Scenario and risk review | Two or three scenarios with typed assumptions, risks, triggers and an owner for each. | Decision at stake; Scenarios; Assumptions with sources | md, docx, xlsx |  | Planned, batch 2 |
+| OPS-EXEC-04 | Scenario and risk review | Two or three scenarios with typed assumptions, risks, triggers and an owner for each. | Decision at stake; Scenarios; Assumptions with sources | md, docx, xlsx |  | Built |
 
 ### Company Secretary
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-EXEC-05 | Meeting minutes and action log | Minutes from your notes, with actions, owners and due dates ready for the action tracker. | Agenda; Notes; Attendees (roles) | md, docx, csv | Action tracker (new) | Planned, batch 2 |
-| OPS-EXEC-06 | Statutory and compliance calendar | Calendar of filings and renewals to confirm. Every date is marked "confirm with the official source". | Entity facts; Known deadlines | md, xlsx, csv | Compliance calendar checklist (new) | Planned, batch 2 |
+| OPS-EXEC-05 | Meeting minutes and action log | Minutes from your notes, with actions, owners and due dates ready for the action tracker. | Agenda; Notes; Attendees (roles) | md, docx, csv | Action tracker (new) | Built |
+| OPS-EXEC-06 | Statutory and compliance calendar | Calendar of filings and renewals to confirm. Every date is marked "confirm with the official source". | Entity facts; Known deadlines | md, xlsx, csv | Compliance calendar checklist (new) | Built |
 
 ## Product & Engineering
 
@@ -63,14 +63,14 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-PROD-03 | Architecture decision record | ADR with context, options, decision and consequences. | Context; Options; Decision | md, docx |  | Built |
-| OPS-PROD-04 | Release readiness checklist | Go or no-go sheet from release scope, live CI status and open questions. | Release scope; Known risks | md, docx, pdf | Live CI | Planned, batch 3 |
+| OPS-PROD-04 | Release readiness checklist | Go or no-go sheet from release scope, live CI status and open questions. | Release scope; Known risks | md, docx, pdf | Live CI | Built |
 
 ### Product Designer
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-PROD-05 | Teacher usability test plan | Task script and observation grid for sessions with teachers. No learner data. | Feature; Tasks to test; Participant roles | md, docx, csv | Findings tracker (new) | Planned, batch 3 |
-| OPS-PROD-06 | Accessibility review sheet | WCAG 2.2 checklist per screen with space for evidence and fixes. | Screens or flows; Assistive technology used | md, xlsx | Accessibility checklist (new) | Planned, batch 3 |
+| OPS-PROD-05 | Teacher usability test plan | Task script and observation grid for sessions with teachers. No learner data. | Feature; Tasks to test; Participant roles | md, docx, csv | Findings tracker (new) | Built |
+| OPS-PROD-06 | Accessibility review sheet | WCAG 2.2 checklist per screen with space for evidence and fixes. | Screens or flows; Assistive technology used | md, xlsx | Accessibility checklist (new) | Built |
 
 ## Curriculum & Pedagogy QA
 
@@ -85,15 +85,15 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-CURR-04 | CAPS-aligned assessment task and rubric | Task, rubric and memo template for a topic you cite from CAPS. | Grade, subject, term; CAPS topic and page | md, docx, pdf |  | Planned, batch 4 |
-| OPS-CURR-05 | Moderation record | Moderation checklist and record for sampled tasks, by learner code only. | Tasks sampled; Moderator role | md, docx, csv | Moderation checklist (new) | Planned, batch 4 |
+| OPS-CURR-04 | CAPS-aligned assessment task and rubric | Task, rubric and memo template for a topic you cite from CAPS. | Grade, subject, term; CAPS topic and page | md, docx, pdf |  | Built |
+| OPS-CURR-05 | Moderation record | Moderation checklist and record for sampled tasks, by learner code only. | Tasks sampled; Moderator role | md, docx, csv | Moderation checklist (new) | Built |
 
 ### Inclusion and Language Specialist
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-CURR-03 | Differentiation and support sheet | Support and extension strategies for a lesson. | Lesson; Barriers to learning (general) | md, docx |  | Built |
-| OPS-CURR-06 | Home-language glossary check | Term list laid out for a first-language speaker to verify. Unreviewed machine translation is never used. | Term list; Languages | md, docx, csv |  | Planned, batch 4 |
+| OPS-CURR-06 | Home-language glossary check | Term list laid out for a first-language speaker to verify. Unreviewed machine translation is never used. | Term list; Languages | md, docx, csv |  | Built |
 
 ## AI, Brain & Evals
 
@@ -109,14 +109,14 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-AI-03 | Eval plan | Evaluation plan with test sets, thresholds you set, and an owner. | Agent; Thresholds | md, docx |  | Built |
-| OPS-AI-04 | Eval results review | Pass or fail table against your thresholds from results you type. | Eval run results; Thresholds | md, xlsx, csv |  | Planned, batch 5 |
+| OPS-AI-04 | Eval results review | Pass or fail table against your thresholds from results you type. | Eval run results; Thresholds | md, xlsx, csv |  | Built |
 
 ### Guardrail Engineer
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-AI-05 (2nd) | Guardrail rule change proposal | Proposed change to a guardrail with the risk it addresses and a test to prove it. | Rule; Reason; Test | md, docx |  | Planned, batch 5 |
-| OPS-AI-06 | Prompt change review | Risk notes on a prompt diff: scope creep, data exposure, claims. | Prompt diff; Agent | md, docx |  | Planned, batch 5 |
+| OPS-AI-05 (2nd) | Guardrail rule change proposal | Proposed change to a guardrail with the risk it addresses and a test to prove it. | Rule; Reason; Test | md, docx |  | Built |
+| OPS-AI-06 | Prompt change review | Risk notes on a prompt diff: scope creep, data exposure, claims. | Prompt diff; Agent | md, docx |  | Built |
 
 ## Security & POPIA Compliance
 
@@ -132,14 +132,14 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-SEC-03 | Security control mapping | Maps controls to ISO/IEC 27001-style themes and NIST CSF. | Controls in place | md, xlsx, csv | Risk register | Built |
-| OPS-SEC-05 | Access review | Least-privilege review of roles and who holds them, by role not name. | Roles and access list | md, xlsx, csv | Access review checklist (new) | Planned, batch 6 |
+| OPS-SEC-05 | Access review | Least-privilege review of roles and who holds them, by role not name. | Roles and access list | md, xlsx, csv | Access review checklist (new) | Built |
 
 ### Privacy Analyst
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-SEC-04 (2nd) | Data subject request response | Response checklist for a POPIA access, correction or deletion request, by reference code only. | Request type; Date received | md, docx | Request log (new) | Planned, batch 6 |
-| OPS-SEC-06 | Operator register review | Checks that each operator has a written agreement and security measures recorded. | Operator list | md, xlsx, csv |  | Planned, batch 6 |
+| OPS-SEC-04 (2nd) | Data subject request response | Response checklist for a POPIA access, correction or deletion request, by reference code only. | Request type; Date received | md, docx | Request log (new) | Built |
+| OPS-SEC-06 | Operator register review | Checks that each operator has a written agreement and security measures recorded. | Operator list | md, xlsx, csv |  | Built |
 
 ## Legal & Contracts
 
@@ -155,14 +155,14 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-LEG-02 (2nd) | Operator agreement outline (POPIA) | Outline of a POPIA operator agreement for counsel. | Operator; Processing | md, docx |  | Built |
-| OPS-LEG-05 (2nd) | Privacy notice outline | Outline of a notice covering what POPIA requires you to tell people, for counsel to finalise. | Data collected; Purposes | md, docx |  | Planned, batch 7 |
+| OPS-LEG-05 (2nd) | Privacy notice outline | Outline of a notice covering what POPIA requires you to tell people, for counsel to finalise. | Data collected; Purposes | md, docx |  | Built |
 
 ### Commercial Counsel Liaison
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-LEG-04 (2nd) | School agreement term sheet | Term sheet for a school agreement using the approved price card and your own terms. | Pricing option chosen; Term and renewal | md, docx |  | Planned, batch 7 |
-| OPS-LEG-06 | Obligation and renewal register | Register of dates and duties from signed contracts. | Contracts and dates | md, xlsx, csv | Obligation register (new) | Planned, batch 7 |
+| OPS-LEG-04 (2nd) | School agreement term sheet | Term sheet for a school agreement using the approved price card and your own terms. | Pricing option chosen; Term and renewal | md, docx |  | Built |
+| OPS-LEG-06 | Obligation and renewal register | Register of dates and duties from signed contracts. | Contracts and dates | md, xlsx, csv | Obligation register (new) | Built |
 
 ## Finance
 
@@ -207,15 +207,15 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-SALES-04 | Pipeline review | Weekly review with MEDDICC coverage per opportunity from what the rep can evidence. | Opportunities; MEDDICC evidence | md, xlsx, csv | MEDDICC | Planned, batch 8 |
-| OPS-SALES-05 | Win and loss review | Structured review of why a school bought or did not, from the rep’s notes. | Outcome; Notes | md, docx |  | Planned, batch 8 |
+| OPS-SALES-04 | Pipeline review | Weekly review with MEDDICC coverage per opportunity from what the rep can evidence. | Opportunities; MEDDICC evidence | md, xlsx, csv | MEDDICC | Built |
+| OPS-SALES-05 | Win and loss review | Structured review of why a school bought or did not, from the rep’s notes. | Outcome; Notes | md, docx |  | Built |
 
 ### Solutions Lead
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-SALES-03 (2nd) | Proposal outline | Outline of a proposal using the approved price card. | School; Needs | md, docx, pdf | School quote calculator | Built |
-| OPS-SALES-06 | Teacher demo script | Demo script built around a teacher’s day, with no learner data on screen. | Audience; Features to show | md, docx |  | Planned, batch 8 |
+| OPS-SALES-06 | Teacher demo script | Demo script built around a teacher’s day, with no learner data on screen. | Audience; Features to show | md, docx |  | Built |
 
 ## Marketing & Brand
 
@@ -224,21 +224,21 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-MKT-01 | Campaign brief | Brief with audience, message and measures. | Goal; Audience | md, docx |  | Built |
-| OPS-MKT-04 | Content calendar builder | Month of posts across channels, ready for the calendar tracker. | Month; Pillars; Channels | md, csv | Content calendar | Planned, batch 9 |
+| OPS-MKT-04 | Content calendar builder | Month of posts across channels, ready for the calendar tracker. | Month; Pillars; Channels | md, csv | Content calendar | Built |
 
 ### Content Lead
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-MKT-02 | Post / email draft | Draft in the Infinite-AI voice, to be checked against the claims review. | Topic; Audience | md, docx | Brand voice check | Built |
-| OPS-MKT-05 | Case study draft | Case study built only from pilot evidence you supply, with a consent checklist for the school. | School (with consent); Evidence | md, docx |  | Planned, batch 9 |
+| OPS-MKT-05 | Case study draft | Case study built only from pilot evidence you supply, with a consent checklist for the school. | School (with consent); Evidence | md, docx |  | Built |
 
 ### Brand and Compliance Reviewer
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-MKT-03 | Brand and claims review | Checks claims against evidence and the brand voice. | Draft to review | md, docx | Brand voice check | Built |
-| OPS-MKT-06 | Direct-marketing consent audit (POPIA s69) | Checks each list and message against the section 69 conditions. | List source; Message | md, docx | Direct-marketing check | Planned, batch 9 |
+| OPS-MKT-06 | Direct-marketing consent audit (POPIA s69) | Checks each list and message against the section 69 conditions. | List source; Message | md, docx | Direct-marketing check | Built |
 
 ## Customer Success & Pilots
 
@@ -247,7 +247,7 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-CS-01 | Pilot plan | Plan following the ecosystem’s pilot protocol. | School; Pilot scope | md, docx |  | Built |
-| OPS-CS-04 | School onboarding checklist | Checklist from agreement to first lesson, with owners. | School; Start date | md, xlsx | Onboarding checklist (new) | Planned, batch 10 |
+| OPS-CS-04 | School onboarding checklist | Checklist from agreement to first lesson, with owners. | School; Start date | md, xlsx | Onboarding checklist (new) | Built |
 
 ### Customer Success Manager
 
@@ -260,8 +260,8 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-CS-05 | Teacher training session plan | Session plan with outcomes, activities and a short feedback form. | Audience; Duration | md, docx |  | Planned, batch 10 |
-| OPS-CS-06 | Training feedback summary | Summary of feedback results you type in, with no names. | Survey results | md, docx, csv |  | Planned, batch 10 |
+| OPS-CS-05 | Teacher training session plan | Session plan with outcomes, activities and a short feedback form. | Audience; Duration | md, docx |  | Built |
+| OPS-CS-06 | Training feedback summary | Summary of feedback results you type in, with no names. | Survey results | md, docx, csv |  | Built |
 
 ## Support & Service Desk
 
@@ -270,21 +270,21 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-SUP-01 | Ticket triage | Priority and routing for a ticket described without personal data. | Ticket summary | md, json | Priority matrix | Built |
-| OPS-SUP-06 | Ticket trend review | Themes and counts from ticket categories you type. | Period; Category counts | md, xlsx, csv |  | Planned, batch 11 |
+| OPS-SUP-06 | Ticket trend review | Themes and counts from ticket categories you type. | Period; Category counts | md, xlsx, csv |  | Built |
 
 ### Knowledge Manager
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-SUP-02 | Knowledge base article | How-to article for teachers. | Question; Steps | md, html |  | Built |
-| OPS-SUP-05 | Response macro library | Reusable reply wording for common questions, for the support lead to approve. | Common questions | md, docx |  | Planned, batch 11 |
+| OPS-SUP-05 | Response macro library | Reusable reply wording for common questions, for the support lead to approve. | Common questions | md, docx |  | Built |
 
 ### Incident Manager
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-SUP-03 | Incident update | Customer-facing update for an incident. | Incident; Status | md, html |  | Built |
-| OPS-SUP-04 | Escalation handoff note | Handoff from support to engineering with the facts and what has been tried. | Ticket summary; Steps tried | md, docx |  | Planned, batch 11 |
+| OPS-SUP-04 | Escalation handoff note | Handoff from support to engineering with the facts and what has been tried. | Ticket summary; Steps tried | md, docx |  | Built |
 
 ## Government & Partnerships
 
@@ -330,14 +330,14 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-PPL-03 | 30-60-90 onboarding plan | Onboarding plan for a new hire. | Role; Start date | md, docx |  | Built |
-| OPS-PPL-04 (2nd) | Offer and contract checklist | Checklist for a labour lawyer to review before an offer goes out. | Role; Terms | md, docx |  | Planned, batch 12 |
+| OPS-PPL-04 (2nd) | Offer and contract checklist | Checklist for a labour lawyer to review before an offer goes out. | Role; Terms | md, docx |  | Built |
 
 ### Learning and Development Lead
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-PPL-05 (2nd) | Performance review guide | Structured review guide. Ratings are the manager’s alone. | Role; Goals for the period | md, docx |  | Planned, batch 12 |
-| OPS-PPL-06 | Staff development plan | Development plan from goals the person and manager agree. | Role; Goals | md, docx |  | Planned, batch 12 |
+| OPS-PPL-05 (2nd) | Performance review guide | Structured review guide. Ratings are the manager’s alone. | Role; Goals for the period | md, docx |  | Built |
+| OPS-PPL-06 | Staff development plan | Development plan from goals the person and manager agree. | Role; Goals | md, docx |  | Built |
 
 ## IT, DevOps & SRE
 
@@ -353,14 +353,14 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-SRE-01 (2nd) | Change request | Change request with risk, rollback and approver. | Change; Rollback | md, docx |  | Built |
-| OPS-SRE-05 | Release runbook | Step-by-step runbook for a release, taken from the ecosystem’s runbooks. | Release; Environment | md, docx | Runbooks | Planned, batch 13 |
+| OPS-SRE-05 | Release runbook | Step-by-step runbook for a release, taken from the ecosystem’s runbooks. | Release; Environment | md, docx | Runbooks | Built |
 
 ### Cloud Platform Analyst
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-SRE-04 | Backup and restore test record | Record of a restore test with result and evidence. | System; Date tested; Result | md, xlsx | Restore test log (new) | Planned, batch 13 |
-| OPS-SRE-06 | Cloud cost review | Budget against actual from bill figures you type. Never estimated. | Bill lines | md, xlsx, csv | Budget vs actual | Planned, batch 13 |
+| OPS-SRE-04 | Backup and restore test record | Record of a restore test with result and evidence. | System; Date tested; Result | md, xlsx | Restore test log (new) | Built |
+| OPS-SRE-06 | Cloud cost review | Budget against actual from bill figures you type. Never estimated. | Bill lines | md, xlsx, csv | Budget vs actual | Built |
 
 ## Procurement & Vendors
 
@@ -376,14 +376,14 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-PRO-02 | RFQ and scoring matrix | Request for quotation and a weighted scoring matrix. | Need; Criteria | md, docx, xlsx | Weighted score | Built |
-| OPS-PRO-05 | Purchase request and approval log | Purchase request with approvals recorded. | Item; Reason; Approver role | md, csv | Purchase log (new) | Planned, batch 14 |
+| OPS-PRO-05 | Purchase request and approval log | Purchase request with approvals recorded. | Item; Reason; Approver role | md, csv | Purchase log (new) | Built |
 
 ### Operator Agreements Controller
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-PRO-04 (2nd) | Operator register update | Updates the register of operators and their written agreements (POPIA). | Operator; Agreement status | md, xlsx, csv | Operator register (new) | Planned, batch 14 |
-| OPS-PRO-06 (2nd) | Exit and data-return plan | Plan to leave a supplier and get data returned or deleted. | Supplier; Data held | md, docx |  | Planned, batch 14 |
+| OPS-PRO-04 (2nd) | Operator register update | Updates the register of operators and their written agreements (POPIA). | Operator; Agreement status | md, xlsx, csv | Operator register (new) | Built |
+| OPS-PRO-06 (2nd) | Exit and data-return plan | Plan to leave a supplier and get data returned or deleted. | Supplier; Data held | md, docx |  | Built |
 
 ## Research, Impact & Knowledge
 
@@ -398,15 +398,15 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-RES-05 (2nd) | Pilot data collection plan | What to collect, from whom, with a consent checklist. No learner-identifying data on this platform. | Pilot; Measures | md, docx |  | Planned, batch 15 |
+| OPS-RES-05 (2nd) | Pilot data collection plan | What to collect, from whom, with a consent checklist. No learner-identifying data on this platform. | Pilot; Measures | md, docx |  | Built |
 | OPS-RES-03 (2nd) | Impact report skeleton | Report structure. No impact claim without evidence. | Programme; Evidence | md, docx, pdf |  | Built |
 
 ### Evidence Librarian
 
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
-| OPS-RES-04 | Literature scan summary | Summary of sources you supply, each cited. Nothing added from memory. | Question; Sources | md, docx |  | Planned, batch 15 |
-| OPS-RES-06 | Evidence claims register | Register tying each public claim to its evidence, shared with Marketing. | Claims; Evidence | md, xlsx, csv | Claims register (new) | Planned, batch 15 |
+| OPS-RES-04 | Literature scan summary | Summary of sources you supply, each cited. Nothing added from memory. | Question; Sources | md, docx |  | Built |
+| OPS-RES-06 | Evidence claims register | Register tying each public claim to its evidence, shared with Marketing. | Claims; Evidence | md, xlsx, csv | Claims register (new) | Built |
 
 ## Widgets added with this catalogue
 
