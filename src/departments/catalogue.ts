@@ -198,7 +198,7 @@ export const CATALOGUE: CatDept[] = [
     ] },
     { role: 'Funding and Grants Lead', tasks: [
       T('OPS-GOV-03', 'Funding application skeleton', 'Structure for a grant or tender response using facts you can cite.', ['Funder', 'Need', 'Activities'], 'md, docx', { widget: 'Funding and partnership leads' }),
-      T('OPS-GOV-06', 'Funding pipeline review', 'Review of the leads tracker: what is open, what is stale and the next action for each live lead.', ['Leads export (CSV)', 'Priorities'], 'md, docx, csv', { widget: 'Funding and partnership leads', batch: 1 }),
+      T('OPS-GOV-06', 'Funding pipeline review', 'Counts leads by stage and lists the next action for each live lead, flagging any with none recorded.', ['Leads, one per line: name | stage | next action', 'Priorities'], 'md, docx, csv', { widget: 'Funding and partnership leads', batch: 1 }),
     ] },
     { role: 'Policy Analyst', tasks: [
       T('OPS-GOV-07', 'Policy watch note', 'Note on a policy or circular. Every statement cites the official source, and unverified statements are flagged.', ['Policy or circular', 'Source link', 'Relevance'], 'md, docx', { batch: 1 }),
