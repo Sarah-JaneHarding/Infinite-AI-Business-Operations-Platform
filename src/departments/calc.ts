@@ -51,3 +51,37 @@ export const variance = (budget: number, actual: number): CalcOut[] => [
   { label: 'Variance', value: actual - budget, unit: 'currency', formula: 'actual − budget' },
   { label: 'Variance %', value: budget === 0 ? null : ((actual - budget) / budget) * 100, unit: '%', formula: '(actual − budget) ÷ budget' },
 ];
+
+/** Per-school pricing model (project doc claude/per-school-pricing-model-2026-11-11.md). These are the
+ * company's own proposed rates, held in one place so the quote widget and its tests share them. */
+export const SCHOOL_PRICING = {
+  minMonthly: 750, platformFee: 300, perEducator: 75, perLearnerFirst: 4.0, tierBreak: 500, perLearnerBeyond: 1.5,
+  communityFactor: 0.5, annualDiscount: 0.1, vat: 0.15, variablePerLearner: 1.76, paymentFee: 0.01,
+} as const;
+
+/** Monthly price ex VAT for a school, standard rate. Learners and educators only. */
+export const schoolMonthlyExVat = (learners: number, educators: number): number | null => {
+  const P = SCHOOL_PRICING;
+  if (![learners, educators].every((n) => Number.isFinite(n) && n >= 0)) return null;
+  const raw = P.platformFee + P.perEducator * educators + P.perLearnerFirst * Math.min(learners, P.tierBreak) + P.perLearnerBeyond * Math.max(0, learners - P.tierBreak);
+  return Math.max(P.minMonthly, raw);
+};
+
+/** Quote for one school: standard and community rates, monthly and annual prepay, VAT and internal margin. */
+export const schoolQuote = (learners: number, educators: number): CalcOut[] => {
+  const P = SCHOOL_PRICING;
+  const std = schoolMonthlyExVat(learners, educators);
+  if (std === null) return [{ label: 'Monthly price ex VAT', value: null, unit: 'R', formula: 'learners and educators must be zero or more' }];
+  const com = std * P.communityFactor;
+  const annual = (m: number) => m * 12 * (1 - P.annualDiscount);
+  const margin = (m: number) => m - P.variablePerLearner * learners - P.paymentFee * m;
+  return [
+    { label: 'Standard: monthly ex VAT', value: std, unit: 'R', formula: 'max(R750, R300 + R75 × educators + R4.00 × first 500 learners + R1.50 × learners above 500)' },
+    { label: 'Standard: monthly incl VAT', value: std * (1 + P.vat), unit: 'R', formula: 'ex VAT × 1.15' },
+    { label: 'Standard: annual prepay ex VAT', value: annual(std), unit: 'R', formula: 'monthly × 12 × 0.90' },
+    { label: 'Community rate: monthly ex VAT', value: com, unit: 'R', formula: 'standard × 50% (no-fee / low-budget public schools)' },
+    { label: 'Community rate: annual prepay ex VAT', value: annual(com), unit: 'R', formula: 'community monthly × 12 × 0.90' },
+    { label: 'Price per learner per month (standard, ex VAT)', value: div(std, learners), unit: 'R', formula: 'monthly ex VAT ÷ learners' },
+    { label: 'Internal margin per month (standard, ex VAT)', value: margin(std), unit: 'R', formula: 'price − R1.76 × learners − 1% payment fee' },
+  ];
+};

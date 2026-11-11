@@ -7,7 +7,7 @@ export interface Col { key: string; label: string; kind: 'text' | 'number' | 'da
 export type Widget =
   | { id: string; title: string; type: 'stats'; note?: string; stats: (facts: Record<string, string | number>) => Stat[] }
   | { id: string; title: string; type: 'calc'; note?: string; inputs: { key: string; label: string; unit?: string }[]; compute: (v: Record<string, number>) => CalcOut[] }
-  | { id: string; title: string; type: 'tracker'; note?: string; collection: string; columns: Col[] }
+  | { id: string; title: string; type: 'tracker'; note?: string; collection: string; columns: Col[]; seed?: Record<string, string | number>[] }
   | { id: string; title: string; type: 'checklist'; note?: string; collection: string; items: string[] }
   | { id: string; title: string; type: 'live'; note?: string; source: 'pulls' | 'ci' | 'oq' | 'events' | 'roster' | 'runbooks' | 'stages' };
 

@@ -63,6 +63,15 @@ function useRows(collection: string) {
 
 function TrackerW({ w }: { w: Extract<Widget, { type: 'tracker' }> }) {
   const { rows, save } = useRows(w.collection);
+  const { p, bump, actor } = useOps();
+  // Seed once: only when the collection has never held a record (a deleted seed row still counts, so removals stick).
+  useEffect(() => {
+    if (!p || !w.seed?.length || p.warehouse.latest<Row>(w.collection, 'id').length) return;
+    (async () => {
+      for (const r of w.seed!) await p.warehouse.put(w.collection, { ...r, updatedBy: actor.id, at: new Date().toISOString() } as never);
+      bump();
+    })();
+  }, [p, w.collection]); // eslint-disable-line react-hooks/exhaustive-deps
   const add = () => save({ id: newId('row'), ...Object.fromEntries(w.columns.map((c) => [c.key, c.kind === 'select' ? c.options![0] : ''])) });
   const doc: Doc = { title: w.title, blocks: [{ type: 'table', headers: w.columns.map((c) => c.label), rows: rows.map((r) => w.columns.map((c) => (r[c.key] ?? '') as string | number)) }], meta: {} };
   return (

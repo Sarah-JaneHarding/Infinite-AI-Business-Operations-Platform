@@ -1,6 +1,7 @@
 import { defineAgent as A, long, pick, src, txt, v, blankRows, TBC } from './kit';
 import type { Department } from './types';
 import { priority } from './calc';
+import { FUNDING_LEAD_SEED } from './fundingLeads';
 
 export const marketing: Department = {
   id: 'marketing', name: 'Marketing & Brand', icon: 'Megaphone',
@@ -76,6 +77,9 @@ export const government: Department = {
   mission: 'Work with the DBE, provincial departments, districts and partners. Policy is cited from source, never invented.',
   frameworks: ['Stakeholder mapping (power / interest)', 'Theory of change', 'Partnership MoU outline', 'Grant application structure'],
   widgets: [
+    { id: 'leads', title: 'Funding and partnership leads', type: 'tracker', collection: 'funding_leads', seed: FUNDING_LEAD_SEED,
+      note: 'Seeded with 43 leads researched from public pages on 11 Nov 2026. Contacts are unverified, so confirm on the funder’s own page before reaching out. Programmes marked “Closed, watch” are closed now; “Confirm” means the current call needs checking.',
+      columns: [{ key: 'name', label: 'Lead', kind: 'text' }, { key: 'category', label: 'Category', kind: 'select', options: ['Government', 'Accelerator', 'Credits', 'Investor', 'Philanthropy', 'Corporate'] }, { key: 'fit', label: 'Fit', kind: 'select', options: ['High', 'Medium', 'Low', 'Later'] }, { key: 'availability', label: 'Availability', kind: 'select', options: ['Open now', 'Closed, watch', 'Confirm'] }, { key: 'stage', label: 'Stage', kind: 'select', options: ['Not started', 'Researching', 'Contacted', 'In talks', 'Applied', 'Declined'] }, { key: 'type', label: 'Type', kind: 'text' }, { key: 'timing', label: 'Timing', kind: 'text' }, { key: 'person', label: 'Contact person', kind: 'text' }, { key: 'contact', label: 'Contact details', kind: 'text' }, { key: 'why', label: 'Why it fits', kind: 'text' }] },
     { id: 'stake', title: 'Stakeholder map', type: 'tracker', note: 'Roles and organisations only.', collection: 'stakeholders', columns: [{ key: 'org', label: 'Organisation / body', kind: 'text' }, { key: 'role', label: 'Role', kind: 'text' }, { key: 'power', label: 'Power', kind: 'select', options: ['High', 'Medium', 'Low'] }, { key: 'interest', label: 'Interest', kind: 'select', options: ['High', 'Medium', 'Low'] }, { key: 'next', label: 'Next engagement', kind: 'text' }] },
   ],
   agents: [

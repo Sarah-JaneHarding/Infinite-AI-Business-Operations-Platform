@@ -1,6 +1,6 @@
 import { defineAgent as A, long, num, pick, src, txt, v, blankRows, TBC } from './kit';
 import type { Department } from './types';
-import { burnMultiple, grossMargin, breakEven, nrr, runway, unitEconomics, variance, MEDDICC } from './calc';
+import { burnMultiple, grossMargin, breakEven, nrr, runway, unitEconomics, variance, schoolQuote, MEDDICC } from './calc';
 
 const POPIA_CONDITIONS = ['Accountability', 'Processing limitation', 'Purpose specification', 'Further processing limitation', 'Information quality', 'Openness', 'Security safeguards', 'Data subject participation'];
 
@@ -74,6 +74,7 @@ export const finance: Department = {
     { id: 'burnm', title: 'Burn multiple', type: 'calc', note: FIN_NOTE, inputs: [{ key: 'b', label: 'Net burn', unit: 'R' }, { key: 'n', label: 'Net new ARR', unit: 'R' }], compute: (x) => burnMultiple(x.b, x.n) },
     { id: 'margin', title: 'Gross margin', type: 'calc', note: FIN_NOTE, inputs: [{ key: 'r', label: 'Revenue', unit: 'R' }, { key: 'c', label: 'Cost of revenue', unit: 'R' }], compute: (x) => grossMargin(x.r, x.c) },
     { id: 'be', title: 'Break-even', type: 'calc', note: FIN_NOTE, inputs: [{ key: 'f', label: 'Fixed costs', unit: 'R' }, { key: 'p', label: 'Price per unit', unit: 'R' }, { key: 'v', label: 'Variable cost per unit', unit: 'R' }], compute: (x) => breakEven(x.f, x.p, x.v) },
+    { id: 'schoolquote', title: 'School quote calculator', type: 'calc', note: 'Type a school’s learners and educators. Rates come from the per-school pricing model (a proposal for decision D-1, not yet tested with a paying school): R300 + R75 per educator + R4.00 per learner for the first 500 + R1.50 above 500, minimum R750; community rate 50%; annual prepay 10% off; VAT 15%.', inputs: [{ key: 'learners', label: 'Learners' }, { key: 'educators', label: 'Educators' }], compute: (x) => schoolQuote(x.learners, x.educators) },
     { id: 'var', title: 'Budget vs actual', type: 'calc', note: FIN_NOTE, inputs: [{ key: 'b', label: 'Budget', unit: 'R' }, { key: 'a', label: 'Actual', unit: 'R' }], compute: (x) => variance(x.b, x.a) },
     { id: 'budget', title: 'Budget lines', type: 'tracker', collection: 'budget', columns: [{ key: 'line', label: 'Line', kind: 'text' }, { key: 'budget', label: 'Budget (R)', kind: 'number' }, { key: 'actual', label: 'Actual (R)', kind: 'number' }, { key: 'note', label: 'Note', kind: 'text' }] },
   ],
