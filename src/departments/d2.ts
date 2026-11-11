@@ -1,6 +1,6 @@
 import { defineAgent as A, long, num, pick, src, txt, v, blankRows, TBC } from './kit';
 import type { Department } from './types';
-import { burnMultiple, grossMargin, breakEven, nrr, runway, unitEconomics, variance, schoolQuote, MEDDICC } from './calc';
+import { burnMultiple, grossMargin, breakEven, nrr, runway, unitEconomics, variance, schoolQuote, schoolMonthlyExVat, SCHOOL_PRICING, MEDDICC } from './calc';
 
 const POPIA_CONDITIONS = ['Accountability', 'Processing limitation', 'Purpose specification', 'Further processing limitation', 'Information quality', 'Openness', 'Security safeguards', 'Data subject participation'];
 
@@ -77,6 +77,9 @@ export const finance: Department = {
     { id: 'schoolquote', title: 'School quote calculator', type: 'calc', note: 'Type a school’s learners and educators. Rates come from the per-school pricing model (a proposal for decision D-1, not yet tested with a paying school): R300 + R75 per educator + R4.00 per learner for the first 500 + R1.50 above 500, minimum R750; community rate 50%; annual prepay 10% off; VAT 15%.', inputs: [{ key: 'learners', label: 'Learners' }, { key: 'educators', label: 'Educators' }], compute: (x) => schoolQuote(x.learners, x.educators) },
     { id: 'var', title: 'Budget vs actual', type: 'calc', note: FIN_NOTE, inputs: [{ key: 'b', label: 'Budget', unit: 'R' }, { key: 'a', label: 'Actual', unit: 'R' }], compute: (x) => variance(x.b, x.a) },
     { id: 'budget', title: 'Budget lines', type: 'tracker', collection: 'budget', columns: [{ key: 'line', label: 'Line', kind: 'text' }, { key: 'budget', label: 'Budget (R)', kind: 'number' }, { key: 'actual', label: 'Actual (R)', kind: 'number' }, { key: 'note', label: 'Note', kind: 'text' }] },
+    { id: 'closechk', title: 'Month-end close', type: 'checklist', collection: 'month_end_close', items: ['Bank accounts reconciled to statements', 'Payment processor settlements matched to the ledger', 'Debtors and creditors ledgers agree to their control accounts', 'Accruals and prepayments posted', 'Payroll journals posted', 'VAT workings prepared for the accountant', 'Management accounts reviewed', 'Close signed off'] },
+    { id: 'debtors', title: 'Debtors', type: 'tracker', collection: 'debtors', note: 'School accounts only. Never a learner or parent.', columns: [{ key: 'school', label: 'School', kind: 'text' }, { key: 'invoice', label: 'Invoice ref', kind: 'text' }, { key: 'amount', label: 'Amount (R)', kind: 'number' }, { key: 'due', label: 'Due', kind: 'date' }, { key: 'last', label: 'Last contact', kind: 'date' }, { key: 'status', label: 'Status', kind: 'select', options: ['Open', 'Promised', 'Disputed', 'Paid'] }] },
+    { id: 'grants', title: 'Grants', type: 'tracker', collection: 'grants', columns: [{ key: 'funder', label: 'Funder', kind: 'text' }, { key: 'line', label: 'Budget line', kind: 'text' }, { key: 'budget', label: 'Approved (R)', kind: 'number' }, { key: 'spent', label: 'Spent (R)', kind: 'number' }, { key: 'drawn', label: 'Drawn (R)', kind: 'number' }, { key: 'note', label: 'Note', kind: 'text' }] },
   ],
   agents: [
     A('finance', 'FIN', { n: 1, name: 'Monthly management commentary', summary: 'Variance commentary built from figures you supply.', framework: 'Budget vs actual variance analysis', purpose: 'financial_planning', formats: ['md', 'docx', 'xlsx', 'html', 'pdf'],
@@ -95,6 +98,74 @@ export const finance: Department = {
     A('finance', 'FIN', { n: 3, name: 'Rolling 13-week cash forecast', summary: 'Template for weekly cash in and out with an opening balance you enter.', framework: 'Rolling cash forecast', purpose: 'financial_planning', formats: ['md', 'xlsx', 'csv'],
       inputs: [num('opening', 'Opening cash balance (R)', true), long('assumptions', 'Assumptions and sources')],
       sections: (c) => [{ h: 'Opening balance', kv: [['Opening cash', `R ${c.input.opening ?? ''}`]] }, { h: 'Weekly forecast (fill each week)', table: { headers: ['Week', 'Cash in', 'Cash out', 'Net', 'Closing'], rows: Array.from({ length: 13 }, (_, i) => [`Week ${i + 1}`, '', '', '', '']) } }, { h: 'Assumptions', input: c.input.assumptions ?? '' }] }),
+    A('finance', 'FIN', { n: 4, name: 'Month-end close checklist', summary: 'Close checklist with owners and sign-off, for the accountant to complete.', framework: 'Month-end close', purpose: 'financial_planning', formats: ['md', 'xlsx'],
+      inputs: [txt('month', 'Month', true), long('scope', 'Accounting package, bank accounts and payment processors in scope', true), txt('accountant', 'Accountant or bookkeeper (role)')],
+      sections: (c) => [{ h: 'Scope', kv: [['Month', v(c, 'month')], ['Accountant (role)', v(c, 'accountant')]] }, { h: 'In scope', input: c.input.scope ?? '' }, { h: 'Close steps', checks: ['Bank accounts reconciled to statements', 'Payment processor settlements matched to the ledger', 'Debtors and creditors ledgers agree to their control accounts', 'Accruals and prepayments posted', 'Payroll journals posted', 'VAT workings prepared for the accountant', 'Fixed assets and depreciation updated', 'Management accounts reviewed for unusual movements', 'Close signed off by the approver'] }, { h: 'Sign-off record', table: { headers: ['Step', 'Owner (role)', 'Done on', 'Evidence reference'], rows: blankRows(['Bank reconciliation', 'Debtors and creditors', 'VAT workings', 'Management accounts review'], 4) } }] }),
+    A('finance', 'FIN', { n: 5, name: 'School quote pack', summary: 'Quote for one school, computed by the pricing formula from learners and educators.', framework: 'Per-school pricing formula', purpose: 'financial_planning', secondApprover: true, formats: ['md', 'docx', 'pdf'],
+      warning: 'The pricing formula is a proposal for decision D-1 and has not been tested with a paying school. Do not send this quote until D-1 is approved and the VAT position is confirmed with the accountant (D-6).',
+      inputs: [txt('school', 'School name', true), num('learners', 'Learners', true), num('educators', 'Educators', true), pick('rate', 'Rate', ['Standard', 'Community'], true), pick('billing', 'Billing', ['Monthly', 'Annual prepay'], true), txt('valid', 'Quote valid until')],
+      sections: (c) => {
+        const P = SCHOOL_PRICING;
+        const [l, e] = [Number(c.input.learners), Number(c.input.educators)];
+        const std = schoolMonthlyExVat(l, e);
+        const R = (n: number | null) => (n === null ? 'n/a' : `R${n.toFixed(2)}`);
+        const f = std === null ? 1 : (c.input.rate === 'Community' ? P.communityFactor : 1) * (c.input.billing === 'Annual prepay' ? 12 * (1 - P.annualDiscount) : 1);
+        const mo = std === null ? null : std * (c.input.rate === 'Community' ? P.communityFactor : 1);
+        const total = std === null ? null : std * f;
+        const tag = ' [src:computed by the pricing formula]';
+        const T = ' [src:pricing model]';
+        const build = std === null ? [[TBC, '', '']] : [
+          ['Platform fee', `1 × R${P.platformFee}${T}`, R(P.platformFee) + T],
+          ['Educators', `${e} × R${P.perEducator}${T}`, R(P.perEducator * e) + T],
+          ['Learners, first tier', `${Math.min(l, P.tierBreak)} × R${P.perLearnerFirst.toFixed(2)}${T}`, R(P.perLearnerFirst * Math.min(l, P.tierBreak)) + T],
+          ['Learners, second tier', `${Math.max(0, l - P.tierBreak)} × R${P.perLearnerBeyond.toFixed(2)}${T}`, R(P.perLearnerBeyond * Math.max(0, l - P.tierBreak)) + T],
+          ['Standard monthly price (the monthly minimum applies if higher)', '', R(std) + tag],
+        ];
+        return [
+          { h: 'Quote', kv: [['School', v(c, 'school')], ['Learners / educators', std === null ? TBC : `${l} / ${e}`], ['Rate', v(c, 'rate')], ['Billing', v(c, 'billing')], ['Price per month ex VAT', R(mo) + tag], ['Price per month incl VAT (15%)', R(mo === null ? null : mo * (1 + P.vat)) + tag], [c.input.billing === 'Annual prepay' ? 'Year one total ex VAT (10% prepay discount)' : 'Twelve months ex VAT', R(total === null ? null : (c.input.billing === 'Annual prepay' ? total : (mo ?? 0) * 12)) + tag], ['Valid until', v(c, 'valid')]] },
+          { h: 'How the standard price is built', table: { headers: ['Component', 'Quantity', 'Amount (R, ex VAT)'], rows: build } },
+          { h: 'Before this quote is sent', checks: ['Decision D-1 (price card) approved', 'VAT position confirmed with the accountant (D-6)', 'Learner and educator counts confirmed with the school', 'Community rate only for a school that qualifies, as you define it', 'Quote sent by a named person from the company’s own channel'] },
+        ];
+      } }),
+    A('finance', 'FIN', { n: 6, name: 'Runway and funding scenarios', summary: 'Runway under funding scenarios you type. Burn is held constant.', framework: 'Runway (cash ÷ net burn)', purpose: 'financial_planning', formats: ['md', 'xlsx', 'csv'],
+      inputs: [num('cash', 'Cash on hand (R)', true), num('burn', 'Monthly net burn (R)', true), long('scenarios', 'Scenarios, one per line: name | amount (R) | months from now it arrives', true)],
+      sections: (c) => {
+        const [cash, burn] = [Number(c.input.cash), Number(c.input.burn)];
+        const base = runway(cash, burn)[0].value;
+        const rows = (c.input.scenarios ?? '').split('\n').map((l) => l.split('|').map((s) => s.trim())).filter((p) => p.length >= 3 && p[0]).map((p) => {
+          const [amt, at] = [Number(p[1].replace(/[R,\s]/g, '')), Number(p[2])];
+          const ok = Number.isFinite(amt) && Number.isFinite(at) && base !== null;
+          if (!ok) return [p[0], p[1], p[2], 'n/a', 'Check the figures'] as (string | number)[];
+          const arrives = at <= base!;
+          return [p[0], p[1], p[2], arrives ? `${runway(cash + amt, burn)[0].value!.toFixed(1)} months [src:computed from your inputs]` : `${base!.toFixed(1)} months`, arrives ? 'Arrives before cash runs out' : 'Arrives after cash runs out, so it does not extend runway'] as (string | number)[];
+        });
+        return [{ h: 'Starting point', kv: [['Cash on hand', `R ${c.input.cash ?? ''}`], ['Monthly net burn', `R ${c.input.burn ?? ''}`], ['Runway today', base === null ? 'n/a' : `${base.toFixed(1)} months [src:computed from your inputs]`]] }, { h: 'Scenarios', table: { headers: ['Scenario', 'Amount (R)', 'Arrives (months)', 'Total runway', 'Note'], rows: rows.length ? rows : [[TBC, '', '', '', '']] } }, { h: 'Assumptions to state', bullets: ['Burn is held constant. Say if you expect it to change.', 'Funding amounts and timing are the ones you typed, not forecasts by the platform.'] }];
+      } }),
+    A('finance', 'FIN', { n: 7, name: 'Debtors follow-up schedule', summary: 'Follow-up schedule and draft reminder wording for overdue school accounts. Draft only, nothing is sent.', framework: 'Credit control', purpose: 'financial_planning', formats: ['md', 'docx', 'csv'],
+      warning: 'Draft only. The platform sends nothing (OPQ-003) and does not issue invoices (OPQ-004). A person checks each amount against the ledger and sends from the company’s own channel.',
+      inputs: [txt('asof', 'As at date (YYYY-MM-DD)', true), long('accounts', 'Overdue accounts, one per line: school | amount (R) | due date (YYYY-MM-DD) | last contact', true), long('terms', 'Payment terms agreed with schools')],
+      sections: (c) => {
+        const asof = Date.parse(c.input.asof ?? '');
+        const rows = (c.input.accounts ?? '').split('\n').map((l) => l.split('|').map((s) => s.trim())).filter((p) => p.length >= 3 && p[0]).map((p) => {
+          const due = Date.parse(p[2]);
+          const days = Number.isFinite(asof) && Number.isFinite(due) ? Math.round((asof - due) / 86400000) : null;
+          return [p[0], p[1], p[2], days === null ? 'n/a' : `${days} [src:computed from your dates]`, p[3] ?? '', ''] as (string | number)[];
+        });
+        return [{ h: 'Overdue accounts', table: { headers: ['School', 'Amount (R)', 'Due', 'Days overdue', 'Last contact', 'Next step (you decide)'], rows: rows.length ? rows : [[TBC, '', '', '', '', '']] } }, { h: 'Terms', input: c.input.terms ?? '' }, { h: 'Draft wording (edit before use)', bullets: ['Reminder: “Hello [bursar or principal], our records show invoice [number] for R[amount], due on [date], is unpaid. Could you confirm when payment will be made? Please tell us if anything about the invoice needs correcting.”', 'Follow-up: “Following our message of [date] about invoice [number]. We would like to help resolve this. Is there a payment date, or a question we can answer?”', 'Escalation: “Invoice [number] is now [days] days overdue. Please contact [role] on [channel] so we can agree a way forward before [date].”'] }, { h: 'Before anything is sent', checks: ['Amount and due date checked against the ledger', 'Invoice was delivered to the school', 'No learner names or personal details in the message', 'Sent by a named person from the company’s own channel', 'Contact logged with the date'] }];
+      } }),
+    A('finance', 'FIN', { n: 8, name: 'Grant budget and drawdown report', summary: 'Budget against spend and drawdowns for a funder, from figures you supply.', framework: 'Grant budget vs actual', purpose: 'financial_planning', secondApprover: true, formats: ['md', 'xlsx', 'csv'],
+      warning: 'Use the format the funder asks for. This is a working layout, and the funder’s template wins.',
+      inputs: [txt('funder', 'Funder and grant', true), txt('period', 'Reporting period'), long('lines', 'Budget lines, one per line: line | approved budget (R) | spent to date (R)', true), long('drawn', 'Drawdowns received, one per line: date | amount (R)')],
+      sections: (c) => {
+        const n = (s: string) => Number(s.replace(/[R,\s]/g, ''));
+        const parsed = (c.input.lines ?? '').split('\n').map((l) => l.split('|').map((s) => s.trim())).filter((p) => p.length >= 3 && p[0]);
+        const rows = parsed.map((p) => { const [b, s] = [n(p[1]), n(p[2])]; const ok = Number.isFinite(b) && Number.isFinite(s); return [p[0], p[1], p[2], ok ? b - s : 'n/a', ok && b !== 0 ? `${((s / b) * 100).toFixed(1)}% [src:computed from your inputs]` : 'n/a'] as (string | number)[]; });
+        const good = parsed.map((p) => [n(p[1]), n(p[2])]).filter(([b, s]) => Number.isFinite(b) && Number.isFinite(s));
+        const [tb, ts] = [good.reduce((a, x) => a + x[0], 0), good.reduce((a, x) => a + x[1], 0)];
+        const draws = (c.input.drawn ?? '').split('\n').map((l) => l.split('|').map((s) => s.trim())).filter((p) => p.length >= 2 && p[0]);
+        const td = draws.map((p) => n(p[1])).filter(Number.isFinite).reduce((a, x) => a + x, 0);
+        return [{ h: 'Grant', kv: [['Funder and grant', v(c, 'funder')], ['Period', v(c, 'period')]] }, { h: 'Budget against spend', table: { headers: ['Line', 'Approved (R)', 'Spent (R)', 'Remaining (R)', 'Spent %'], rows: rows.length ? [...rows, ['Total', tb, ts, tb - ts, tb ? `${((ts / tb) * 100).toFixed(1)}% [src:computed from your inputs]` : 'n/a']] : [[TBC, '', '', '', '']] } }, { h: 'Drawdowns', table: { headers: ['Date', 'Amount (R)'], rows: draws.length ? [...draws.map((p) => [p[0], p[1]]), ['Total received', td]] : [[TBC, '']] } }, { h: 'Cash position on the grant', kv: [['Received less spent', draws.length && good.length ? `R ${(td - ts).toFixed(2)} [src:computed from your inputs]` : TBC]] }, { h: 'Before this goes to the funder', checks: ['Spend traced to the ledger and supporting documents', 'Lines match the approved budget and any approved changes', 'Funder’s own template and deadline used', 'Reviewed by a second approver'] }];
+      } }),
   ],
 };
 
