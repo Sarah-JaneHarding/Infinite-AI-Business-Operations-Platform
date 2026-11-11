@@ -8,7 +8,7 @@ import { snapshotFacts } from '../connector/snapshot';
 import type { LiveStatus } from '../connector/github';
 import type { Actor } from '../core/types';
 
-export interface Health { ok: boolean; repo: string; auth: 'users' | 'open'; githubToken: boolean; llm: boolean; ecosystemWrites: boolean; webhook: boolean }
+export interface Health { ok: boolean; repo: string; auth: 'users' | 'open'; githubToken: boolean; llm: boolean; ecosystemWrites: boolean; webhook: boolean; outbound?: boolean }
 export type View = { name: 'overview' } | { name: 'dept'; id: string } | { name: 'studio'; id?: string } | { name: 'brain' } | { name: 'ledger' } | { name: 'warehouse' } | { name: 'connector' } | { name: 'guardrails' };
 
 interface Ctx {

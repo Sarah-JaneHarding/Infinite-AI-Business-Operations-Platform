@@ -24,5 +24,10 @@
     "noEmit": true,
     "strict": true,
     "noUncheckedIndexedAccess": false
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "legacy"
+  ]
 }

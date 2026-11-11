@@ -4,10 +4,15 @@ import type { Rec } from '../core/warehouse';
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
 const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'tombstones'];
+/** Document library, builder definitions, chat history and integration settings (no secrets are ever stored here). */
+const LIBRARY = ['documents', 'document_chunks', 'custom_defs', 'chat_log', 'integration_settings'];
+/** Collections behind widgets made in the widget builder. */
+export const CUSTOM_WIDGET_COLLECTION = /^cw_[a-z0-9_]{1,40}$/;
 
 /** Only these collections can be appended to by a client. `connector_events` is written by the server alone. */
 export const CLIENT_COLLECTIONS: ReadonlySet<string> = new Set([
   ...CORE,
+  ...LIBRARY,
   ...DEPARTMENTS.flatMap((d) => d.widgets).flatMap((w) => ('collection' in w ? [w.collection] : [])),
 ]);
 
@@ -33,7 +38,7 @@ const isHash = (v: unknown) => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v)
  */
 export async function validateAppend(collection: string, body: unknown, ctx: AppendCtx): Promise<Rec> {
   if (collection === 'ledger') bad('ledger entries are authored by the server: POST /api/ledger', 403);
-  if (!CLIENT_COLLECTIONS.has(collection)) bad('unknown collection', 404);
+  if (!CLIENT_COLLECTIONS.has(collection) && !CUSTOM_WIDGET_COLLECTION.test(collection)) bad('unknown collection', 404);
   if (typeof body !== 'object' || body === null || Array.isArray(body)) bad('record must be an object');
   const rec = body as Rec;
   if (typeof rec.id !== 'string' || rec.id.length < 1 || rec.id.length > 200) bad('record needs a string id (1-200 chars)');
@@ -52,7 +57,8 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
 function artefact(rec: Rec, ctx: AppendCtx) {
   const status = rec.status;
   if (status !== 'DRAFT' && status !== 'IN_REVIEW' && status !== 'APPROVED' && status !== 'REJECTED') bad('bad artefact status');
-  if (typeof rec.agentId !== 'string' || !agentById(rec.agentId)) bad('unknown agent');
+  const customIds = new Set(ctx.store.list('custom_defs').filter((d) => d.kind === 'agent' && !d.deleted).map((d) => d.id));
+  if (typeof rec.agentId !== 'string' || !(agentById(rec.agentId) || customIds.has(rec.agentId))) bad('unknown agent');
   if (status !== 'APPROVED' && status !== 'REJECTED' && rec.approvedBy !== undefined) bad('only a decision carries approvedBy');
   const cur = latestById(ctx.store.list('artefact_versions'), rec.id);
 
@@ -73,7 +79,7 @@ function artefact(rec: Rec, ctx: AppendCtx) {
     const approver = rec.approvedBy;
     if (typeof approver !== 'string' || !approver) bad('a decision needs approvedBy');
     if (ctx.actor && approver !== ctx.actor) bad('approvedBy is not you', 403);
-    if (agentById(String(cur.agentId))?.secondApprover && approver === cur.requestedBy) bad('this agent requires a second person to approve', 403);
+    if ((agentById(String(cur.agentId))?.secondApprover || customIds.has(String(cur.agentId))) && approver === cur.requestedBy) bad('this agent requires a second person to approve', 403);
     if (status === 'REJECTED' && !String(rec.note ?? '').trim()) bad('a rejection needs a reason');
   } else {
     bad(`cannot go from ${String(cur.status)} to ${status}`, 409);

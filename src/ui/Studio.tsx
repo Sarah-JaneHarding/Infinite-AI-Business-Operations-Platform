@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Download, Eye, FilePlus2, Pencil, Save, Send, XCircle, UploadCloud } from 'lucide-react';
 import { useOps } from './store';
 import { apiFetch } from '../core/api';
-import { Badge, Card, downloadDoc, FORMAT_LABEL, statusTone } from './primitives';
+import { Badge, Card, statusTone } from './primitives';
 import { toHtml, toMarkdown } from '../core/artefacts/render';
 import { AGENTS, agentById } from '../departments';
 import { RunRefused, type Artefact } from '../core/platform';
 import type { Block, Doc } from '../core/types';
 import { download } from './primitives';
+import { ExportBar } from './ExportBar';
+import { newDocId, saveRecord } from '../core/documents';
 import { proposalFromArtefact } from '../connector/proposals';
 
-function BlockEditor({ b, set }: { b: Block; set: (n: Block) => void }) {
+export function BlockEditor({ b, set }: { b: Block; set: (n: Block) => void }) {
   const lines = (a?: string[]) => (a ?? []).join('\n');
   switch (b.type) {
     case 'h': return <input className="input font-semibold" value={b.text ?? ''} onChange={(e) => set({ ...b, text: e.target.value })} aria-label="Heading" />;
@@ -78,11 +80,8 @@ function ArtefactPanel({ a }: { a: Artefact }) {
       {mode2 === 'history' && <ul className="space-y-1 text-sm">{hist.map((h, i) => <li key={i}><Badge tone={statusTone(h.status)}>{h.status}</Badge> v{h.version} · {new Date(h.at).toLocaleString('en-ZA')} · <span className="mono text-[11px]">{String((h as unknown as { hash: string }).hash).slice(0, 12)}</span></li>)}</ul>}
       {mode2 === 'ledger' && <ul className="space-y-1 text-sm">{ledger.map((e) => <li key={e.seq}><span className="mono text-[11px]">#{e.seq}</span> {e.action} · {e.actor} · <span className="mono text-[11px]" style={{ color: 'var(--muted)' }}>{e.hash.slice(0, 10)}</span></li>)}</ul>}
 
-      <Card title="Download">
-        <div className="flex flex-wrap gap-2">
-          {a.formats.map((f) => <button key={f} className="btn" onClick={() => downloadDoc(a.doc, f as never)}><Download size={14} /> {FORMAT_LABEL[f as never]}</button>)}
-        </div>
-        <p className="mt-2 text-xs" style={{ color: 'var(--muted)' }}>PDF opens your print dialog; choose “Save as PDF”. Every download is the version shown above.</p>
+      <Card title="Download, print or save">
+        <ExportBar doc={a.doc} onSave={async () => { await saveRecord(p!.warehouse, { id: newDocId(), title: a.title, origin: 'saved', doc: a.doc, scan: { scanned: true, notes: [`Copy of ${a.id} v${a.version}`] }, by: actor.name, at: new Date().toISOString() }); setMsg({ tone: 'ok', text: 'Copy saved to the library.' }); }} />
       </Card>
 
       <Card title="Human decision">

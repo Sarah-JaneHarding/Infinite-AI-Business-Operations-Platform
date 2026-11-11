@@ -1,322 +1,84 @@
-import React, { useState } from 'react';
-import { NavTab } from './types';
-import { OpsProvider, useOps } from './ui/store';
-import { Navbar } from './components/Navbar';
-import { DocsAndRatify } from './components/DocsAndRatify';
-import { DataWarehouse } from './components/DataWarehouse';
-import { CloudAndFinance } from './components/CloudAndFinance';
-import { EducationEcosystemWebsite } from './components/EducationEcosystemWebsite';
+import { useEffect, useState } from 'react';
+import { BrainCircuit, Database, FileText, Gauge, GitBranch, ListChecks, Menu, ScrollText, ShieldAlert } from 'lucide-react';
+import { OpsProvider, useOps, type View } from './ui/store';
+import { Icon } from './ui/primitives';
 import { Studio } from './ui/Studio';
-import { 
-  Overview, 
-  Dept, 
-  BrainView, 
-  LedgerView, 
-  WarehouseView, 
-  ConnectorView, 
-  GuardrailLab 
-} from './ui/Views';
+import { Library } from './ui/Library';
+import { Builders } from './ui/Builders';
+import { Integrations } from './ui/Integrations';
+import { onNavigate } from './ui/nav';
+import { BrainView, ConnectorView, Dept, GuardrailLab, LedgerView, Overview, WarehouseView } from './ui/Views';
 import { DEPARTMENTS } from './departments';
-import { 
-  ShieldCheck, 
-  Lock, 
-  Cpu, 
-  FileText, 
-  Database, 
-  PenTool, 
-  ArrowRight, 
-  CheckCircle2, 
-  Layers,
-  Users
-} from 'lucide-react';
 
-function AppContent() {
-  const [activeTab, setActiveTab] = useState<NavTab>('command');
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('ai');
-  const [selectedStudioDocId, setSelectedStudioDocId] = useState<string | null>(null);
-  const [studioSubView, setStudioSubView] = useState<'ops_docs' | 'artefacts'>('ops_docs');
-  const [ratifiedCount, setRatifiedCount] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('ia_ratified_count');
-      return saved ? parseInt(saved, 10) : 42;
-    } catch {
-      return 42;
-    }
-  });
+type Sub = 'artefacts' | 'library' | 'builders' | 'integrations';
+const SUBS: { id: Sub; label: string }[] = [
+  { id: 'artefacts', label: 'Artefacts' },
+  { id: 'library', label: 'Library & templates' },
+  { id: 'builders', label: 'Agent, widget & artefact builders' },
+  { id: 'integrations', label: 'Integrations' },
+];
 
-  const handleRatifyPolicy = () => {
-    setRatifiedCount(prev => {
-      const next = Math.min(136, prev + 1);
-      try { localStorage.setItem('ia_ratified_count', next.toString()); } catch {}
-      return next;
-    });
-  };
-
+function Shell() {
+  const { view, go, p, mode, actor, setActor, llm, setLlm, health } = useOps();
+  const [navOpen, setNavOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [sub, setSub] = useState<Sub>('artefacts');
+  useEffect(() => onNavigate((d) => { if (d.tab !== 'studio') return; if (d.sub) setSub(d.sub as Sub); if (d.sub !== 'artefacts') go({ name: 'studio' }); }), [go]);
+  const item = (v: View, label: string, icon: React.ReactNode, on: boolean) => (
+    <button key={label} className={on ? 'on' : ''} onClick={() => { go(v); setNavOpen(false); }} aria-current={on ? 'page' : undefined}>{icon}{label}</button>
+  );
+  if (!p) return <div className="p-8">Starting the platform…</div>;
+  const needName = !actor.name || actor.name === 'Operator';
   return (
-    <div className="min-h-screen bg-[#070B14] text-[#E9EDF8] flex flex-col font-sans selection:bg-cyan-500/30 selection:text-white">
-      {/* Top Fixed Navbar */}
-      <Navbar 
-        activeTab={activeTab} 
-        onSelectTab={setActiveTab}
-        ratifiedCount={ratifiedCount}
-      />
-
-      {/* Main Workspace Canvas */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-20 pb-16">
-        {/* TAB 1: COMMAND CENTRE */}
-        {activeTab === 'command' && (
-          <div className="space-y-6">
-            {/* Quick Navigation Cards */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <button 
-                onClick={() => setActiveTab('studio')}
-                className="card p-4 text-left hover:border-cyan-400 transition-all group bg-[#0A1226]/80"
-              >
-                <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-1">
-                  <span className="font-mono text-cyan-400 font-bold">DOCUMENT STUDIO</span>
-                  <FileText className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-                </div>
-                <h3 className="text-sm font-bold text-[#E9EDF8]">Viewer, Editor &amp; Ratify</h3>
-                <p className="text-[11px] text-[#CBD5E1] mt-1">
-                  Read, review, edit markdown, and execute countersignatures.
-                </p>
-                <span className="text-[10px] text-cyan-400 flex items-center gap-1 mt-2 font-mono">
-                  <span>Open Studio</span>
-                  <ArrowRight className="w-3 h-3" />
-                </span>
-              </button>
-
-              <button 
-                onClick={() => setActiveTab('warehouse')}
-                className="card p-4 text-left hover:border-cyan-400 transition-all group bg-[#0A1226]/80"
-              >
-                <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-1">
-                  <span className="font-mono text-cyan-400 font-bold">MOD-03 WAREHOUSE</span>
-                  <Database className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-                </div>
-                <h3 className="text-sm font-bold text-[#E9EDF8]">Multi-Tenant Store</h3>
-                <p className="text-[11px] text-[#CBD5E1] mt-1">
-                  Contracts, primary school tenants, policies &amp; SQL console.
-                </p>
-                <span className="text-[10px] text-cyan-400 flex items-center gap-1 mt-2 font-mono">
-                  <span>Open Warehouse</span>
-                  <ArrowRight className="w-3 h-3" />
-                </span>
-              </button>
-
-              <button 
-                onClick={() => setActiveTab('infra')}
-                className="card p-4 text-left hover:border-emerald-400 transition-all group bg-[#0A1226]/80"
-              >
-                <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-1">
-                  <span className="font-mono text-emerald-400 font-bold">R4k / MO SAAS</span>
-                  <span className="text-xs font-bold text-emerald-400">ZAR</span>
-                </div>
-                <h3 className="text-sm font-bold text-[#E9EDF8]">Cost &amp; Finance Model</h3>
-                <p className="text-[11px] text-[#CBD5E1] mt-1">
-                  Primary school unit economics &amp; AWS Cape Town bills.
-                </p>
-                <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-2 font-mono">
-                  <span>View Calculator</span>
-                  <ArrowRight className="w-3 h-3" />
-                </span>
-              </button>
-
-              <button 
-                onClick={() => setActiveTab('depts')}
-                className="card p-4 text-left hover:border-purple-400 transition-all group bg-[#0A1226]/80"
-              >
-                <div className="flex items-center justify-between text-xs text-[#CBD5E1] mb-1">
-                  <span className="font-mono text-purple-400 font-bold">16 DEPARTMENTS</span>
-                  <Users className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-                </div>
-                <h3 className="text-sm font-bold text-[#E9EDF8]">48 Specialist Agents</h3>
-                <p className="text-[11px] text-[#CBD5E1] mt-1">
-                  Run agents, inspect widgets, and view departmental missions.
-                </p>
-                <span className="text-[10px] text-purple-400 flex items-center gap-1 mt-2 font-mono">
-                  <span>Explore Agents</span>
-                  <ArrowRight className="w-3 h-3" />
-                </span>
-              </button>
+    <div className="flex min-h-full">
+      <aside className={`nav fixed inset-y-0 left-0 z-20 w-64 overflow-y-auto p-3 lg:static lg:block ${navOpen ? 'block' : 'hidden'}`} style={{ background: '#14112b' }}>
+        <div className="mb-3 px-2 pt-1"><div className="text-lg font-bold text-white" style={{ fontFamily: 'var(--fd)' }}>Infinite-AI</div><div className="mono text-[10.5px]" style={{ color: '#a7a2cf' }}>OPERATIONS PLATFORM</div></div>
+        {item({ name: 'overview' }, 'Command centre', <Gauge size={16} />, view.name === 'overview')}
+        <div className="mono mx-2 mb-1 mt-3 text-[10px] uppercase tracking-wider" style={{ color: '#8f89c4' }}>Departments</div>
+        {DEPARTMENTS.map((d) => item({ name: 'dept', id: d.id }, d.name, <Icon name={d.icon} />, view.name === 'dept' && view.id === d.id))}
+        <div className="mono mx-2 mb-1 mt-3 text-[10px] uppercase tracking-wider" style={{ color: '#8f89c4' }}>Core</div>
+        {item({ name: 'studio' }, 'Studio', <FileText size={16} />, view.name === 'studio')}
+        {item({ name: 'brain' }, 'Infinite Brain', <BrainCircuit size={16} />, view.name === 'brain')}
+        {item({ name: 'warehouse' }, 'Data warehouse', <Database size={16} />, view.name === 'warehouse')}
+        {item({ name: 'ledger' }, 'Audit ledger', <ScrollText size={16} />, view.name === 'ledger')}
+        {item({ name: 'connector' }, 'Ecosystem connector', <GitBranch size={16} />, view.name === 'connector')}
+        {item({ name: 'guardrails' }, 'Guardrail lab', <ShieldAlert size={16} />, view.name === 'guardrails')}
+      </aside>
+      <div className="min-w-0 flex-1">
+        <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b px-4 py-2" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+          <button className="btn lg:hidden" aria-label="Menu" onClick={() => setNavOpen(!navOpen)}><Menu size={16} /></button>
+          <span className="badge info"><ListChecks size={11} className="mr-1 inline" />POPIA · learner data refused</span>
+          <span className={`badge ${mode === 'server' ? 'ok' : 'draft'}`}>{mode === 'server' ? 'server storage' : 'browser storage'}</span>
+          <label className="ml-auto flex items-center gap-2 text-xs"><input type="checkbox" checked={llm} disabled={!health?.llm} onChange={(e) => setLlm(e.target.checked)} /> AI narrative {health?.llm ? '' : '(not configured)'}</label>
+          {!needName && <span className="text-xs">Signed in as <b>{actor.name}</b> · {actor.roles[0]}</span>}
+        </header>
+        <main className="mx-auto max-w-[1400px] p-4">
+          {needName ? (
+            <div className="card mx-auto mt-10 max-w-md space-y-3 p-5">
+              <h1 className="text-xl font-bold">Who is deciding?</h1>
+              <p className="text-sm" style={{ color: 'var(--muted)' }}>Approvals are recorded against a named human. Enter your name and role. (Production sign-in is an open question; see docs/OPEN_QUESTIONS.md.)</p>
+              <input className="input" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Your name" />
+              <button className="btn primary" disabled={!name.trim()} onClick={() => setActor(name.trim(), 'Founder')}>Continue</button>
             </div>
-
-            {/* Core Overview Platform Engine */}
-            <Overview />
-          </div>
-        )}
-
-        {/* TAB 2: DOCUMENT STUDIO & RATIFICATION */}
-        {activeTab === 'studio' && (
-          <div className="space-y-4">
-            {/* Studio Mode Toggle Bar */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-[#0E1830] border border-[rgba(148,163,255,0.1)]">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setStudioSubView('ops_docs')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    studioSubView === 'ops_docs' 
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' 
-                      : 'text-[#CBD5E1] hover:text-white'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Operations &amp; Policy Document Editor</span>
-                </button>
-
-                <button
-                  onClick={() => setStudioSubView('artefacts')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    studioSubView === 'artefacts' 
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' 
-                      : 'text-[#CBD5E1] hover:text-white'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Agent Generative Artefacts Studio</span>
-                </button>
+          ) : view.name === 'overview' ? <Overview />
+            : view.name === 'dept' ? <Dept id={view.id} />
+            : view.name === 'studio' ? (
+              <div className="space-y-4">
+                <div role="tablist" className="flex flex-wrap gap-1">{SUBS.map((s) => <button key={s.id} role="tab" aria-selected={sub === s.id} className={`btn ${sub === s.id ? 'primary' : ''}`} onClick={() => setSub(s.id)}>{s.label}</button>)}</div>
+                {sub === 'artefacts' ? <Studio id={view.id} /> : sub === 'library' ? <Library /> : sub === 'builders' ? <Builders /> : <Integrations />}
               </div>
-
-              <span className="text-[11px] font-mono text-[#CBD5E1] hidden sm:block">
-                Non-bypassable Human Decision Gate (Law 02)
-              </span>
-            </div>
-
-            {studioSubView === 'ops_docs' ? (
-              <DocsAndRatify 
-                ratifiedCount={ratifiedCount}
-                onRatifyPolicy={handleRatifyPolicy}
-                onNavigateToWarehouse={() => setActiveTab('warehouse')}
-                initialDocId={selectedStudioDocId}
-              />
-            ) : (
-              <Studio id={selectedStudioDocId || undefined} />
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: DATA WAREHOUSE */}
-        {activeTab === 'warehouse' && (
-          <div className="space-y-6">
-            <DataWarehouse 
-              onOpenDocInEditor={(docId) => {
-                setSelectedStudioDocId(docId);
-                setStudioSubView('ops_docs');
-                setActiveTab('studio');
-              }}
-            />
-            
-            {/* Raw System Warehouse Collections */}
-            <div className="pt-6 border-t border-[rgba(148,163,255,0.1)]">
-              <WarehouseView />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: 16 DEPARTMENTS & AGENTS */}
-        {activeTab === 'depts' && (
-          <div className="space-y-6">
-            {/* Department Navigation Strip */}
-            <div className="card p-3 space-y-2 bg-[#0A1226]/80">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-cyan-400 uppercase font-bold">
-                  Select Department (16 Operational Divisions)
-                </span>
-                <span className="text-xs text-[#CBD5E1]">
-                  Active: <strong className="text-[#E9EDF8]">{DEPARTMENTS.find(d => d.id === selectedDeptId)?.name}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                {DEPARTMENTS.map(d => (
-                  <button
-                    key={d.id}
-                    onClick={() => setSelectedDeptId(d.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                      selectedDeptId === d.id
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                        : 'bg-[#13203C] text-[#CBD5E1] hover:text-white'
-                    }`}
-                  >
-                    {d.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Department View with Agents & Widgets */}
-            <Dept id={selectedDeptId} />
-          </div>
-        )}
-
-        {/* TAB 5: INFINITE BRAIN L0-L4 */}
-        {activeTab === 'brain' && (
-          <BrainView />
-        )}
-
-        {/* TAB 6: AUDIT LEDGER */}
-        {activeTab === 'ledger' && (
-          <LedgerView />
-        )}
-
-        {/* TAB 7: COST & FINANCE */}
-        {activeTab === 'infra' && (
-          <CloudAndFinance />
-        )}
-
-        {/* TAB 8: ECOSYSTEM SHOWCASE */}
-        {activeTab === 'website' && (
-          <EducationEcosystemWebsite onSwitchToOps={() => setActiveTab('command')} />
-        )}
-
-        {/* TAB 9: GUARDRAIL LAB */}
-        {activeTab === 'guardrails' && (
-          <GuardrailLab />
-        )}
-
-        {/* TAB 10: GITHUB CONNECTOR */}
-        {activeTab === 'connector' && (
-          <ConnectorView />
-        )}
-      </main>
-
-      {/* System Footer */}
-      <footer className="border-t border-[rgba(148,163,255,0.08)] bg-[#0A1226]/80 backdrop-blur py-6 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#CBD5E1]">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 font-bold text-[#E9EDF8]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>INFINITE-AI OPS PLATFORM</span>
-            </div>
-            <span>·</span>
-            <span className="font-mono text-[11px]">AI drafts. The human decides.</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono">
-            <span className="text-emerald-400 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              POPIA Section 72 Compliant
-            </span>
-            <span>·</span>
-            <span className="text-cyan-400 flex items-center gap-1">
-              <Lock className="w-3.5 h-3.5" />
-              Non-Bypassable HITL Gates
-            </span>
-            <span>·</span>
-            <span className="text-purple-300 flex items-center gap-1">
-              <Cpu className="w-3.5 h-3.5" />
-              AWS af-south-1 (Cape Town)
-            </span>
-          </div>
-        </div>
-      </footer>
+            )
+            : view.name === 'brain' ? <BrainView />
+            : view.name === 'ledger' ? <LedgerView />
+            : view.name === 'warehouse' ? <WarehouseView />
+            : view.name === 'connector' ? <ConnectorView />
+            : <GuardrailLab />}
+        </main>
+      </div>
     </div>
   );
 }
 
 export default function App() {
-  return (
-    <OpsProvider>
-      <AppContent />
-    </OpsProvider>
-  );
+  return <OpsProvider><Shell /></OpsProvider>;
 }

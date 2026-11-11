@@ -94,3 +94,8 @@ export const pick = (key: string, label: string, options: string[], required = f
 /** Table with blank rows for the human to complete. */
 export const blankRows = (labels: string[], cols: number): (string | number)[][] => labels.map((l) => [l, ...Array(cols - 1).fill('')]);
 export const v = (ctx: RunContext, k: string) => ctx.input[k]?.trim() || TBC;
+
+/** Lines typed as `a | b | c`, split into trimmed cells. Blank lines and lines with no first cell are dropped. */
+export const rows = (s?: string): string[][] => (s ?? '').split('\n').map((l) => l.split('|').map((x) => x.trim())).filter((p) => p[0]);
+/** Plain lines, trimmed, blanks dropped. */
+export const lines = (s?: string): string[] => (s ?? '').split('\n').map((x) => x.trim()).filter(Boolean);
