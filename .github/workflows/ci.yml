@@ -1,0 +1,53 @@
+name: CI
+
+# Runs on every pull request and on pushes to main. GitHub is the source of truth for this
+# repository (see docs/SOURCE_OF_TRUTH.md): a change is real when it has passed this workflow.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (exact versions from package-lock.json)
+        run: npm ci --no-audit --no-fund
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build UI
+        run: npm run build
+
+      - name: Build server
+        run: npm run build:server
+
+      - name: No committed secrets or environment files
+        run: |
+          set -eu
+          tracked_env="$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v -E '(^|/)\.env\.example$' || true)"
+          if [ -n "$tracked_env" ]; then
+            echo "Environment file(s) are committed:"
+            echo "$tracked_env"
+            exit 1
+          fi

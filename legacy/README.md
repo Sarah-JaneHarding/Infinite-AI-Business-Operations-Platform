@@ -7,3 +7,6 @@ build (see `tsconfig.json`), instead of being deleted.
 
 To bring it back: restore the three data files into `src/data/`, move this folder back under `src/`, and wire it into `src/App.tsx`.
 The current shell is `src/App.tsx` with the screens in `src/ui/`.
+
+Note: `src/data/warehouseData.ts` imports its types from `legacy/types` (`../../legacy/types`). If you move this folder back under
+`src/`, change that import back to `../types`.

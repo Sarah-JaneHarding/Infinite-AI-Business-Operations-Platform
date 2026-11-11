@@ -4,7 +4,7 @@ import {
   WarehouseTenant, 
   WarehousePolicyAgreement, 
   WarehouseAuditRecord 
-} from '../types';
+} from '../../legacy/types';
 
 export const INITIAL_WAREHOUSE_DOCUMENTS: DocumentItem[] = [
   {
