@@ -9,6 +9,7 @@ import { EducationEcosystemWebsite } from './components/EducationEcosystemWebsit
 import { Studio } from './ui/Studio';
 import { Library } from './ui/Library';
 import { Builders } from './ui/Builders';
+import { Integrations } from './ui/Integrations';
 import { onNavigate } from './ui/nav';
 import { 
   Overview, 
@@ -38,7 +39,7 @@ function AppContent() {
   React.useEffect(() => onNavigate((d) => { setActiveTab(d.tab as NavTab); if (d.sub) setStudioSubView(d.sub as 'library'); }), []);
   const [selectedDeptId, setSelectedDeptId] = useState<string>('ai');
   const [selectedStudioDocId, setSelectedStudioDocId] = useState<string | null>(null);
-  const [studioSubView, setStudioSubView] = useState<'ops_docs' | 'artefacts' | 'library' | 'builders'>('ops_docs');
+  const [studioSubView, setStudioSubView] = useState<'ops_docs' | 'artefacts' | 'library' | 'builders' | 'integrations'>('ops_docs');
   const [ratifiedCount, setRatifiedCount] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('ia_ratified_count');
@@ -202,6 +203,18 @@ function AppContent() {
                   <Layers className="w-3.5 h-3.5" />
                   <span>Agent, Widget &amp; Artefact Builders</span>
                 </button>
+
+                <button
+                  onClick={() => setStudioSubView('integrations')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    studioSubView === 'integrations' 
+                      ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' 
+                      : 'text-[#CBD5E1] hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Integrations</span>
+                </button>
               </div>
 
               <span className="text-[11px] font-mono text-[#CBD5E1] hidden sm:block">
@@ -220,6 +233,8 @@ function AppContent() {
               <Library />
             ) : studioSubView === 'builders' ? (
               <Builders />
+            ) : studioSubView === 'integrations' ? (
+              <Integrations />
             ) : (
               <Studio id={selectedStudioDocId || undefined} />
             )}

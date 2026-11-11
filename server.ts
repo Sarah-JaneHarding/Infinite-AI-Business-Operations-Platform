@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express';
 import path from 'node:path';
 import { GithubReader, liveFacts, type LiveStatus } from './src/connector/github';
+import { lookup } from 'node:dns/promises';
+import { checkTarget, isPrivateIp, parseAllowlist, payloadFor, sign } from './src/server/outbound';
 import { summariseEvent, verifySignature, type EcoEvent } from './src/connector/webhook';
 import { ProposalPublisher, proposalFromArtefact, PublishRefused } from './src/connector/proposals';
 import { FileStore } from './src/server/fileAdapter';
@@ -55,7 +57,7 @@ const serial = <T>(fn: () => Promise<T>): Promise<T> => {
 };
 
 // ---- public: health (liveness probe, booleans only) ----
-app.get('/api/health', (_q, res) => res.json({ ok: true, repo: REPO, auth: auth.mode, githubToken: Boolean(env.GITHUB_TOKEN), llm: Boolean(env.ANTHROPIC_API_KEY), ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true', webhook: Boolean(env.GITHUB_WEBHOOK_SECRET) }));
+app.get('/api/health', (_q, res) => res.json({ ok: true, repo: REPO, auth: auth.mode, githubToken: Boolean(env.GITHUB_TOKEN), llm: Boolean(env.ANTHROPIC_API_KEY), ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true', webhook: Boolean(env.GITHUB_WEBHOOK_SECRET), outbound: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST).length > 0 }));
 
 // ---- webhook first: it needs the RAW body for the HMAC, and is authenticated by that signature ----
 const events: EcoEvent[] = [];
@@ -114,6 +116,27 @@ app.post('/api/connector/publish', wrap(async (req, res) => {
     if (e instanceof PublishRefused) return res.status(403).json({ error: e.message });
     throw e;
   }
+}));
+
+
+// ---- outbound: approved artefacts only, to hosts the operator allowed, with the address checked again before connecting ----
+app.get('/api/integrations/targets', (_q, res) => res.json({ hosts: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST), signed: Boolean(env.OPS_OUTBOUND_SECRET) }));
+app.post('/api/integrations/send', wrap(async (req, res) => {
+  const actor = actorOf(res);
+  if (!actor) return res.status(403).json({ error: 'Sending needs an authenticated user (set OPS_USERS).' });
+  const t = checkTarget(String(req.body?.url ?? ''), parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST));
+  if (!t.ok) return res.status(403).json({ error: t.why });
+  const id = String(req.body?.artefactId ?? '');
+  const art = store.list('artefact_versions').filter((r) => r.id === id).at(-1) as unknown as Artefact | undefined;
+  if (!art) return res.status(404).json({ error: 'unknown artefact' });
+  if (art.status !== 'APPROVED' || !store.list('approvals').some((r) => r.artefactId === id && r.decision === 'APPROVED' && r.approver === art.approvedBy)) return res.status(403).json({ error: 'Only an approved artefact with a recorded human approval can be sent.' });
+  try { const addrs = await lookup(t.url.hostname, { all: true }); if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) return res.status(403).json({ error: 'That host resolves to a non-public address.' }); } catch { return res.status(502).json({ error: 'Could not resolve that host.' }); }
+  const body = JSON.stringify(payloadFor(art));
+  const headers: Record<string, string> = { 'content-type': 'application/json', 'user-agent': 'infinite-ai-ops' };
+  if (env.OPS_OUTBOUND_SECRET) headers['x-ops-signature'] = sign(env.OPS_OUTBOUND_SECRET, body);
+  const r = await fetch(t.url, { method: 'POST', headers, body, redirect: 'error', signal: AbortSignal.timeout(10_000) }).catch((e: Error) => ({ ok: false, status: 0, statusText: e.message }));
+  store.append('connector_events', { id: `out_${Date.now()}`, kind: 'artefact_sent', summary: `${art.id} v${art.version} to ${t.url.hostname}: ${r.status}`, by: actor, at: new Date().toISOString() });
+  res.status(r.ok ? 200 : 502).json({ ok: r.ok, status: r.status, host: t.url.hostname });
 }));
 
 // ---- gateway upstream: holds the key; needs provenance, refuses anything that looks personal or hostile ----

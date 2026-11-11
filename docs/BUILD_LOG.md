@@ -34,3 +34,14 @@ enabled). Existing: Vite, React 19, Tailwind 4, express, tsx, lucide-react. `@go
 
 The earlier prototype UI (`src/App.tsx`, `src/components/*`, `src/data/*`, `src/types/*`) used random and invented
 telemetry, which conflicts with the no-invented-metrics rule. It remains in git history.
+
+## 2026-11-11: library, builders, assistants, integrations
+- All 100 catalogue agents built.
+- Document library: upload any format (Word, Excel, Markdown, CSV, JSON, HTML, text read and editable; PDF, images and others stored as-is with an honest "cannot preview or scan" note). Learner data and prompt injection refused. 5 MB limit, stored in 120k-character chunks.
+- Export bar on every document: choose Word, PDF (print), Markdown, CSV, JSON, HTML or Excel; download, print, or save a copy to the library.
+- 25 editable templates (12 business, 13 customer). Blanks marked "[Fill in: …]"; no invented figures; legal-weight ones carry a "needs review" note.
+- Builders (agent, widget, artefact template) store plain data in `custom_defs`. Calculator formulas use a small parser, never eval. Custom agents always need a second approver.
+- Department assistants are rule-based (no language model). Chat text is not stored.
+- Integrations page with honest states; outbound send of APPROVED artefacts to allowlisted https hosts (SSRF guarded, off unless OPS_OUTBOUND_ALLOWLIST is set).
+- Not built: SSO (OPQ-002), email/WhatsApp (OPQ-003), payments (OPQ-004), live Google/Microsoft connectors.
+- Known and unchanged: `src/components/*` still imports missing `src/data/*`, so `vite build` fails and `tsc` reports 65 errors, all in those files. The new UI is in `src/ui/*` and adds none. UI was type-checked and bundles with esbuild but was not exercised in a browser.
