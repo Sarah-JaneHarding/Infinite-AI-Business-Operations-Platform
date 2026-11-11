@@ -5,6 +5,8 @@ import { apiFetch } from '../core/api';
 import { Badge, Card, download, Icon, statusTone } from './primitives';
 import { WidgetCard } from './Widgets';
 import { AgentRunner } from './AgentRunner';
+import { DeptChat } from './DeptChat';
+import { customAgents, customWidgets } from '../departments/custom';
 import { DEPARTMENTS, deptById } from '../departments';
 import { snapshot, snapshotFacts } from '../connector/snapshot';
 import { checkInput, checkOutput } from '../core/guardrails/engine';
@@ -73,15 +75,19 @@ export function Overview() {
 
 export function Dept({ id }: { id: string }) {
   const d = deptById(id);
+  const { p, tick } = useOps();
+  const extraAgents = useMemo(() => (p ? customAgents(p.warehouse, id) : []), [p, id, tick]);
+  const extraWidgets = useMemo(() => (p ? customWidgets(p.warehouse, id) : []), [p, id, tick]);
   if (!d) return null;
   return (
     <div className="space-y-4">
       <div><h1 className="flex items-center gap-2 text-2xl font-bold"><Icon name={d.icon} size={24} /> {d.name}</h1><p style={{ color: 'var(--muted)' }}>{d.mission}</p>
         <div className="mt-2 flex flex-wrap gap-1.5">{d.frameworks.map((f) => <Badge key={f}>{f}</Badge>)}</div></div>
+      <DeptChat deptId={id} />
       <h2 className="text-lg font-semibold">Agents</h2>
-      <div className="grid gap-3 xl:grid-cols-2">{d.agents.map((a) => <AgentRunner key={a.id} agent={a} />)}</div>
+      <div className="grid gap-3 xl:grid-cols-2">{[...d.agents, ...extraAgents].map((a) => <AgentRunner key={a.id} agent={a} />)}</div>
       <h2 className="text-lg font-semibold">Widgets</h2>
-      <div className="grid gap-3 xl:grid-cols-2">{d.widgets.map((w) => <WidgetCard key={w.id} w={w} />)}</div>
+      <div className="grid gap-3 xl:grid-cols-2">{[...d.widgets, ...extraWidgets].map((w) => <WidgetCard key={w.id} w={w} />)}</div>
     </div>
   );
 }

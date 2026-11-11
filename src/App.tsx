@@ -8,6 +8,8 @@ import { CloudAndFinance } from './components/CloudAndFinance';
 import { EducationEcosystemWebsite } from './components/EducationEcosystemWebsite';
 import { Studio } from './ui/Studio';
 import { Library } from './ui/Library';
+import { Builders } from './ui/Builders';
+import { onNavigate } from './ui/nav';
 import { 
   Overview, 
   Dept, 
@@ -33,9 +35,10 @@ import {
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<NavTab>('command');
+  React.useEffect(() => onNavigate((d) => { setActiveTab(d.tab as NavTab); if (d.sub) setStudioSubView(d.sub as 'library'); }), []);
   const [selectedDeptId, setSelectedDeptId] = useState<string>('ai');
   const [selectedStudioDocId, setSelectedStudioDocId] = useState<string | null>(null);
-  const [studioSubView, setStudioSubView] = useState<'ops_docs' | 'artefacts' | 'library'>('ops_docs');
+  const [studioSubView, setStudioSubView] = useState<'ops_docs' | 'artefacts' | 'library' | 'builders'>('ops_docs');
   const [ratifiedCount, setRatifiedCount] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('ia_ratified_count');
@@ -187,6 +190,18 @@ function AppContent() {
                   <FileText className="w-3.5 h-3.5" />
                   <span>Library &amp; Templates</span>
                 </button>
+
+                <button
+                  onClick={() => setStudioSubView('builders')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    studioSubView === 'builders' 
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                      : 'text-[#CBD5E1] hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Agent, Widget &amp; Artefact Builders</span>
+                </button>
               </div>
 
               <span className="text-[11px] font-mono text-[#CBD5E1] hidden sm:block">
@@ -203,6 +218,8 @@ function AppContent() {
               />
             ) : studioSubView === 'library' ? (
               <Library />
+            ) : studioSubView === 'builders' ? (
+              <Builders />
             ) : (
               <Studio id={selectedStudioDocId || undefined} />
             )}

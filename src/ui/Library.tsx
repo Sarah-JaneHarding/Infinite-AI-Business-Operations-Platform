@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, FilePlus2, Trash2, Upload } from 'lucide-react';
 import { useOps } from './store';
 import { Badge, Card, download } from './primitives';
@@ -7,6 +7,8 @@ import { ExportBar } from './ExportBar';
 import { toHtml } from '../core/artefacts/render';
 import { listDocuments, loadOriginal, MAX_UPLOAD_BYTES, newDocId, saveRecord, uploadFile, UploadRefused, type DocRecord } from '../core/documents';
 import { TEMPLATES, templateById, type Template } from '../departments/templates';
+import { customArtefacts } from '../departments/custom';
+import { pending } from './nav';
 import type { Doc } from '../core/types';
 
 const blankDoc = (): Doc => ({ title: 'Untitled document', blocks: [{ type: 'h', level: 2, text: 'Heading' }, { type: 'p', text: '' }], meta: {} });
@@ -45,6 +47,8 @@ export function Library() {
   };
   const saveEdit = async () => { if (!rec || !draft) return; await saveRecord(store, { ...rec, title: draft.title, doc: draft, at: new Date().toISOString(), by: actor.name }); bump(); say('ok', 'Saved.'); };
   const remove = async () => { if (!rec) return; await saveRecord(store, { ...rec, deleted: true, at: new Date().toISOString() }); setSel(null); setDraft(null); bump(); };
+  useEffect(() => { const id = pending.template; if (id) { pending.template = undefined; const t = templateById(id); if (t) void create(structuredClone(t.doc), 'template', t.dept); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const mine = useMemo(() => customArtefacts(store), [store, tick]);
   const tpls = TEMPLATES.filter((t) => group === 'all' || t.group === group);
   const useTpl = (t: Template) => create(structuredClone(t.doc), 'template', t.dept);
 
@@ -95,9 +99,9 @@ export function Library() {
           <ul className="grid gap-2 md:grid-cols-2">
             {tpls.map((t) => <li key={t.id} className="rounded-lg border p-2" style={{ borderColor: 'var(--line)' }}><div className="text-sm font-semibold">{t.title}</div><div className="text-xs" style={{ color: 'var(--muted)' }}>{t.summary}</div>{t.review && <div className="mt-1 text-[11px]"><Badge tone="draft">needs review</Badge> {t.review}</div>}<button className="btn mt-2" onClick={() => useTpl(t)}>Use this template</button></li>)}
           </ul>
+          {mine.length > 0 && <><h3 className="mb-1 mt-4 text-sm font-semibold">Your own templates</h3><ul className="grid gap-2 md:grid-cols-2">{mine.map((m) => <li key={m.id} className="rounded-lg border p-2" style={{ borderColor: 'var(--line)' }}><div className="text-sm font-semibold">{m.title}</div><div className="text-xs" style={{ color: 'var(--muted)' }}>{m.summary}</div><button className="btn mt-2" onClick={() => create(structuredClone(m.doc), 'template', m.dept)}>Use this template</button></li>)}</ul></>}
         </Card>
       </div>
     </div>
   );
 }
-void templateById;
