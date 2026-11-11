@@ -307,7 +307,7 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 | Agent | Task | What it produces | You supply | Formats | Widget | Status |
 |---|---|---|---|---|---|---|
 | OPS-GOV-03 | Funding application skeleton | Structure for a grant or tender response using facts you can cite. | Funder; Need; Activities | md, docx | Funding and partnership leads | Built |
-| OPS-GOV-06 | Funding pipeline review | Counts leads by stage and lists the next action for each live lead, flagging any with none recorded. | Leads, one per line: name | stage | next action; Priorities | md, docx, csv | Funding and partnership leads | Built |
+| OPS-GOV-06 | Funding pipeline review | Counts leads by stage and lists the next action for each live lead, flagging any with none recorded. | Leads, one per line (name, stage, next action); Priorities | md, docx, csv | Funding and partnership leads | Built |
 
 ### Policy Analyst
 
