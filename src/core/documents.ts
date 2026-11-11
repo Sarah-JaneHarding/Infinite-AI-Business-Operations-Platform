@@ -315,7 +315,7 @@ export const chunkBase64 = (b64: string): string[] => { const out: string[] = []
 export interface Store {
   put(collection: string, rec: Record<string, unknown> & { id: string }): Promise<unknown>;
   latest<T>(collection: string, key?: string): T[];
-  list<T>(collection: string, where?: (r: never) => boolean): T[];
+  list<T>(collection: string, where?: (r: Record<string, unknown> & { id: string }) => boolean): T[];
 }
 export const newDocId = () => `doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -336,7 +336,7 @@ export async function uploadFile(store: Store, file: { name: string; type: strin
 }
 
 export function loadOriginal(store: Store, id: string): Uint8Array | null {
-  const parts = store.list<{ doc: string; i: number; data: string }>('document_chunks', ((r: { doc: string }) => r.doc === id) as never);
+  const parts = store.list<{ doc: string; i: number; data: string }>('document_chunks', (r) => r['doc'] === id);
   if (!parts.length) return null;
   const latest = new Map<number, string>();
   for (const p of parts) latest.set(p.i, p.data);

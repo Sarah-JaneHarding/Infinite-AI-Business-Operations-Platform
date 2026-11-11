@@ -7,6 +7,7 @@ import { DataWarehouse } from './components/DataWarehouse';
 import { CloudAndFinance } from './components/CloudAndFinance';
 import { EducationEcosystemWebsite } from './components/EducationEcosystemWebsite';
 import { Studio } from './ui/Studio';
+import { Library } from './ui/Library';
 import { 
   Overview, 
   Dept, 
@@ -34,7 +35,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<NavTab>('command');
   const [selectedDeptId, setSelectedDeptId] = useState<string>('ai');
   const [selectedStudioDocId, setSelectedStudioDocId] = useState<string | null>(null);
-  const [studioSubView, setStudioSubView] = useState<'ops_docs' | 'artefacts'>('ops_docs');
+  const [studioSubView, setStudioSubView] = useState<'ops_docs' | 'artefacts' | 'library'>('ops_docs');
   const [ratifiedCount, setRatifiedCount] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('ia_ratified_count');
@@ -175,6 +176,17 @@ function AppContent() {
                   <Layers className="w-3.5 h-3.5" />
                   <span>Agent Generative Artefacts Studio</span>
                 </button>
+                <button
+                  onClick={() => setStudioSubView('library')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    studioSubView === 'library' 
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                      : 'text-[#CBD5E1] hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Library &amp; Templates</span>
+                </button>
               </div>
 
               <span className="text-[11px] font-mono text-[#CBD5E1] hidden sm:block">
@@ -189,6 +201,8 @@ function AppContent() {
                 onNavigateToWarehouse={() => setActiveTab('warehouse')}
                 initialDocId={selectedStudioDocId}
               />
+            ) : studioSubView === 'library' ? (
+              <Library />
             ) : (
               <Studio id={selectedStudioDocId || undefined} />
             )}
