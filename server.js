@@ -159,7 +159,7 @@ var ECOSYSTEM_RULES_CHECKLIST = [
 ];
 function proposalFromArtefact(a, summary) {
   const body = [
-    `> Drafted by the Infinite-AI Ops Platform (${a.agentId}) and approved by a named human (${a.approvedBy ?? "n/a"}). AI drafts. The human decides.`,
+    `> Drafted by the Infinite-AI Ops Platform (${a.agentId}) and approved by ${a.approvedBy ?? "n/a"} and countersigned by ${a.countersignedBy ?? "n/a"}. AI drafts. The human decides.`,
     "",
     summary,
     "",
@@ -181,7 +181,7 @@ var ProposalPublisher = class {
     this.api = api;
   }
   async openIssue(a, p) {
-    if (a.status !== "APPROVED" || !a.approvedBy) throw new PublishRefused("Only a human-APPROVED artefact can be published.");
+    if (a.status !== "RATIFIED" && a.status !== "INGESTED" || !a.approvedBy || !a.countersignedBy || a.approvedBy === a.countersignedBy) throw new PublishRefused("Only a ratified artefact (approved and countersigned by two different people) can be published.");
     if (!this.writesEnabled) throw new PublishRefused('Ecosystem writes are disabled (OPS_ALLOW_ECOSYSTEM_WRITES is not "true"). Download the proposal instead.');
     if (!this.token) throw new PublishRefused("No GitHub token is configured on the server.");
     const r = await this.f(`${this.api}/repos/${this.repo}/issues`, { method: "POST", headers: { authorization: `Bearer ${this.token}`, accept: "application/vnd.github+json", "content-type": "application/json", "user-agent": "infinite-ai-ops" }, body: JSON.stringify(p) });
@@ -227,28 +227,6 @@ var FileStore = class {
   }
 };
 
-// src/server/claude.ts
-var ClaudeError = class extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-};
-async function completeWithClaude(r) {
-  const f = r.fetchImpl ?? fetch;
-  const res = await f(`${r.api ?? "https://api.anthropic.com"}/v1/messages`, {
-    method: "POST",
-    headers: { "x-api-key": r.apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: r.model, max_tokens: r.maxTokens ?? 1024, system: r.system, messages: [{ role: "user", content: r.prompt }] }),
-    signal: AbortSignal.timeout(3e4)
-  });
-  if (!res.ok) throw new ClaudeError(res.status, `Anthropic ${res.status}`);
-  const j = await res.json();
-  const text = (j.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
-  if (!text) throw new ClaudeError(502, "Anthropic returned no text");
-  return text;
-}
-
 // src/server/auth.ts
 import { createHash, timingSafeEqual } from "node:crypto";
 var digest = (t) => createHash("sha256").update(t).digest();
@@ -270,7 +248,7 @@ function parseAuth(env2) {
   }
   if (env2.OPS_API_TOKEN) add("operator", env2.OPS_API_TOKEN);
   if (users.length) return { mode: "users", users };
-  if (env2.OPS_OPEN_DEV === "true" || LOOPBACK.has(env2.HOST ?? "127.0.0.1")) return { mode: "open" };
+  if (env2.OPS_OPEN_DEV === "true" || LOOPBACK.has(env2.HOST || "127.0.0.1")) return { mode: "open" };
   throw new Error("No users configured (OPS_USERS) and HOST is not loopback. Set OPS_USERS, or OPS_OPEN_DEV=true for a throwaway local container.");
 }
 function authenticate(auth2, token) {
@@ -279,6 +257,23 @@ function authenticate(auth2, token) {
   let found = null;
   for (const u of auth2.users) if (timingSafeEqual(u.digest, d)) found = u.id;
   return found;
+}
+
+// src/core/crypto.ts
+async function sha256Hex(text) {
+  const data = new TextEncoder().encode(text);
+  const buf = await globalThis.crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function canonical(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+  const o = value;
+  return "{" + Object.keys(o).sort().filter((k) => o[k] !== void 0).map((k) => JSON.stringify(k) + ":" + canonical(o[k])).join(",") + "}";
+}
+function newId(prefix) {
+  const r = globalThis.crypto.getRandomValues(new Uint8Array(8));
+  return prefix + "_" + [...r].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // src/departments/kit.ts
@@ -299,6 +294,7 @@ function blocksFrom(secs) {
   }
   return out;
 }
+var DEPT_OWNER = { executive: "Executive", product: "Product", curriculum: "Curriculum", ai: "AI and Brain", security: "Security", legal: "Legal", finance: "Finance", sales: "Sales", marketing: "Marketing", success: "Customer Success", support: "Support", government: "Government Relations", people: "People", devops: "Infrastructure", procurement: "Procurement", research: "Research" };
 function defineAgent(dept, code, d) {
   const id = `OPS-${code}-${String(d.n).padStart(2, "0")}`;
   return {
@@ -308,6 +304,8 @@ function defineAgent(dept, code, d) {
     name: d.name,
     summary: d.summary,
     framework: d.framework,
+    owner: d.owner ?? `Head of ${DEPT_OWNER[dept] ?? dept}`,
+    models: d.models,
     purpose: d.purpose,
     allowedPurposes: [d.purpose],
     dataClass: "internal",
@@ -1229,7 +1227,7 @@ var sales = {
       purpose: "sales_pipeline",
       formats: ["md", "docx"],
       inputs: [txt("audience", "Audience (roles)", true), long("features", "Features to show, one per line: feature | benefit for the teacher", true), txt("minutes", "Time available")],
-      sections: (c) => [{ h: "Audience", kv: [["Audience", v(c, "audience")], ["Time available", v(c, "minutes")]] }, { h: "Flow", table: { headers: ["Step", "Feature", "Benefit for the teacher", "Time"], rows: rows(c.input.features).map((p, i) => [i + 1, p[0], p[1] ?? "", ""]) } }, { h: "Opening and close", bullets: ["Open with a problem the teacher told us about.", "Close with one clear next step."] }, { h: "Before the demo", checks: ["Demo school and learner data are fictional", "No real learner name or image on screen", "Every claim about results has a source"] }]
+      sections: (c) => [{ h: "Audience", kv: [["Audience", v(c, "audience")], ["Time available", v(c, "minutes")]] }, { h: "Flow", table: { headers: ["Step", "Feature", "Benefit for the teacher", "Time"], rows: rows(c.input.features).map((p, i) => [i + 1, p[0], p[1] ?? "", ""]) } }, { h: "Opening and close", bullets: ["Open with a problem the teacher told us about.", "Close with one clear next step."] }, { h: "Before the demo", checks: ["Demo school and learner data are fictional", "No real learner\u2019s name or image on screen", "Every claim about results has a source"] }]
     })
   ]
 };
@@ -1942,10 +1940,320 @@ var DEPARTMENTS = [executive, product, curriculum, aibrain, security, legal, fin
 var AGENTS = DEPARTMENTS.flatMap((d) => d.agents);
 var agentById = (id) => AGENTS.find((a) => a.id === id);
 
+// src/core/erasure.ts
+var ERASURE_CATEGORIES = ["data_subject_request", "consent_withdrawn", "retention_expired", "unlawfully_obtained", "other"];
+var normalizeSubject = (s) => s.trim();
+
+// src/core/types.ts
+var PURPOSES = [
+  "strategy_planning",
+  "engineering_governance",
+  "content_review",
+  "ai_governance",
+  "compliance_review",
+  "contract_review",
+  "financial_planning",
+  "sales_pipeline",
+  "marketing_content",
+  "customer_success",
+  "service_desk",
+  "public_sector_relations",
+  "people_ops",
+  "infrastructure_ops",
+  "vendor_management",
+  "research_evaluation"
+];
+var LAWFUL_BASES = ["legitimate_interest", "contract", "consent", "legal_obligation"];
+
+// src/core/guardrails/pii.ts
+function validSaId(id) {
+  if (!/^\d{13}$/.test(id)) return false;
+  const mm = Number(id.slice(2, 4));
+  const dd = Number(id.slice(4, 6));
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return false;
+  let sum = 0;
+  for (let i = 0; i < 13; i++) {
+    let d = Number(id[12 - i]);
+    if (i % 2 === 1) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
+var EMAIL = /(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+var PHONE = /(?:\+27|\b0)[\s-]?[6-8]\d[\s-]?\d{3}[\s-]?\d{4}\b|(?:\+27|\b0)[\s-]?[1-5]\d[\s-]?\d{3}[\s-]?\d{4}\b/g;
+var TITLED = /\b(?:Mr|Mrs|Ms|Miss|Mx|Dr|Prof|Principal|Mnr|Mev)\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?/g;
+var LEARNER_ID = /\b(?:EMIS|learner\s*(?:no|number|id|name)|student\s*(?:no|number|id)|pupil\s*(?:no|number|id))\b[\s:#-]*[\w-]+/gi;
+var THIRTEEN = /(?<!\d)\d{13}(?!\d)/g;
+function collect(re, text, kind, keep = () => true) {
+  const out = [];
+  for (const m of text.matchAll(re)) {
+    if (keep(m[0])) out.push({ kind, match: m[0], start: m.index ?? 0, end: (m.index ?? 0) + m[0].length });
+  }
+  return out;
+}
+function detectPii(text, knownNames = []) {
+  const found = [
+    ...collect(THIRTEEN, text, "sa_id", validSaId),
+    ...collect(EMAIL, text, "email"),
+    ...collect(PHONE, text, "phone_za"),
+    ...collect(TITLED, text, "titled_name"),
+    ...collect(LEARNER_ID, text, "learner_identifier")
+  ];
+  for (const name of knownNames.filter((n) => n.trim().length >= 3)) {
+    const re = new RegExp("\\b" + name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "gi");
+    found.push(...collect(re, text, "known_name"));
+  }
+  return found.sort((a, b) => a.start - b.start);
+}
+var LearnerDataRefused = class extends Error {
+  constructor(findings) {
+    super("Learner-level identifiers are never admitted to the operations platform.");
+    this.findings = findings;
+  }
+};
+function deidentify(text, sources, knownNames = []) {
+  const findings = detectPii(text, knownNames);
+  const learner = findings.filter((f) => f.kind === "learner_identifier");
+  if (learner.length) throw new LearnerDataRefused(learner);
+  const tokens = {};
+  const seen = /* @__PURE__ */ new Map();
+  const counters = {};
+  let out = "";
+  let cursor = 0;
+  for (const f of findings) {
+    if (f.start < cursor) continue;
+    out += text.slice(cursor, f.start);
+    const key = f.kind + ":" + f.match.toLowerCase();
+    let tok = seen.get(key);
+    if (!tok) {
+      counters[f.kind] = (counters[f.kind] ?? 0) + 1;
+      tok = `[${f.kind.toUpperCase()}_${counters[f.kind]}]`;
+      seen.set(key, tok);
+      tokens[tok] = f.match;
+    }
+    out += tok;
+    cursor = f.end;
+  }
+  out += text.slice(cursor);
+  return { text: out, tokens, findings, provenance: { deidentified: true, sources } };
+}
+
+// src/core/guardrails/injection.ts
+var RULES = [
+  ["override_instructions", /\b(ignore|disregard|forget)\b[^.\n]{0,40}\b(previous|prior|above|system|earlier)\b[^.\n]{0,30}\b(instructions?|prompts?|rules?)\b/i],
+  ["reveal_system_prompt", /\b(reveal|print|show|repeat|leak)\b[^.\n]{0,30}\b(system|hidden|developer)\s+(prompt|message|instructions?)\b/i],
+  ["role_hijack", /\byou\s+are\s+now\b|\bact\s+as\s+(?:an?\s+)?(?:unrestricted|jailbroken|dan)\b|\bdeveloper\s+mode\b/i],
+  ["bypass_controls", /\b(bypass|disable|skip|turn\s+off|override)\b[^.\n]{0,30}\b(guardrails?|approval|hitl|human\s+review|pii|audit|ledger|safety)\b/i],
+  ["approval_flag", /\bSKIP_APPROVAL\b|\bAUTO_APPROVE\b|\bFORCE_APPROVE\b/],
+  ["exfiltrate", /\b(send|post|upload|exfiltrate)\b[^.\n]{0,40}\b(secrets?|api\s*keys?|tokens?|passwords?|credentials?)\b/i]
+];
+function detectInjection(text) {
+  const out = [];
+  for (const [rule, re] of RULES) {
+    const m = text.match(re);
+    if (m) out.push({ rule, match: m[0] });
+  }
+  return out;
+}
+
+// src/core/artefacts/render.ts
+var esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+var cell = (c) => String(c);
+function toMarkdown(d) {
+  const out = [`# ${d.title}`];
+  if (d.subtitle) out.push(`_${d.subtitle}_`);
+  for (const b of d.blocks) {
+    switch (b.type) {
+      case "h":
+        out.push(`${"#".repeat(Math.min(6, (b.level ?? 2) + 0))} ${b.text}`);
+        break;
+      case "p":
+        out.push(b.text ?? "");
+        break;
+      case "ul":
+        out.push((b.items ?? []).map((i) => `- ${i}`).join("\n"));
+        break;
+      case "ol":
+        out.push((b.items ?? []).map((i, n) => `${n + 1}. ${i}`).join("\n"));
+        break;
+      case "checklist":
+        out.push((b.checks ?? []).map((c) => `- [${c.done ? "x" : " "}] ${c.label}`).join("\n"));
+        break;
+      case "callout":
+        out.push(`> **${(b.tone ?? "info").toUpperCase()}** ${b.text}`);
+        break;
+      case "kv":
+        out.push((b.pairs ?? []).map(([k, v2]) => `- **${k}:** ${v2}`).join("\n"));
+        break;
+      case "table": {
+        const h = b.headers ?? [];
+        out.push([`| ${h.join(" | ")} |`, `| ${h.map(() => "---").join(" | ")} |`, ...(b.rows ?? []).map((r) => `| ${r.map(cell).join(" | ")} |`)].join("\n"));
+        break;
+      }
+    }
+  }
+  const meta = Object.entries(d.meta);
+  if (meta.length) out.push("---\n" + meta.map(([k, v2]) => `*${k}:* ${v2}`).join(" \xB7 "));
+  return out.join("\n\n") + "\n";
+}
+function blockHtml(b) {
+  switch (b.type) {
+    case "h":
+      return `<h${Math.min(4, (b.level ?? 2) + 1)}>${esc(b.text ?? "")}</h${Math.min(4, (b.level ?? 2) + 1)}>`;
+    case "p":
+      return `<p>${esc(b.text ?? "").replace(/\n/g, "<br>")}</p>`;
+    case "ul":
+      return `<ul>${(b.items ?? []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`;
+    case "ol":
+      return `<ol>${(b.items ?? []).map((i) => `<li>${esc(i)}</li>`).join("")}</ol>`;
+    case "checklist":
+      return `<ul class="chk">${(b.checks ?? []).map((c) => `<li>${c.done ? "\u2611" : "\u2610"} ${esc(c.label)}</li>`).join("")}</ul>`;
+    case "callout":
+      return `<div class="callout ${b.tone ?? "info"}">${esc(b.text ?? "")}</div>`;
+    case "kv":
+      return `<dl>${(b.pairs ?? []).map(([k, v2]) => `<dt>${esc(k)}</dt><dd>${esc(v2)}</dd>`).join("")}</dl>`;
+    case "table":
+      return `<table><thead><tr>${(b.headers ?? []).map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${(b.rows ?? []).map((r) => `<tr>${r.map((c) => `<td>${esc(cell(c))}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  }
+}
+function toHtml(d) {
+  const meta = Object.entries(d.meta).map(([k, v2]) => `<span><b>${esc(k)}</b> ${esc(v2)}</span>`).join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(d.title)}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+:root{--ink:#14112b;--violet:#6d4aff;--amber:#f5a524;--emerald:#12a870;--rose:#e5484d;--cyan:#12a4c7;--cream:#fbf8f1}
+body{font:16px/1.6 Inter,system-ui,sans-serif;color:var(--ink);background:var(--cream);max-width:860px;margin:0 auto;padding:40px 24px}
+h1,h2,h3,h4{font-family:'Space Grotesk',Inter,sans-serif;line-height:1.2}h1{font-size:2rem;border-bottom:4px solid var(--violet);padding-bottom:.4rem}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.92rem}th{background:var(--ink);color:#fff;text-align:left}th,td{border:1px solid #d9d3c3;padding:6px 10px;vertical-align:top}tr:nth-child(even) td{background:#f3eee0}
+.callout{border-left:5px solid var(--cyan);background:#e8f6fa;padding:10px 14px;margin:1rem 0}.callout.warn{border-color:var(--amber);background:#fdf3dc}.callout.ok{border-color:var(--emerald);background:#e2f6ee}
+dl{display:grid;grid-template-columns:minmax(150px,36%) 1fr;gap:4px 16px}dt{font-weight:600}dd{margin:0}.chk{list-style:none;padding-left:0}
+.meta{font:12px 'Space Mono',monospace;color:#55507a;display:flex;flex-wrap:wrap;gap:4px 14px;border-top:1px solid #d9d3c3;margin-top:2rem;padding-top:.6rem}
+.draft{display:inline-block;background:var(--amber);color:var(--ink);font:700 11px 'Space Mono',monospace;padding:2px 8px;border-radius:99px;letter-spacing:.06em}
+@media print{body{background:#fff;padding:0}}
+</style></head><body><span class="draft">AI DRAFT \xB7 THE HUMAN DECIDES</span><h1>${esc(d.title)}</h1>${d.subtitle ? `<p><i>${esc(d.subtitle)}</i></p>` : ""}${d.blocks.map(blockHtml).join("\n")}<div class="meta">${meta}</div></body></html>`;
+}
+function csvEscape(v2) {
+  let s = String(v2);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function toCsv(d) {
+  const tables = d.blocks.filter((b) => b.type === "table");
+  if (!tables.length) {
+    const rows2 = d.blocks.flatMap((b) => b.type === "kv" ? (b.pairs ?? []).map(([k, v2]) => [k, v2]) : b.type === "ul" || b.type === "ol" ? (b.items ?? []).map((i) => ["", i]) : b.text ? [["", b.text]] : []);
+    return ["Field,Value", ...rows2.map((r) => r.map(csvEscape).join(","))].join("\r\n") + "\r\n";
+  }
+  return tables.map((t, i) => [`${csvEscape(`Table ${i + 1}`)}`, (t.headers ?? []).map(csvEscape).join(","), ...(t.rows ?? []).map((r) => r.map(csvEscape).join(","))].join("\r\n")).join("\r\n\r\n") + "\r\n";
+}
+function toJson(d) {
+  return JSON.stringify(d, null, 2) + "\n";
+}
+
+// src/core/acceptance.ts
+var MAX_DOC_JSON = 2e5;
+var BLOCK_TYPES = /* @__PURE__ */ new Set(["h", "p", "ul", "ol", "table", "kv", "callout", "checklist"]);
+function textOf(doc) {
+  const out = [doc.title, doc.subtitle ?? ""];
+  for (const b of doc.blocks) {
+    out.push(b.text ?? "", ...b.items ?? [], ...b.headers ?? [], ...(b.checks ?? []).map((c) => c.label));
+    for (const r of b.rows ?? []) out.push(...r.map(String));
+    for (const [k, v2] of b.pairs ?? []) out.push(k, v2);
+  }
+  out.push(...Object.values(doc.meta ?? {}).map(String));
+  return out.filter(Boolean);
+}
+var check = (id, title, fn) => {
+  try {
+    const fail = fn();
+    return { id, title, pass: fail === null, detail: fail ?? "ok" };
+  } catch (e) {
+    return { id, title, pass: false, detail: `check could not run: ${e.message.slice(0, 80)}` };
+  }
+};
+function runAcceptance(c, agent) {
+  const doc = c.doc;
+  const tooBig = (() => {
+    try {
+      return JSON.stringify(doc).length > MAX_DOC_JSON;
+    } catch {
+      return true;
+    }
+  })();
+  if (tooBig) return { passed: false, results: [{ id: "A7", title: "It fits the storage limit", pass: false, detail: `larger than ${MAX_DOC_JSON} characters, so the other checks were not run` }] };
+  const texts = (() => {
+    try {
+      return textOf(doc);
+    } catch {
+      return [];
+    }
+  })();
+  const joined = texts.join("\n");
+  const results = [
+    check("A1", "The agent contract holds", () => {
+      if (!agent) return `no registered agent ${c.agentId}`;
+      if (agent.requiresApproval !== true) return "the contract does not require approval";
+      if (agent.dataClass === "learner") return "the contract handles learner data, which is never admitted";
+      if (!PURPOSES.includes(agent.purpose) || !agent.allowedPurposes.includes(agent.purpose)) return "the contract purpose is not one it is allowed";
+      return null;
+    }),
+    check("A2", "The document is well formed", () => {
+      if (typeof doc?.title !== "string" || !doc.title.trim() || doc.title.length > 200) return "the title is missing or longer than 200 characters";
+      if (!Array.isArray(doc.blocks) || !doc.blocks.length) return "the document has no content";
+      const bad2 = doc.blocks.filter((b) => !BLOCK_TYPES.has(b.type)).length;
+      if (bad2) return `${bad2} block(s) have an unknown type`;
+      if (doc.blocks.some((b) => b.type === "h" && !(b.text ?? "").trim())) return "a heading is empty";
+      return null;
+    }),
+    check("A3", "It says something", () => {
+      const body = doc.blocks.filter((b) => b.type !== "h").flatMap((b) => [b.text ?? "", ...b.items ?? [], ...(b.pairs ?? []).map(([, v2]) => v2), ...(b.rows ?? []).flat().map(String)]).join(" ").trim();
+      return body.length >= 40 ? null : "there is almost no content outside headings";
+    }),
+    check("A4", "No personal data", () => {
+      const found = detectPii(joined);
+      return found.length ? `personal data present (${[...new Set(found.map((f) => f.kind))].join(", ")})` : null;
+    }),
+    check("A5", "No instruction-override text", () => detectInjection(joined).length ? "the text contains an instruction-override pattern" : null),
+    check("A6", "Every figure is sourced and nothing was redacted", () => {
+      const flagged = (c.flags ?? []).filter((f) => /^(pii_echo|unsourced_claims)/.test(f));
+      if (flagged.length) return `the guardrails flagged it while drafting (${flagged.join(", ")})`;
+      if (/\[UNSOURCED\]/.test(joined)) return "it still contains [UNSOURCED] figures";
+      if (/\[REDACTED_[A-Z_]+\]/.test(joined)) return "it still contains redacted personal data";
+      return null;
+    }),
+    check("A7", "It fits the storage limit", () => null),
+    check("A8", "It renders safely in every text format", () => {
+      const md = toMarkdown(doc);
+      const html = toHtml(doc);
+      const csv = toCsv(doc);
+      const json = toJson(doc);
+      if (![md, html, csv, json].every((s) => s.trim().length > 0)) return "a format rendered empty";
+      JSON.parse(json);
+      const markup = html.replace(/<style[\s\S]*?<\/style>/i, "");
+      if (/<script/i.test(markup) || /<[a-z][^>]*\son[a-z]+\s*=/i.test(markup) || /\b(?:href|src)\s*=\s*["']?\s*javascript:/i.test(markup)) return "the HTML export contains script or an event handler";
+      return null;
+    }),
+    check("A9", "It is marked as a draft with its provenance", () => {
+      const m = doc.meta ?? {};
+      if (m.status !== "DRAFT") return "meta.status is not DRAFT";
+      if (!m.agent || m.agent !== c.agentId) return "meta.agent does not match the agent";
+      if (!m.engine) return "meta.engine is missing";
+      if (agent && m.purpose !== agent.purpose) return "meta.purpose does not match the contract";
+      return null;
+    }),
+    check("A10", "An autonomous draft names its standing order", () => {
+      if (!c.requestedBy?.startsWith("auto:")) return null;
+      return doc.meta?.order === c.requestedBy.slice(5) ? null : "meta.order does not match the autonomous actor";
+    })
+  ];
+  return { passed: results.every((r) => r.pass), results };
+}
+var failedChecks = (a) => a.results.filter((r) => !r.pass);
+
 // src/server/validate.ts
 var MAX_RECORD_BYTES = 256 * 1024;
 var MAX_RECORDS = 2e4;
-var CORE = ["ledger", "brain", "artefact_versions", "runs", "approvals", "tombstones"];
+var CORE = ["ledger", "brain", "artefact_versions", "runs", "approvals", "countersignatures", "tombstones", "erasure_requests"];
 var LIBRARY = ["documents", "document_chunks", "custom_defs", "chat_log", "integration_settings"];
 var CUSTOM_WIDGET_COLLECTION = /^cw_[a-z0-9_]{1,40}$/;
 var CLIENT_COLLECTIONS = /* @__PURE__ */ new Set([
@@ -1974,48 +2282,107 @@ async function validateAppend(collection, body, ctx) {
   if (ctx.store.list(collection).length >= MAX_RECORDS) bad("collection is full", 507);
   switch (collection) {
     case "artefact_versions":
-      artefact(rec, ctx);
+      await artefact(rec, ctx);
       break;
     case "approvals":
       approval(rec, ctx);
       break;
+    case "countersignatures":
+      countersignature(rec, ctx);
+      break;
+    case "documents":
+      await document(rec, ctx);
+      break;
     case "brain":
       brain(rec, ctx);
       break;
+    case "erasure_requests":
+      erasure(rec, ctx);
+      break;
     case "tombstones":
-      if (!isHash(rec.subjectHash)) bad("tombstone needs a subjectHash (sha-256 hex)");
+      tombstone(rec, ctx);
       break;
   }
   return rec;
 }
-function artefact(rec, ctx) {
+async function artefact(rec, ctx) {
+  if (typeof rec.doc !== "object" || rec.doc === null || typeof rec.docHash !== "string" || await sha256Hex(canonical(rec.doc)) !== rec.docHash) bad("docHash does not match the document");
   const status = rec.status;
-  if (status !== "DRAFT" && status !== "IN_REVIEW" && status !== "APPROVED" && status !== "REJECTED") bad("bad artefact status");
+  if (status !== "DRAFT" && status !== "IN_REVIEW" && status !== "APPROVED" && status !== "RATIFIED" && status !== "INGESTED" && status !== "REJECTED") bad("bad artefact status");
   const customIds = new Set(ctx.store.list("custom_defs").filter((d) => d.kind === "agent" && !d.deleted).map((d) => d.id));
   if (typeof rec.agentId !== "string" || !(agentById(rec.agentId) || customIds.has(rec.agentId))) bad("unknown agent");
-  if (status !== "APPROVED" && status !== "REJECTED" && rec.approvedBy !== void 0) bad("only a decision carries approvedBy");
+  if (status !== "APPROVED" && status !== "REJECTED" && status !== "RATIFIED" && status !== "INGESTED" && rec.approvedBy !== void 0) bad("only a decision carries approvedBy");
+  if (status !== "RATIFIED" && status !== "INGESTED" && rec.countersignedBy !== void 0) bad("only a ratified artefact carries countersignedBy");
   const cur = latestById(ctx.store.list("artefact_versions"), rec.id);
   if (!cur) {
     if (status !== "DRAFT" || rec.version !== 1) bad("a new artefact starts as DRAFT v1");
     if (ctx.actor && rec.requestedBy !== ctx.actor) bad("requestedBy is not you", 403);
+    if (String(rec.requestedBy).startsWith("auto:")) {
+      const orderId = String(rec.requestedBy).slice(5);
+      const order = latestById(ctx.store.list("standing_orders"), orderId);
+      if (ctx.actor !== rec.requestedBy) bad("only the autonomy runner can create an autonomous draft", 403);
+      if (!order || order.status !== "ACTIVE") return bad("there is no active standing order for this autonomous draft", 403);
+      if (order.agentId !== rec.agentId) bad("the draft is from a different agent than its standing order", 403);
+      if (rec.doc?.meta?.order !== orderId) bad("the draft does not name its standing order");
+    }
+    if (rec.revisionOf !== void 0) {
+      const of = latestById(ctx.store.list("artefact_versions"), rec.revisionOf);
+      if (of?.status !== "RATIFIED" && of?.status !== "INGESTED") bad("only a ratified artefact can be revised", 409);
+    }
     return;
   }
   if (rec.requestedBy !== cur.requestedBy || rec.agentId !== cur.agentId || rec.orgId !== cur.orgId) bad("requestedBy, agent and org cannot change");
   const sameDoc = rec.docHash === cur.docHash && rec.version === cur.version;
   if (status === "DRAFT") {
+    if (cur.status === "RATIFIED" || cur.status === "INGESTED") bad("a ratified artefact is final: start a revision instead", 409);
     if (rec.version !== Number(cur.version) + 1) bad("an edit is a new version");
   } else if (cur.status === "DRAFT" && status === "IN_REVIEW") {
     if (!sameDoc) bad("submitting for review cannot change the document");
+    if (String(rec.requestedBy).startsWith("auto:")) {
+      const acc = runAcceptance({ doc: rec.doc, agentId: String(rec.agentId), flags: Array.isArray(rec.flags) ? rec.flags.map(String) : [], requestedBy: String(rec.requestedBy) }, agentById(String(rec.agentId)));
+      if (!acc.passed) bad(`it did not pass the acceptance suite: ${failedChecks(acc).map((c) => `${c.id} ${c.detail}`).join("; ")}`, 422);
+    }
   } else if (cur.status === "IN_REVIEW" && (status === "APPROVED" || status === "REJECTED")) {
     if (!sameDoc) bad("a decision cannot change the document");
     const approver = rec.approvedBy;
     if (typeof approver !== "string" || !approver) bad("a decision needs approvedBy");
+    if (String(approver).startsWith("auto:")) bad("an autonomous actor can never approve", 403);
     if (ctx.actor && approver !== ctx.actor) bad("approvedBy is not you", 403);
     if ((agentById(String(cur.agentId))?.secondApprover || customIds.has(String(cur.agentId))) && approver === cur.requestedBy) bad("this agent requires a second person to approve", 403);
     if (status === "REJECTED" && !String(rec.note ?? "").trim()) bad("a rejection needs a reason");
+  } else if (cur.status === "APPROVED" && status === "RATIFIED") {
+    if (!sameDoc) bad("a countersignature cannot change the document");
+    const signer = rec.countersignedBy;
+    if (typeof signer !== "string" || !signer) bad("ratifying needs countersignedBy");
+    if (String(signer).startsWith("auto:")) bad("an autonomous actor can never countersign", 403);
+    if (ctx.actor && signer !== ctx.actor) bad("countersignedBy is not you", 403);
+    if (signer === cur.approvedBy) bad("a different person from the approver must countersign", 403);
+    if (rec.approvedBy !== cur.approvedBy) bad("approvedBy cannot change");
+    if (typeof rec.ratifiedAt !== "string") bad("ratifying needs ratifiedAt");
+  } else if (cur.status === "RATIFIED" && status === "INGESTED") {
+    if (!sameDoc) bad("ingesting cannot change the document");
+    if (rec.approvedBy !== cur.approvedBy || rec.countersignedBy !== cur.countersignedBy) bad("signers cannot change");
+    if (agentById(String(cur.agentId))?.ingestion === "none") bad("this agent's contract says its output is not ingested", 409);
+    const doc = latestById(ctx.store.list("documents"), `rat_${String(cur.id)}_v${String(cur.version)}`);
+    if (!doc || doc.origin !== "ratified" || doc.ratifiedFrom?.docHash !== cur.docHash) bad("the ratified document is not in the library yet", 409);
+    if (typeof rec.ingestedAt !== "string") bad("ingesting needs ingestedAt");
   } else {
     bad(`cannot go from ${String(cur.status)} to ${status}`, 409);
   }
+}
+function countersignature(rec, ctx) {
+  const art = latestById(ctx.store.list("artefact_versions"), rec.artefactId);
+  if (!art || art.status !== "RATIFIED" || art.countersignedBy !== rec.signer || art.docHash !== rec.docHash || art.version !== rec.version) bad("countersignature does not match a ratified artefact", 409);
+  if (ctx.actor && rec.signer !== ctx.actor) bad("signer is not you", 403);
+}
+async function document(rec, ctx) {
+  if (latestById(ctx.store.list("documents"), rec.id)?.origin === "ratified") bad("a ratified document is immutable", 409);
+  if (rec.origin !== "ratified") return;
+  const from = rec.ratifiedFrom;
+  const art = latestById(ctx.store.list("artefact_versions"), from?.artefactId);
+  if (!art || art.status !== "RATIFIED" || art.docHash !== from?.docHash || rec.id !== `rat_${String(art.id)}_v${String(art.version)}`) return bad("a ratified document must come from a ratified artefact", 409);
+  if (await sha256Hex(canonical(rec.doc)) !== art.docHash) bad("the document does not match what was ratified");
+  if (ctx.actor && rec.by !== ctx.actor) bad("by is not you", 403);
 }
 function approval(rec, ctx) {
   const art = latestById(ctx.store.list("artefact_versions"), rec.artefactId);
@@ -2032,6 +2399,46 @@ function brain(rec, ctx) {
     if (!from || from.status !== "proposed") bad("L3/L4 facts are ratified only by a human ratifying a proposed fact", 403);
     if (ctx.actor && rec.by !== ctx.actor) bad("ratifier is not you", 403);
   }
+}
+var latestRequests = (store2) => {
+  const m = /* @__PURE__ */ new Map();
+  for (const r of store2.list("erasure_requests")) m.set(r.id, r);
+  return [...m.values()];
+};
+function erasure(rec, ctx) {
+  if (!isHash(rec.subjectHash)) bad("erasure request needs a subjectHash (sha-256 hex)");
+  if (!ERASURE_CATEGORIES.includes(rec.category)) bad("bad erasure category");
+  if (typeof rec.note !== "string" || rec.note.length > 200) bad("note must be text of at most 200 characters");
+  if (typeof rec.requestedBy !== "string" || !rec.requestedBy) bad("requestedBy is required");
+  const hasTombstone = (h) => ctx.store.list("tombstones").some((t) => t.subjectHash === h);
+  const cur = latestById(ctx.store.list("erasure_requests"), rec.id);
+  if (!cur) {
+    if (rec.status !== "REQUESTED" || rec.version !== 1 || rec.decidedBy !== void 0) bad("a new erasure request starts as REQUESTED v1");
+    if (ctx.actor && rec.requestedBy !== ctx.actor) bad("requestedBy is not you", 403);
+    if (hasTombstone(rec.subjectHash)) bad("that subject has already been erased", 409);
+    if (latestRequests(ctx.store).some((r) => r.subjectHash === rec.subjectHash && (r.status === "REQUESTED" || r.status === "APPROVED"))) bad("there is already an open request for that subject", 409);
+    return;
+  }
+  if (rec.subjectHash !== cur.subjectHash || rec.requestedBy !== cur.requestedBy || rec.category !== cur.category) bad("subject, requester and category cannot change");
+  if (rec.version !== Number(cur.version) + 1) bad("a change is a new version");
+  if (cur.status === "REQUESTED" && (rec.status === "APPROVED" || rec.status === "REJECTED")) {
+    const by = rec.decidedBy;
+    if (typeof by !== "string" || !by) bad("a decision needs decidedBy");
+    if (ctx.actor && by !== ctx.actor) bad("decidedBy is not you", 403);
+    if (by === cur.requestedBy) bad("a second person must decide an erasure request", 403);
+    if (ctx.roles && !ctx.roles.includes("officer")) bad("deciding an erasure request needs the officer role", 403);
+    if (rec.status === "REJECTED" && !String(rec.decisionNote ?? "").trim()) bad("a rejection needs a reason");
+  } else if (cur.status === "APPROVED" && rec.status === "EXECUTED") {
+    if (!hasTombstone(cur.subjectHash)) bad("the erasure has not been applied: no tombstone is recorded", 409);
+    if (rec.decidedBy !== cur.decidedBy) bad("decidedBy cannot change");
+  } else {
+    bad(`cannot go from ${String(cur.status)} to ${String(rec.status)}`, 409);
+  }
+}
+function tombstone(rec, ctx) {
+  if (!isHash(rec.subjectHash)) bad("tombstone needs a subjectHash (sha-256 hex)");
+  if (!latestRequests(ctx.store).some((r) => r.subjectHash === rec.subjectHash && r.status === "APPROVED")) bad("a tombstone needs an approved erasure request", 403);
+  if (ctx.actor && rec.by !== ctx.actor) bad("by is not you", 403);
 }
 
 // src/server/rate.ts
@@ -2054,19 +2461,6 @@ var RateLimiter = class {
   }
 };
 
-// src/core/crypto.ts
-async function sha256Hex(text) {
-  const data = new TextEncoder().encode(text);
-  const buf = await globalThis.crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-function canonical(value) {
-  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
-  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
-  const o = value;
-  return "{" + Object.keys(o).sort().filter((k) => o[k] !== void 0).map((k) => JSON.stringify(k) + ":" + canonical(o[k])).join(",") + "}";
-}
-
 // src/server/ledgerService.ts
 var GENESIS = "0".repeat(64);
 var MAX_DETAIL_BYTES = 16 * 1024;
@@ -2075,13 +2469,14 @@ var strip = (r) => {
   const { id: _id, ...e } = r;
   return e;
 };
-function appendLedger(store2, input, knownSeq, actor, now = () => (/* @__PURE__ */ new Date()).toISOString()) {
-  const run = (tails.get(store2) ?? Promise.resolve()).then(() => write(store2, input, knownSeq, actor, now));
+function appendLedger(store2, input, knownSeq, actor, now = () => (/* @__PURE__ */ new Date()).toISOString(), opts = {}) {
+  const run = (tails.get(store2) ?? Promise.resolve()).then(() => write(store2, input, knownSeq, actor, now, opts));
   tails.set(store2, run.catch(() => void 0));
   return run;
 }
 var tails = /* @__PURE__ */ new WeakMap();
-async function write(store2, input, knownSeq, actor, now = () => (/* @__PURE__ */ new Date()).toISOString()) {
+var SERVER_ONLY_ACTIONS = /^(model|autonomy)\./;
+async function write(store2, input, knownSeq, actor, now = () => (/* @__PURE__ */ new Date()).toISOString(), opts = {}) {
   const bad2 = (m, status = 400) => {
     throw new Rejected(status, m);
   };
@@ -2091,12 +2486,22 @@ async function write(store2, input, knownSeq, actor, now = () => (/* @__PURE__ *
   const detail = i.detail ?? {};
   if (typeof detail !== "object" || detail === null || Array.isArray(detail) || JSON.stringify(detail).length > MAX_DETAIL_BYTES) bad2("detail must be a small object");
   const action = i.action;
+  if (opts.client && SERVER_ONLY_ACTIONS.test(action)) bad2("this action is written by the server only", 403);
   const who = i.actor;
   const subject = i.subject;
-  if (actor && /^(hitl|artefact|subject)\./.test(action) && who !== actor) bad2("ledger actor is not you", 403);
+  if (actor && /^(hitl|artefact|subject|erasure)\./.test(action) && who !== actor) bad2("ledger actor is not you", 403);
   const art = store2.list("artefact_versions").filter((r) => r.id === subject).at(-1);
   if (/^hitl\.(approved|rejected)$/.test(action) && (art?.status !== action.slice(5).toUpperCase() || art.approvedBy !== who)) bad2("no recorded decision matches this ledger entry", 409);
   if (action === "artefact.submit" && art?.status !== "IN_REVIEW") bad2("artefact is not in review", 409);
+  if (/^artefact\.(countersigned|ratified)$/.test(action) && (art?.status !== "RATIFIED" && art?.status !== "INGESTED" || art?.countersignedBy !== who)) bad2("no recorded countersignature matches this ledger entry", 409);
+  if (action === "artefact.ingested" && art?.status !== "INGESTED") bad2("artefact is not ingested", 409);
+  const er = store2.list("erasure_requests").filter((r) => r.id === subject).at(-1);
+  if (action === "erasure.requested" && (er?.status !== "REQUESTED" || er.requestedBy !== who)) bad2("no recorded erasure request matches this ledger entry", 409);
+  if (/^erasure\.(approved|rejected)$/.test(action)) {
+    const want = action === "erasure.approved" ? ["APPROVED", "EXECUTED"] : ["REJECTED"];
+    if (!er || !want.includes(er.status) || er.decidedBy !== who) bad2("no recorded erasure decision matches this ledger entry", 409);
+  }
+  if (action === "subject.tombstone" && !store2.list("tombstones").some((t) => t.id === subject)) bad2("no recorded tombstone matches this ledger entry", 409);
   const ledger = store2.list("ledger");
   if (ledger.length >= MAX_RECORDS) bad2("collection is full", 507);
   const last = ledger.at(-1);
@@ -2108,572 +2513,2248 @@ async function write(store2, input, knownSeq, actor, now = () => (/* @__PURE__ *
   return { entry, earlier: ledger.filter((r) => Number(r.seq) > knownSeq && Number(r.seq) < entry.seq).map(strip) };
 }
 
-// src/core/guardrails/pii.ts
-function validSaId(id) {
-  if (!/^\d{13}$/.test(id)) return false;
-  const mm = Number(id.slice(2, 4));
-  const dd = Number(id.slice(4, 6));
-  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return false;
-  let sum = 0;
-  for (let i = 0; i < 13; i++) {
-    let d = Number(id[12 - i]);
-    if (i % 2 === 1) {
-      d *= 2;
-      if (d > 9) d -= 9;
-    }
-    sum += d;
-  }
-  return sum % 10 === 0;
-}
-var EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
-var PHONE = /(?:\+27|\b0)[\s-]?[6-8]\d[\s-]?\d{3}[\s-]?\d{4}\b|(?:\+27|\b0)[\s-]?[1-5]\d[\s-]?\d{3}[\s-]?\d{4}\b/g;
-var TITLED = /\b(?:Mr|Mrs|Ms|Miss|Mx|Dr|Prof|Principal|Mnr|Mev)\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?/g;
-var LEARNER_ID = /\b(?:EMIS|learner\s*(?:no|number|id|name)|student\s*(?:no|number|id)|pupil\s*(?:no|number|id))\b[\s:#-]*[\w-]+/gi;
-var THIRTEEN = /(?<!\d)\d{13}(?!\d)/g;
-function collect(re, text, kind, keep = () => true) {
-  const out = [];
-  for (const m of text.matchAll(re)) {
-    if (keep(m[0])) out.push({ kind, match: m[0], start: m.index ?? 0, end: (m.index ?? 0) + m[0].length });
-  }
-  return out;
-}
-function detectPii(text, knownNames = []) {
-  const found = [
-    ...collect(THIRTEEN, text, "sa_id", validSaId),
-    ...collect(EMAIL, text, "email"),
-    ...collect(PHONE, text, "phone_za"),
-    ...collect(TITLED, text, "titled_name"),
-    ...collect(LEARNER_ID, text, "learner_identifier")
-  ];
-  for (const name of knownNames.filter((n) => n.trim().length >= 3)) {
-    const re = new RegExp("\\b" + name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "gi");
-    found.push(...collect(re, text, "known_name"));
-  }
-  return found.sort((a, b) => a.start - b.start);
+// src/server/finality.ts
+function ratifiedProblem(store2, art) {
+  if (!art) return "unknown artefact";
+  if (art.status !== "RATIFIED" && art.status !== "INGESTED") return "Only a ratified artefact (approved and countersigned) can leave the platform.";
+  if (!art.approvedBy || !art.countersignedBy || art.approvedBy === art.countersignedBy) return "The artefact does not carry two different signers.";
+  const approved = store2.list("approvals").some((r) => r.artefactId === art.id && r.decision === "APPROVED" && r.approver === art.approvedBy);
+  const countersigned = store2.list("countersignatures").some((r) => r.artefactId === art.id && r.signer === art.countersignedBy && r.docHash === art.docHash);
+  if (!approved || !countersigned) return "No recorded approval and countersignature for this artefact.";
+  return null;
 }
 
-// src/core/guardrails/injection.ts
-var RULES = [
-  ["override_instructions", /\b(ignore|disregard|forget)\b[^.\n]{0,40}\b(previous|prior|above|system|earlier)\b[^.\n]{0,30}\b(instructions?|prompts?|rules?)\b/i],
-  ["reveal_system_prompt", /\b(reveal|print|show|repeat|leak)\b[^.\n]{0,30}\b(system|hidden|developer)\s+(prompt|message|instructions?)\b/i],
-  ["role_hijack", /\byou\s+are\s+now\b|\bact\s+as\s+(?:an?\s+)?(?:unrestricted|jailbroken|dan)\b|\bdeveloper\s+mode\b/i],
-  ["bypass_controls", /\b(bypass|disable|skip|turn\s+off|override)\b[^.\n]{0,30}\b(guardrails?|approval|hitl|human\s+review|pii|audit|ledger|safety)\b/i],
-  ["approval_flag", /\bSKIP_APPROVAL\b|\bAUTO_APPROVE\b|\bFORCE_APPROVE\b/],
-  ["exfiltrate", /\b(send|post|upload|exfiltrate)\b[^.\n]{0,40}\b(secrets?|api\s*keys?|tokens?|passwords?|credentials?)\b/i]
+// src/server/autonomy/schedule.ts
+var EVENT_KINDS = ["push", "pull_request", "workflow_run", "issues"];
+var CATCH_UP_MS = 3 * 36e5;
+var TriggerInvalid = class extends Error {
+};
+var int = (v2, lo, hi, what) => {
+  if (typeof v2 !== "number" || !Number.isInteger(v2) || v2 < lo || v2 > hi) throw new TriggerInvalid(`${what} must be a whole number from ${lo} to ${hi}`);
+  return v2;
+};
+function parseTrigger(v2) {
+  if (typeof v2 !== "object" || v2 === null) throw new TriggerInvalid("a trigger is required");
+  const t = v2;
+  if (t.kind === "request") return { kind: "request" };
+  if (t.kind === "schedule") {
+    if (t.every === "daily") return { kind: "schedule", every: "daily", hourUtc: int(t.hourUtc, 0, 23, "hour (UTC)") };
+    if (t.every === "weekly") return { kind: "schedule", every: "weekly", weekday: int(t.weekday, 0, 6, "weekday (0 is Sunday)"), hourUtc: int(t.hourUtc, 0, 23, "hour (UTC)") };
+    throw new TriggerInvalid("a schedule is daily or weekly");
+  }
+  if (t.kind === "event") {
+    const events2 = Array.isArray(t.events) ? [...new Set(t.events)] : [];
+    if (!events2.length || events2.some((e) => !EVENT_KINDS.includes(e))) throw new TriggerInvalid(`events must be a non-empty list from: ${EVENT_KINDS.join(", ")}`);
+    return { kind: "event", events: events2, cooldownMinutes: int(t.cooldownMinutes ?? 60, 15, 1440, "cooldown (minutes)") };
+  }
+  throw new TriggerInvalid("a trigger is a schedule, an event or a request");
+}
+function latestSlot(t, now) {
+  const today2 = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), t.hourUtc));
+  if (t.every === "daily") return today2 > now ? new Date(today2.getTime() - 864e5) : today2;
+  const back = (today2.getUTCDay() - t.weekday + 7) % 7;
+  const slot = new Date(today2.getTime() - back * 864e5);
+  return slot > now ? new Date(slot.getTime() - 7 * 864e5) : slot;
+}
+function dueSlot(t, now, alreadyRan) {
+  const slot = latestSlot(t, now);
+  const key = slot.toISOString();
+  if (alreadyRan.has(key)) return null;
+  return now.getTime() - slot.getTime() <= CATCH_UP_MS ? key : null;
+}
+
+// src/server/autonomy/orders.ts
+var MAX_RUNS_PER_DAY_CEILING = 5;
+var OrderRefused = class extends Error {
+  constructor(status, message, checks) {
+    super(message);
+    this.status = status;
+    this.checks = checks;
+  }
+};
+function parseProposal(body) {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new OrderRefused(400, "the order must be an object");
+  const b = body;
+  const name = typeof b.name === "string" ? b.name.trim() : "";
+  if (name.length < 3 || name.length > 80) throw new OrderRefused(400, "the name must be 3 to 80 characters");
+  if (detectPii(name).length) throw new OrderRefused(422, "the name must not contain personal data");
+  const agent = typeof b.agentId === "string" ? agentById(b.agentId) : void 0;
+  if (!agent) throw new OrderRefused(404, "unknown agent");
+  if (agent.dataClass === "learner") throw new OrderRefused(422, "this agent handles learner data, which is never admitted");
+  if (agent.requiresApproval !== true) throw new OrderRefused(422, "this agent does not require approval, so it cannot run autonomously");
+  let trigger;
+  try {
+    trigger = parseTrigger(b.trigger);
+  } catch (e) {
+    if (e instanceof TriggerInvalid) throw new OrderRefused(400, e.message);
+    throw e;
+  }
+  const given = typeof b.inputs === "object" && b.inputs !== null && !Array.isArray(b.inputs) ? b.inputs : {};
+  const unknown = Object.keys(given).filter((k) => !agent.inputs.some((i) => i.key === k));
+  if (unknown.length) throw new OrderRefused(400, `unknown input(s): ${unknown.join(", ")}`);
+  const inputs = {};
+  for (const f of agent.inputs) {
+    const v2 = given[f.key];
+    if (v2 === void 0 || v2 === "") {
+      if (f.required) throw new OrderRefused(400, `the input "${f.label}" is required`);
+      continue;
+    }
+    if (typeof v2 !== "string" || v2.length > 1e3) throw new OrderRefused(400, `the input "${f.label}" must be text of at most 1000 characters`);
+    if (f.kind === "number" && !Number.isFinite(Number(v2.replace(/[,\s]/g, "")))) throw new OrderRefused(400, `the input "${f.label}" must be a number`);
+    if (f.kind === "select" && !(f.options ?? []).includes(v2)) throw new OrderRefused(400, `the input "${f.label}" must be one of its options`);
+    if (detectPii(v2).some((x) => x.kind === "learner_identifier")) throw new OrderRefused(422, `the input "${f.label}" contains a learner identifier, which is never admitted`);
+    if (detectPii(v2).length) throw new OrderRefused(422, `the input "${f.label}" contains personal data`);
+    if (detectInjection(v2).length) throw new OrderRefused(422, `the input "${f.label}" looks like an attempt to override platform controls`);
+    inputs[f.key] = v2;
+  }
+  const runs = b.maxRunsPerDay === void 0 ? 1 : b.maxRunsPerDay;
+  if (typeof runs !== "number" || !Number.isInteger(runs) || runs < 1 || runs > MAX_RUNS_PER_DAY_CEILING) throw new OrderRefused(400, `maxRunsPerDay must be a whole number from 1 to ${MAX_RUNS_PER_DAY_CEILING}`);
+  return { name, agentId: agent.id, trigger, inputs, maxRunsPerDay: runs };
+}
+
+// src/server/autonomy/service.ts
+var DAY = 864e5;
+var RUN_TIMEOUT_MS = 18e4;
+var AutonomyService = class {
+  /** Throws on a bad configuration, so the server stops rather than starting with a different limit than the operator meant. */
+  constructor(deps) {
+    this.deps = deps;
+    this.chain = Promise.resolve();
+    this.enabled = deps.env.OPS_AUTONOMY === "on";
+    if (deps.env.OPS_AUTONOMY && !["on", "off"].includes(deps.env.OPS_AUTONOMY)) throw new Error('OPS_AUTONOMY must be "on" or "off"');
+    const max = deps.env.OPS_AUTONOMY_MAX_RUNS_PER_DAY?.trim();
+    this.maxRunsPerDay = max ? Number(max) : 20;
+    if (!Number.isInteger(this.maxRunsPerDay) || this.maxRunsPerDay < 1) throw new Error("OPS_AUTONOMY_MAX_RUNS_PER_DAY must be a whole number of at least 1");
+    this.now = deps.now ?? (() => /* @__PURE__ */ new Date());
+  }
+  // ------------------------------------------------------------ storage
+  orders() {
+    const m = /* @__PURE__ */ new Map();
+    for (const r of this.deps.store.list("standing_orders")) m.set(String(r.id), r);
+    return [...m.values()];
+  }
+  order(id) {
+    const o = this.orders().find((x) => x.id === id);
+    if (!o) throw new OrderRefused(404, "unknown order");
+    return o;
+  }
+  save(o, patch) {
+    const { statusNote: _drop, ...keep } = o;
+    const next = { ...keep, ...patch, version: o.version + 1, at: this.now().toISOString() };
+    this.deps.store.append("standing_orders", next);
+    return next;
+  }
+  async audit(action, actor, subject, detail = {}) {
+    const last = this.deps.store.list("ledger").at(-1);
+    await appendLedger(this.deps.store, { orgId: "infinite-ai", actor, action, subject, detail }, Number(last?.seq ?? 0), null, () => this.now().toISOString());
+  }
+  /** Ledger entries of one action since a time, newest first. Entries are in time order, so the scan stops early. */
+  since(action, from, subject) {
+    const out = [];
+    const ledger = this.deps.store.list("ledger");
+    for (let i = ledger.length - 1; i >= 0; i--) {
+      const e = ledger[i];
+      if (new Date(String(e.at)) < from) break;
+      if (e.action === action && (!subject || e.subject === subject)) out.push(e);
+    }
+    return out;
+  }
+  startOfDay() {
+    const n = this.now();
+    return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
+  }
+  runsToday(orderId) {
+    return this.since("autonomy.started", this.startOfDay(), orderId).length;
+  }
+  // ---------------------------------------------------- order lifecycle
+  human(actor) {
+    if (!actor || actor.startsWith("auto:")) throw new OrderRefused(403, "Standing orders need a signed-in person (set OPS_USERS).");
+    return actor;
+  }
+  dryRunFailure(a) {
+    return new OrderRefused(422, `The dry run failed: ${failedChecks(a).map((c) => `${c.id} ${c.detail}`).join("; ")}`, a.results);
+  }
+  async propose(actor, body) {
+    const by = this.human(actor);
+    const p = parseProposal(body);
+    const dry = await this.deps.runner.dryRun(p);
+    if (!dry.passed) throw this.dryRunFailure(dry);
+    const o = { id: newId("ord"), ...p, status: "PROPOSED", proposedBy: by, version: 1, at: this.now().toISOString() };
+    this.deps.store.append("standing_orders", o);
+    await this.audit("autonomy.order.proposed", by, o.id, { agentId: o.agentId, trigger: o.trigger.kind, maxRunsPerDay: o.maxRunsPerDay });
+    return o;
+  }
+  /** A different person activates it, and it is dry-run again first: contracts and facts may have changed since it was proposed. */
+  async activate(actor, id, note) {
+    const by = this.human(actor);
+    const o = this.order(id);
+    if (o.status === "REVOKED") throw new OrderRefused(409, "a revoked order cannot be activated");
+    if (o.status === "ACTIVE") throw new OrderRefused(409, "the order is already active");
+    if (o.status === "PROPOSED" && by === o.proposedBy) throw new OrderRefused(403, "A different person from the proposer must activate an order.");
+    const dry = await this.deps.runner.dryRun(o);
+    if (!dry.passed) throw this.dryRunFailure(dry);
+    const next = this.save(o, { status: "ACTIVE", activatedBy: by, statusNote: (note ?? "").trim().slice(0, 300) });
+    await this.audit(o.status === "PAUSED" ? "autonomy.order.resumed" : "autonomy.order.activated", by, id, { note: next.statusNote });
+    return next;
+  }
+  async pause(actor, id, reason) {
+    return this.stop(actor, id, reason, "PAUSED", "autonomy.order.paused");
+  }
+  async revoke(actor, id, reason) {
+    return this.stop(actor, id, reason, "REVOKED", "autonomy.order.revoked");
+  }
+  async stop(actor, id, reason, status, action) {
+    const by = this.human(actor);
+    const o = this.order(id);
+    const r = (reason ?? "").trim();
+    if (r.length < 5 || r.length > 300) throw new OrderRefused(400, "Give a reason, in 5 to 300 characters.");
+    if (o.status === "REVOKED" || status === "PAUSED" && o.status !== "ACTIVE") throw new OrderRefused(409, `the order is ${o.status.toLowerCase()}`);
+    const next = this.save(o, { status, statusNote: r });
+    await this.audit(action, by, id, { reason: r });
+    return next;
+  }
+  // --------------------------------------------------------------- runs
+  /** One run at a time, and the budget check and the "started" record are one step, so two triggers cannot both squeeze under a limit. */
+  exclusive(fn) {
+    const run = this.chain.then(fn, fn);
+    this.chain = run.catch(() => void 0);
+    return run;
+  }
+  async startRun(orderId, via, by) {
+    return this.exclusive(async () => {
+      if (!this.enabled) throw new OrderRefused(503, "Autonomy is switched off. The operator enables it with OPS_AUTONOMY=on.");
+      const o = this.order(orderId);
+      if (o.status !== "ACTIVE") throw new OrderRefused(409, `the order is ${o.status.toLowerCase()}`);
+      const perOrder = this.runsToday(o.id);
+      if (perOrder >= o.maxRunsPerDay) throw new OrderRefused(429, `This order has used its ${o.maxRunsPerDay} run(s) for today.`);
+      if (this.runsToday() >= this.maxRunsPerDay) throw new OrderRefused(429, `The platform's autonomous runs for today (${this.maxRunsPerDay}) are used up.`);
+      const actor = `auto:${o.id}`;
+      await this.audit("autonomy.started", actor, o.id, { via, by });
+      let outcome;
+      try {
+        outcome = await Promise.race([
+          this.deps.runner.run(o, via),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("the run took too long")), RUN_TIMEOUT_MS).unref())
+        ]);
+      } catch (e) {
+        await this.audit("autonomy.failed", actor, o.id, { error: e.message.slice(0, 200) }).catch(() => void 0);
+        throw e;
+      }
+      await this.audit(outcome.outcome === "submitted" ? "autonomy.submitted" : "autonomy.quarantined", actor, o.id, { artefactId: outcome.artefactId, failed: failedChecks({ passed: false, results: outcome.checks }).map((c) => c.id) });
+      return outcome;
+    });
+  }
+  /** By request: a person asks an active order to run now. It still counts against the budgets. */
+  async runNow(actor, id) {
+    const by = this.human(actor);
+    return this.startRun(id, { kind: "request", by }, by);
+  }
+  /** Called when a signed webhook event arrives. Only active orders listening for it run, no more than once per cooldown. */
+  async onEvent(kind) {
+    if (!this.enabled) return [];
+    const out = [];
+    for (const o of this.orders()) {
+      if (o.status !== "ACTIVE" || o.trigger.kind !== "event" || !o.trigger.events.includes(kind)) continue;
+      const cool = new Date(this.now().getTime() - o.trigger.cooldownMinutes * 6e4);
+      if (this.since("autonomy.started", cool, o.id).length) continue;
+      try {
+        out.push(await this.startRun(o.id, { kind: "event", event: kind }, "webhook"));
+      } catch (e) {
+        if (!(e instanceof OrderRefused)) await this.audit("autonomy.failed", `auto:${o.id}`, o.id, { error: e.message.slice(0, 200) }).catch(() => void 0);
+      }
+    }
+    return out;
+  }
+  /** Called every minute. Runs each scheduled order whose slot is due and has not run, one after another. */
+  async tick(now = this.now()) {
+    if (!this.enabled) return [];
+    const out = [];
+    for (const o of this.orders()) {
+      if (o.status !== "ACTIVE" || o.trigger.kind !== "schedule") continue;
+      const ran = new Set(this.since("autonomy.started", new Date(now.getTime() - 9 * DAY - CATCH_UP_MS), o.id).map((e) => String(e.detail.via?.slot ?? "")));
+      const slot = dueSlot(o.trigger, now, ran);
+      if (!slot) continue;
+      try {
+        out.push(await this.startRun(o.id, { kind: "schedule", slot }, "schedule"));
+      } catch (e) {
+        if (!(e instanceof OrderRefused)) await this.audit("autonomy.failed", `auto:${o.id}`, o.id, { error: e.message.slice(0, 200) }).catch(() => void 0);
+      }
+    }
+    return out;
+  }
+  // ------------------------------------------------------------- status
+  status() {
+    const day = this.startOfDay();
+    const orders = this.orders().map((o) => ({ ...o, runsToday: this.runsToday(o.id), lastRunAt: this.since("autonomy.started", new Date(this.now().getTime() - 30 * DAY), o.id)[0]?.at ?? null }));
+    const recent = [];
+    const ledger = this.deps.store.list("ledger");
+    for (let i = ledger.length - 1; i >= 0 && recent.length < 40; i--) {
+      const e = ledger[i];
+      if (/^autonomy\.(submitted|quarantined|failed)$/.test(String(e.action))) recent.push({ at: String(e.at), action: String(e.action), orderId: String(e.subject), detail: e.detail });
+    }
+    return { enabled: this.enabled, maxRunsPerDay: this.maxRunsPerDay, runsToday: this.runsToday(), since: day.toISOString(), orders, recent };
+  }
+};
+
+// src/core/ledger.ts
+var GENESIS2 = "0".repeat(64);
+var Ledger = class {
+  /** With a `sequencer` the server assigns seq/hash/time (and persists the entry); without one the chain is built locally. */
+  constructor(initial = [], onAppend, sequencer) {
+    this.onAppend = onAppend;
+    this.sequencer = sequencer;
+    this.entries = [];
+    this.tail = Promise.resolve();
+    this.entries = [...initial];
+  }
+  get all() {
+    return this.entries;
+  }
+  async append(e) {
+    if (!this.sequencer) return this.appendLocal(e);
+    const run = this.tail.then(() => this.appendRemote(this.sequencer, e));
+    this.tail = run.catch(() => void 0);
+    return run;
+  }
+  async appendRemote(seq, e) {
+    const known = this.entries[this.entries.length - 1]?.seq ?? 0;
+    const { entry, earlier } = await seq({ orgId: e.orgId, actor: e.actor, action: e.action, subject: e.subject, detail: e.detail }, known);
+    const gap = [...earlier, entry].every((x, i) => x.seq === known + 1 + i);
+    if (!gap) throw new Error("Server ledger reply does not continue this ledger.");
+    this.entries.push(...earlier, entry);
+    return entry;
+  }
+  async appendLocal(e) {
+    const prev = this.entries[this.entries.length - 1];
+    const base = {
+      seq: (prev?.seq ?? 0) + 1,
+      at: e.at ?? (/* @__PURE__ */ new Date()).toISOString(),
+      orgId: e.orgId,
+      actor: e.actor,
+      action: e.action,
+      subject: e.subject,
+      detail: e.detail ?? {},
+      prevHash: prev?.hash ?? GENESIS2
+    };
+    const entry = { ...base, hash: await sha256Hex(canonical(base)) };
+    this.entries.push(entry);
+    this.onAppend?.(entry);
+    return entry;
+  }
+  /** Returns the seq of the first bad entry, or null when the chain is intact. */
+  async verify() {
+    let prevHash = GENESIS2;
+    for (const [i, e] of this.entries.entries()) {
+      const { hash, ...base } = e;
+      if (e.seq !== i + 1 || e.prevHash !== prevHash || await sha256Hex(canonical(base)) !== hash) return e.seq;
+      prevHash = hash;
+    }
+    return null;
+  }
+};
+
+// src/core/brain.ts
+var CONSTITUTION = [
+  { topic: "invariant.pii", text: "No personal information reaches a model. Only de-identified text is admitted." },
+  { topic: "invariant.learner", text: "Learner-level data is never held or processed by the operations platform." },
+  { topic: "invariant.purpose", text: "Every run declares a purpose and may only use agents permitted for it." },
+  { topic: "invariant.append_only", text: "Ledger and Brain are append-only. Corrections supersede; erasure is a tombstone." },
+  { topic: "invariant.human", text: "AI drafts. The human decides. Nothing is approved without a named human." },
+  { topic: "invariant.numbers", text: "No invented numbers. Every figure is sourced or stripped." },
+  { topic: "invariant.curriculum", text: "Never invent curriculum policy; cite CAPS/DBE sources or mark as unverified." }
 ];
-function detectInjection(text) {
-  const out = [];
-  for (const [rule, re] of RULES) {
-    const m = text.match(re);
-    if (m) out.push({ rule, match: m[0] });
+var TIER_NEEDS_RATIFY = ["L3", "L4"];
+var Brain = class {
+  constructor(ledger, orgId = "infinite-ai", restored = [], onChange) {
+    this.ledger = ledger;
+    this.orgId = orgId;
+    this.onChange = onChange;
+    this.facts = [];
+    const at = "2026-01-01T00:00:00.000Z";
+    if (restored.length) this.facts.push(...restored.filter((f) => f.tier !== "L0"));
+    CONSTITUTION.forEach(
+      (c, i) => this.facts.push({ id: `L0-${String(i + 1).padStart(2, "0")}`, orgId, tier: "L0", topic: c.topic, text: c.text, provenance: { deidentified: true, sources: ["constitution"] }, status: "ratified", by: "system", at })
+    );
   }
-  return out;
+  get all() {
+    return this.facts;
+  }
+  async remember(f) {
+    if (f.tier === "L0") throw new Error("L0 is the constitution and cannot be written.");
+    if (!f.provenance.deidentified) throw new Error("Brain refuses facts that are not de-identified.");
+    if (!f.provenance.sources.length) throw new Error("Brain refuses facts without a source.");
+    const fact = { id: newId("fact"), orgId: this.orgId, tier: f.tier, topic: f.topic, text: f.text, provenance: f.provenance, status: TIER_NEEDS_RATIFY.includes(f.tier) ? "proposed" : "ratified", by: f.by, at: (/* @__PURE__ */ new Date()).toISOString() };
+    this.facts.push(fact);
+    this.onChange?.(fact);
+    await this.ledger.append({ orgId: this.orgId, actor: f.by, action: "brain.remember", subject: fact.id, detail: { tier: f.tier, topic: f.topic, status: fact.status } });
+    return fact;
+  }
+  /** Only a named human can ratify a proposed fact. */
+  async ratify(id, approver) {
+    if (approver.kind !== "human") throw new Error("Only a human can ratify a Brain fact.");
+    const f = this.facts.find((x) => x.id === id);
+    if (!f || f.status !== "proposed") throw new Error("No proposed fact with that id.");
+    const next = { ...f, id: newId("fact"), status: "ratified", supersedes: f.id, by: approver.id, at: (/* @__PURE__ */ new Date()).toISOString() };
+    this.mark(f, "superseded");
+    this.facts.push(next);
+    this.onChange?.(next);
+    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: "brain.ratify", subject: next.id, detail: { supersedes: f.id } });
+    return next;
+  }
+  async supersede(id, text, provenance, by) {
+    const old = this.facts.find((x) => x.id === id);
+    if (!old || old.tier === "L0" || old.status === "tombstoned") throw new Error("Cannot supersede that fact.");
+    if (!provenance.deidentified) throw new Error("Brain refuses facts that are not de-identified.");
+    const next = { ...old, id: newId("fact"), text, provenance, supersedes: id, by, at: (/* @__PURE__ */ new Date()).toISOString(), status: TIER_NEEDS_RATIFY.includes(old.tier) ? "proposed" : "ratified" };
+    this.mark(old, "superseded");
+    this.facts.push(next);
+    this.onChange?.(next);
+    await this.ledger.append({ orgId: this.orgId, actor: by, action: "brain.supersede", subject: next.id, detail: { supersedes: id } });
+    return next;
+  }
+  /** Erasure: keep the audit fact (id, topic, who/when), drop the content. */
+  async forget(id, by) {
+    const f = this.facts.find((x) => x.id === id);
+    if (!f || f.tier === "L0") throw new Error("Cannot forget that fact.");
+    this.mark(f, "tombstoned", { text: "[erased]" });
+    await this.ledger.append({ orgId: this.orgId, actor: by, action: "brain.forget", subject: id, detail: { topic: f.topic } });
+  }
+  /** Recall only ratified, live facts. Proposed facts are never fed to agents. */
+  recall(tiers, topicPrefix = "") {
+    return this.facts.filter((f) => f.status === "ratified" && tiers.includes(f.tier) && f.topic.startsWith(topicPrefix));
+  }
+  explain(id) {
+    const chain = [];
+    let cur = this.facts.find((f) => f.id === id);
+    while (cur) {
+      chain.push(cur);
+      const prev = cur.supersedes;
+      cur = prev ? this.facts.find((f) => f.id === prev) : void 0;
+    }
+    return chain;
+  }
+  mark(f, status, patch = {}) {
+    Object.assign(f, patch, { status });
+    this.onChange?.(f);
+  }
+};
+
+// src/core/warehouse.ts
+var MemoryAdapter = class {
+  constructor() {
+    this.data = {};
+  }
+  async load() {
+    return structuredClone(this.data);
+  }
+  async append(c, r) {
+    (this.data[c] ??= []).push(structuredClone(r));
+  }
+  async clear() {
+    this.data = {};
+  }
+};
+var Warehouse = class {
+  constructor(adapter = new MemoryAdapter()) {
+    this.adapter = adapter;
+    this.cols = {};
+  }
+  async init() {
+    this.cols = await this.adapter.load();
+    return this;
+  }
+  async put(collection, rec) {
+    const hash = await sha256Hex(canonical(rec));
+    const stored = { ...rec, hash, storedAt: rec["storedAt"] ?? (/* @__PURE__ */ new Date()).toISOString() };
+    await this.persist(collection, stored);
+    return stored;
+  }
+  /** Store a record exactly as given (used for ledger entries, which carry their own hash). */
+  async putRaw(collection, rec) {
+    await this.persist(collection, rec);
+  }
+  /** The record is visible locally while it is being saved, and is taken back out if saving fails, so this view never holds a record the store does not. */
+  async persist(collection, rec) {
+    const rows2 = this.cols[collection] ??= [];
+    rows2.push(rec);
+    try {
+      await this.adapter.append(collection, rec);
+    } catch (e) {
+      const i = rows2.lastIndexOf(rec);
+      if (i >= 0) rows2.splice(i, 1);
+      throw e;
+    }
+  }
+  list(collection, where) {
+    const all = this.cols[collection] ?? [];
+    return where ? all.filter(where) : [...all];
+  }
+  /** Newest record per `key` field value. */
+  latest(collection, key = "id") {
+    const m = /* @__PURE__ */ new Map();
+    for (const r of this.cols[collection] ?? []) m.set(r[key], r);
+    return [...m.values()];
+  }
+  collections() {
+    return Object.fromEntries(Object.entries(this.cols).map(([k, v2]) => [k, v2.length]));
+  }
+  /** JSON-lines bundle so data is never trapped in the platform. */
+  exportJsonl() {
+    return Object.entries(this.cols).flatMap(([c, rs]) => rs.map((r) => JSON.stringify({ collection: c, ...r }))).join("\n");
+  }
+  async clearAll() {
+    this.cols = {};
+    await this.adapter.clear?.();
+  }
+};
+
+// src/core/gateway.ts
+var localDraftEngine = {
+  name: "local-draft/1",
+  async complete(req) {
+    const lines3 = Object.entries(req.context ?? {}).map(([k, v2]) => `- ${k}: ${v2} [src:${k}]`);
+    return lines3.length ? `Facts supplied to this draft:
+${lines3.join("\n")}` : "No structured facts were supplied; a human must complete this section.";
+  }
+};
+var GatewayRefused = class extends Error {
+};
+var Gateway = class {
+  constructor(ledger, engine = localDraftEngine) {
+    this.ledger = ledger;
+    this.engine = engine;
+  }
+  setEngine(e) {
+    this.engine = e;
+  }
+  get engineName() {
+    return this.engine.name;
+  }
+  async complete(req) {
+    if (!req.provenance.deidentified) {
+      await this.ledger.append({ orgId: req.orgId, actor: req.agentId, action: "gateway.refused", subject: req.purpose, detail: { reason: "not_deidentified" } });
+      throw new GatewayRefused("Gateway refuses any request that is not de-identified.");
+    }
+    if (!req.provenance.sources.length) throw new GatewayRefused("Gateway refuses requests without provenance sources.");
+    let text;
+    let engine = this.engine;
+    try {
+      text = await engine.complete(req);
+    } catch (e) {
+      await this.ledger.append({ orgId: req.orgId, actor: req.agentId, action: "gateway.fallback", subject: req.purpose, detail: { from: engine.name, error: String(e.message) } });
+      engine = localDraftEngine;
+      text = await engine.complete(req);
+    }
+    await this.ledger.append({ orgId: req.orgId, actor: req.agentId, action: "gateway.complete", subject: req.purpose, detail: { engine: engine.name, promptChars: req.prompt.length, sources: req.provenance.sources } });
+    return { text, engine: engine.name };
+  }
+};
+
+// src/core/guardrails/claims.ts
+var NUMBER = /(?<![A-Za-z0-9_.\-/])(?:R\s?|\$|US\$)?\d[\d,\s]*(?:\.\d+)?\s?(?:%|[kKmMbB]\b|bn\b)?(?![A-Za-z0-9_\-/])/g;
+function isExempt(raw, before, after) {
+  const n = raw.replace(/[R$,\s%kKmMbB]|US|bn/g, "");
+  if (/^(19|20)\d{2}$/.test(n)) return true;
+  if (n.length <= 1 && !/[%R$]/.test(raw)) return true;
+  if (/(?:iso|iec|nist|sp|soc|sections?|ss?|act|no|pr|issue|rfc|cis|owasp|oq|ac|mod|le)\.?\s*$/i.test(before) || /#\s*$/.test(before)) return true;
+  if (/(?:^|\s)(stage|step|phase|section|part|week|term|grade|gate|tier|level|l|q|fy|b|v|a|sprint|rule|day)\s*$/i.test(before)) return true;
+  if (/^\s*(?:\.|\)|:)\s/.test(after) && before.trim() === "") return true;
+  return false;
+}
+function enforceSourcing(text, allowed = []) {
+  const allow = new Set([...allowed].map((v2) => String(v2).replace(/[R$,\s%]/g, "").toLowerCase()));
+  const stripped = [];
+  let sourced = 0;
+  const lines3 = text.split("\n").map((line) => {
+    if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) return line;
+    return line.split(/(?<=[.!?;])\s+/).map((sentence) => {
+      const hasTag = /\[src:[^\]]+\]/.test(sentence);
+      return sentence.replace(NUMBER, (raw, offset, whole) => {
+        const before = whole.slice(0, offset).replace(/\[src:[^\]]*\]/g, "");
+        const after = whole.slice(offset + raw.length);
+        if (isExempt(raw, before, after)) return raw;
+        const norm = raw.replace(/[R$,\s%]/g, "").toLowerCase();
+        if (hasTag || allow.has(norm)) {
+          sourced++;
+          return raw;
+        }
+        stripped.push(raw.trim());
+        return "[UNSOURCED]";
+      });
+    }).join(" ");
+  });
+  return { text: lines3.join("\n"), stripped, sourced };
 }
 
-// src/server/geminiService.ts
-import { GoogleGenAI, Type } from "@google/genai";
-var GEMINI_OPERATIONS_TOOLS = [
-  {
-    name: "query_data_warehouse",
-    description: "Query the Infinite-AI data warehouse to inspect tenant schools, customer contracts, POPIA policies, internal documents, or audit ledger records.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        collection: {
-          type: Type.STRING,
-          description: "Collection to query: contracts, schools, policies, documents, ledger, or all"
-        },
-        query: {
-          type: Type.STRING,
-          description: "Optional keyword filter"
-        },
-        limit: {
-          type: Type.INTEGER,
-          description: "Maximum number of items to return (default 10)"
-        }
-      },
-      required: ["collection"]
+// src/core/guardrails/engine.ts
+function runGates(g) {
+  if (g.dataClass === "learner") return { gate: "data_class", reason: "Learner-level data is never admitted to the operations platform." };
+  if (g.subjectId && g.tombstoned?.has(g.subjectId)) return { gate: "tombstone", reason: `Subject ${g.subjectId} has been erased; no processing is permitted.` };
+  if (!PURPOSES.includes(g.purpose) || !g.allowedPurposes.includes(g.purpose))
+    return { gate: "purpose", reason: `Purpose "${g.purpose}" is not permitted for this agent.` };
+  if (g.dataClass === "personal" && !g.lawfulBasis) return { gate: "lawful_basis", reason: "Personal data requires a stated lawful basis (POPIA s11)." };
+  return null;
+}
+function checkInput(text, sources, knownNames = []) {
+  const injection = detectInjection(text);
+  if (injection.length) return { ok: false, refusal: "injection", injection };
+  try {
+    return { ok: true, clean: deidentify(text, sources, knownNames), injection };
+  } catch (e) {
+    if (e instanceof LearnerDataRefused) return { ok: false, refusal: "learner_data", pii: e.findings };
+    throw e;
+  }
+}
+function checkOutput(text, allowedNumbers, knownNames = []) {
+  const pii = detectPii(text, knownNames).filter((f) => f.kind !== "titled_name" || false);
+  let redacted = text;
+  for (const f of [...pii].sort((a, b) => b.start - a.start)) redacted = redacted.slice(0, f.start) + `[REDACTED_${f.kind.toUpperCase()}]` + redacted.slice(f.end);
+  const claims = enforceSourcing(redacted, allowedNumbers);
+  const flags = [];
+  if (pii.length) flags.push(`pii_echo:${pii.length}`);
+  if (claims.stripped.length) flags.push(`unsourced_claims:${claims.stripped.length}`);
+  return { text: claims.text, claims, piiRedacted: pii.length, flags };
+}
+
+// src/core/platform.ts
+var isAutonomous = (id) => id.startsWith("auto:");
+var erasureFields = (r) => ({ id: r.id, subjectHash: r.subjectHash, category: r.category, note: r.note, status: r.status, requestedBy: r.requestedBy, decidedBy: r.decidedBy, decisionNote: r.decisionNote, version: r.version });
+var RunRefused = class extends Error {
+  constructor(kind, message) {
+    super(message);
+    this.kind = kind;
+  }
+};
+var Platform = class {
+  constructor(o = {}) {
+    /** sha-256 of each erased subject id. The raw id is never stored. */
+    this.tombstoned = /* @__PURE__ */ new Set();
+    this.persistTail = Promise.resolve();
+    this.orgId = o.orgId ?? "infinite-ai";
+    this.warehouse = new Warehouse(o.adapter ?? new MemoryAdapter());
+    this.engine = o.engine;
+    this.sequencer = o.sequencer;
+    this.wire([], []);
+    this.factsFn = o.facts ?? (() => ({}));
+    this.knownNames = o.knownNames ?? [];
+    this.onPersistError = o.onPersistError ?? ((e) => console.error("persist failed:", e.message));
+  }
+  /** (Re)build ledger, Brain and gateway over the warehouse so state survives a reload. */
+  wire(ledger, facts) {
+    const fail = (e) => this.onPersistError(e instanceof Error ? e : new Error(String(e)));
+    const queue = (collection, rec) => {
+      this.persistTail = this.persistTail.then(() => this.warehouse.putRaw(collection, rec)).catch(fail);
+    };
+    this.ledger = new Ledger(ledger, this.sequencer ? void 0 : (e) => queue("ledger", { ...e, id: `L${e.seq}` }), this.sequencer);
+    this.brain = new Brain(this.ledger, this.orgId, facts, (f) => queue("brain", { ...f }));
+    this.gateway = new Gateway(this.ledger, this.engine);
+  }
+  async init() {
+    await this.warehouse.init();
+    const ledger = this.warehouse.list("ledger").map(({ id: _id, ...e }) => e);
+    const facts = this.warehouse.latest("brain", "id");
+    this.wire(ledger, facts);
+    this.tombstoned = new Set(this.warehouse.list("tombstones").map((t) => t.subjectHash));
+    return this;
+  }
+  /** Resolves once every queued ledger/Brain write has been handed to the storage adapter. */
+  flush() {
+    return this.persistTail;
+  }
+  /** Swap the model engine (undefined = the deterministic local engine). The gateway remains the only path. */
+  useEngine(e) {
+    this.engine = e;
+    this.gateway = new Gateway(this.ledger, e);
+  }
+  setFacts(fn) {
+    this.factsFn = fn;
+  }
+  /** Erase a data subject: recorded in the warehouse and the ledger, so it survives a reload. Only a hash is kept. */
+  async tombstone(subjectId, by) {
+    const subjectHash = await sha256Hex(normalizeSubject(subjectId));
+    if (this.tombstoned.has(subjectHash)) return;
+    await this.warehouse.put("tombstones", { id: `ts_${subjectHash.slice(0, 16)}`, subjectHash, by });
+    this.tombstoned.add(subjectHash);
+    await this.ledger.append({ orgId: this.orgId, actor: by, action: "subject.tombstone", subject: `ts_${subjectHash.slice(0, 16)}` });
+  }
+  // ---- erasure requests: one person asks, a different person decides, approval applies the tombstone ----
+  /** Newest version of each request, newest first. */
+  erasureRequests() {
+    return this.warehouse.latest("erasure_requests").sort((a, b) => b.at.localeCompare(a.at));
+  }
+  erasureRequest(id) {
+    const r = this.erasureRequests().find((x) => x.id === id);
+    if (!r) throw new RunRefused("erasure", "Unknown erasure request.");
+    return r;
+  }
+  async saveErasure(next) {
+    return this.warehouse.put("erasure_requests", { ...next, at: (/* @__PURE__ */ new Date()).toISOString() });
+  }
+  async requestErasure(subjectRef, category, note, requester) {
+    if (requester.kind !== "human") throw new RunRefused("erasure", "Only a named human can raise an erasure request.");
+    const ref = normalizeSubject(subjectRef);
+    const n = note.trim();
+    if (ref.length < 3 || ref.length > 100) throw new RunRefused("erasure", "Enter the subject reference (3 to 100 characters).");
+    if (!ERASURE_CATEGORIES.includes(category)) throw new RunRefused("erasure", "Choose a reason category.");
+    if (n.length > 200) throw new RunRefused("erasure", "Keep the note to 200 characters.");
+    if (category === "other" && !n) throw new RunRefused("erasure", 'Explain "other" in the note.');
+    if (detectPii(ref, this.knownNames).length || detectPii(n, this.knownNames).length) throw new RunRefused("pii", "Use an opaque reference. The reference and note must not contain a name, email, phone number or ID number.");
+    const subjectHash = await sha256Hex(ref);
+    if (this.tombstoned.has(subjectHash)) throw new RunRefused("erasure", "That subject has already been erased.");
+    if (this.erasureRequests().some((r) => r.subjectHash === subjectHash && (r.status === "REQUESTED" || r.status === "APPROVED"))) throw new RunRefused("erasure", "There is already an open erasure request for that subject.");
+    const req = await this.saveErasure({ id: newId("er"), subjectHash, category, note: n, status: "REQUESTED", requestedBy: requester.id, version: 1 });
+    await this.ledger.append({ orgId: this.orgId, actor: requester.id, action: "erasure.requested", subject: req.id, detail: { category } });
+    return req;
+  }
+  /**
+   * HITL. A second person decides. To approve, they retype the subject reference, which must hash to the request's:
+   * that proves they know exactly who is being erased. The approval is recorded before the tombstone is applied.
+   */
+  async decideErasure(id, approver, decision, note, subjectRef = "") {
+    if (approver.kind !== "human") throw new RunRefused("hitl", "Only a named human can decide an erasure request.");
+    const cur = this.erasureRequest(id);
+    if (cur.status !== "REQUESTED") throw new RunRefused("hitl", "Only a request that is waiting for a decision can be decided.");
+    if (approver.id === cur.requestedBy) throw new RunRefused("hitl", "A second person must decide an erasure request.");
+    if (decision === "REJECTED" && !note.trim()) throw new RunRefused("hitl", "A rejection needs a reason.");
+    if (decision === "APPROVED") await this.assertReference(cur, subjectRef);
+    const next = await this.saveErasure({ ...erasureFields(cur), status: decision, decidedBy: approver.id, decisionNote: note.trim(), version: cur.version + 1 });
+    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: "erasure." + decision.toLowerCase(), subject: id, detail: { note: note.trim() } });
+    return decision === "APPROVED" ? this.applyErasure(id, approver, subjectRef) : next;
+  }
+  /** Applies an approved erasure. Also the retry if applying failed after the approval was recorded; safe to repeat. */
+  async applyErasure(id, by, subjectRef) {
+    if (by.kind !== "human") throw new RunRefused("hitl", "Only a named human can apply an erasure.");
+    const cur = this.erasureRequest(id);
+    if (cur.status !== "APPROVED") throw new RunRefused("hitl", "Only an approved request can be applied.");
+    await this.assertReference(cur, subjectRef);
+    await this.tombstone(subjectRef, by.id);
+    return this.saveErasure({ ...erasureFields(cur), status: "EXECUTED", version: cur.version + 1 });
+  }
+  async assertReference(req, subjectRef) {
+    if (await sha256Hex(normalizeSubject(subjectRef)) !== req.subjectHash) throw new RunRefused("erasure", "That reference does not match this request.");
+  }
+  async runAgent(agent, rawInput, requester, opts = {}) {
+    const log = (action, subject, detail = {}) => this.ledger.append({ orgId: this.orgId, actor: requester.id, action, subject, detail });
+    const gate = runGates({ subjectId: opts.subjectId ? await sha256Hex(normalizeSubject(opts.subjectId)) : void 0, tombstoned: this.tombstoned, purpose: agent.purpose, allowedPurposes: agent.allowedPurposes, dataClass: agent.dataClass, lawfulBasis: agent.lawfulBasis });
+    if (gate) {
+      await log("run.refused", agent.id, { gate: gate.gate });
+      throw new RunRefused(gate.gate, gate.reason);
     }
-  },
-  {
-    name: "calculate_school_unit_economics",
-    description: "Computes South African primary school unit economics, gross margins, AWS Cape Town infrastructure hosting, token inference costs, and monthly net margin at standard R4,000/mo baseline.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        activeSchools: {
-          type: Type.INTEGER,
-          description: "Number of subscribed South African primary schools"
-        },
-        monthlyFeeZar: {
-          type: Type.NUMBER,
-          description: "Monthly subscription fee per school in ZAR (default: 4000)"
-        },
-        llmTokensPerSchoolPerMonth: {
-          type: Type.INTEGER,
-          description: "Average monthly generative AI tokens per school tenant (default: 150000)"
-        },
-        serverCostPerMonthZar: {
-          type: Type.NUMBER,
-          description: "Fixed AWS Cape Town (af-south-1) local hosting and storage cost in ZAR (default: 850)"
-        }
-      },
-      required: ["activeSchools"]
+    for (const f of agent.inputs.filter((i) => i.required)) {
+      if (!rawInput[f.key]?.trim()) throw new RunRefused("input", `Missing required input: ${f.label}`);
     }
-  },
-  {
-    name: "audit_compliance_and_guardrails",
-    description: "Audits text and inputs against South African POPIA Section 72 cross-border data transfer rules, South African student PII (13-digit ID, learner names), CAPS curriculum alignment, and SIAS MTSS tier safeguards.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        content: {
-          type: Type.STRING,
-          description: "Text or document content to audit for compliance and guardrails"
-        },
-        checkPopiaSection72: {
-          type: Type.BOOLEAN,
-          description: "Verify cross-border data transfer safeguards under POPIA Section 72"
-        },
-        checkStudentPii: {
-          type: Type.BOOLEAN,
-          description: "Check for learner personal identifiers or South African National ID numbers"
-        },
-        checkSiasTierSafeguards: {
-          type: Type.BOOLEAN,
-          description: "Verify SIAS (Screening, Identification, Assessment and Support) multi-tier support safeguards"
-        }
-      },
-      required: ["content"]
+    const cleanInput = {};
+    const inputNumbers = [];
+    let promptChars = 0;
+    for (const [k, v2] of Object.entries(rawInput)) {
+      const field = agent.inputs.find((i) => i.key === k);
+      if (!field) continue;
+      const verdict = checkInput(v2, ["user-input"], this.knownNames);
+      if (!verdict.ok) {
+        await log("run.refused", agent.id, { reason: verdict.refusal, field: k });
+        throw new RunRefused(verdict.refusal, verdict.refusal === "injection" ? "Input looks like an attempt to override platform controls." : "Learner-level identifiers are never admitted. Remove them and retry.");
+      }
+      cleanInput[k] = verdict.clean.text;
+      promptChars += verdict.clean.text.length;
+      if (field.kind === "number") {
+        const n = Number(v2.replace(/[,\s]/g, ""));
+        if (!Number.isNaN(n)) inputNumbers.push(n);
+      } else for (const m of v2.matchAll(/\d[\d,]*(?:\.\d+)?/g)) inputNumbers.push(Number(m[0].replace(/,/g, "")));
     }
-  },
-  {
-    name: "inspect_department_agent",
-    description: "Inspects any specialist agent contract across the 16 Infinite-AI departments (purpose, inputs, formats, approvers, framework).",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        agentId: {
-          type: Type.STRING,
-          description: "The Agent ID (e.g. OPS-EXEC-01, OPS-FIN-01, OPS-SEC-01)"
-        }
-      },
-      required: ["agentId"]
+    if (promptChars > agent.budget.maxPromptChars) throw new RunRefused("budget", `Input exceeds the agent's budget (${agent.budget.maxPromptChars} characters).`);
+    const brain2 = this.brain.recall(["L0", ...agent.reads]).map((f) => ({ id: f.id, topic: f.topic, text: f.text }));
+    const facts = this.factsFn();
+    const ctx = { facts, input: cleanInput, inputNumbers, brain: brain2 };
+    let doc = agent.build(ctx);
+    let engineName = this.gateway.engineName;
+    const nf = agent.narrativeFacts?.(ctx);
+    if (nf) {
+      const prompt = `Summarise for a South African education-company operations reader. Do not add numbers or facts not listed.
+${Object.entries(nf).map(([k, v2]) => `${k}: ${v2}`).join("\n")}`;
+      const d = deidentify(prompt, ["agent:" + agent.id, ...Object.keys(facts).slice(0, 0)], this.knownNames);
+      const res = await this.gateway.complete({ orgId: this.orgId, agentId: agent.id, purpose: agent.purpose, system: "You draft. A human decides. Never invent numbers.", prompt: d.text, provenance: d.provenance, context: nf });
+      engineName = res.engine;
+      doc = { ...doc, blocks: [...doc.blocks, { type: "h", level: 2, text: "Narrative (AI draft)" }, { type: "p", text: res.text }] };
     }
-  },
-  {
-    name: "generate_task_recommendations",
-    description: "Generates strategic suggestions, recommended input presets, risk safeguards, and next-step checklists for any agent task.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        agentId: {
-          type: Type.STRING,
-          description: "The Agent ID"
-        },
-        contextSummary: {
-          type: Type.STRING,
-          description: "Brief operational context or objective"
-        }
-      },
-      required: ["agentId"]
+    const allowed = [...inputNumbers];
+    const flags = [];
+    const guard = (s) => {
+      const o = checkOutput(s, allowed, this.knownNames);
+      flags.push(...o.flags);
+      return o.text;
+    };
+    const blocks = doc.blocks.map((b) => ({
+      ...b,
+      text: b.text !== void 0 ? guard(b.text) : void 0,
+      items: b.items?.map(guard),
+      rows: b.rows?.map((r) => r.map((c) => typeof c === "string" ? guard(c) : c)),
+      pairs: b.pairs?.map(([k, v2]) => [k, guard(v2)])
+    }));
+    doc = { ...doc, title: guard(doc.title), blocks: blocks.map((b) => JSON.parse(JSON.stringify(b))), meta: { ...doc.meta, ...opts.meta, agent: agent.id, version: agent.version, framework: agent.framework, engine: engineName, status: "DRAFT", purpose: agent.purpose } };
+    const art = { id: newId("art"), orgId: this.orgId, agentId: agent.id, dept: agent.dept, title: doc.title, status: "DRAFT", version: 1, requestedBy: requester.id, formats: agent.formats, doc, flags: [...new Set(flags)], engine: engineName, at: (/* @__PURE__ */ new Date()).toISOString() };
+    await this.saveVersion(art, requester.id);
+    await this.warehouse.put("runs", { id: newId("run"), agentId: agent.id, artefactId: art.id, requester: requester.id, flags: art.flags, engine: engineName, at: art.at });
+    await log("run.complete", art.id, { agent: agent.id, flags: art.flags, status: "DRAFT" });
+    return art;
+  }
+  async saveVersion(a, by) {
+    const docHash = await sha256Hex(canonical(a.doc));
+    await this.warehouse.put("artefact_versions", { ...a, docHash, editedBy: by });
+  }
+  /** Newest record per artefact (every state change and edit is a new immutable record). */
+  artefacts() {
+    return this.warehouse.latest("artefact_versions", "id").sort((x, y) => y.at.localeCompare(x.at));
+  }
+  artefact(id) {
+    return this.artefacts().find((a) => a.id === id);
+  }
+  history(id) {
+    return this.warehouse.list("artefact_versions", (r) => r["id"] === id);
+  }
+  /** Human edit → new version (status returns to DRAFT) + learning proposal. */
+  async edit(artefactId, doc, editor) {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error("Unknown artefact.");
+    if (editor.kind !== "human") throw new Error("Only a human can edit an artefact.");
+    if (cur.status === "RATIFIED" || cur.status === "INGESTED") throw new RunRefused("hitl", "A ratified artefact is final. Start a revision instead.");
+    const clean = JSON.parse(JSON.stringify(doc));
+    const next = { ...cur, id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: "DRAFT", approvedBy: void 0, at: (/* @__PURE__ */ new Date()).toISOString() };
+    try {
+      deidentify(JSON.stringify(clean), ["edit"]);
+    } catch (e) {
+      if (e instanceof LearnerDataRefused) throw new RunRefused("learner_data", "Learner-level identifiers cannot be saved.");
+      throw e;
+    }
+    await this.saveVersion(next, editor.id);
+    await this.ledger.append({ orgId: this.orgId, actor: editor.id, action: "artefact.edit", subject: artefactId, detail: { version: next.version } });
+    await this.captureLearning(cur.doc, clean, cur.agentId, editor.id, artefactId);
+    return next;
+  }
+  async submitForReview(artefactId, by) {
+    const cur = this.artefact(artefactId);
+    if (!cur || cur.status !== "DRAFT") throw new Error("Only a DRAFT can be submitted.");
+    const next = { ...cur, id: artefactId, status: "IN_REVIEW", version: cur.version, at: (/* @__PURE__ */ new Date()).toISOString() };
+    await this.warehouse.put("artefact_versions", { ...next, editedBy: by.id });
+    await this.ledger.append({ orgId: this.orgId, actor: by.id, action: "artefact.submit", subject: artefactId });
+    return next;
+  }
+  /** HITL. No agent, no self-approval where the contract demands a second person, no skip flag. */
+  async decide(artefactId, approver, decision, note, agent) {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error("Unknown artefact.");
+    if (approver.kind !== "human" || isAutonomous(approver.id)) throw new RunRefused("hitl", "Only a named human can approve or reject.");
+    if (cur.status !== "IN_REVIEW") throw new RunRefused("hitl", "Artefact must be submitted for review first.");
+    if (agent?.secondApprover && approver.id === cur.requestedBy) throw new RunRefused("hitl", "This agent requires a second person to approve.");
+    if (decision === "REJECTED" && !note.trim()) throw new RunRefused("hitl", "A rejection needs a reason.");
+    const next = { ...cur, id: artefactId, status: decision, approvedBy: approver.id, note, at: (/* @__PURE__ */ new Date()).toISOString() };
+    await this.warehouse.put("artefact_versions", { ...next, editedBy: approver.id });
+    await this.warehouse.put("approvals", { id: newId("apr"), artefactId, decision, approver: approver.id, note, at: next.at });
+    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: "hitl." + decision.toLowerCase(), subject: artefactId, detail: { note } });
+    return next;
+  }
+  /**
+   * Second signature. A different human from the approver countersigns the exact content that was approved; that
+   * ratifies it, and then (unless the agent's contract says it is not relevant) it is ingested.
+   */
+  async countersign(artefactId, signer, note, agent) {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error("Unknown artefact.");
+    if (signer.kind !== "human" || isAutonomous(signer.id)) throw new RunRefused("hitl", "Only a named human can countersign.");
+    if (cur.status !== "APPROVED") throw new RunRefused("hitl", "Only an approved artefact can be countersigned.");
+    if (signer.id === cur.approvedBy) throw new RunRefused("hitl", "A different person from the approver must countersign.");
+    const n = (note ?? "").trim();
+    if (n.length > 300) throw new RunRefused("hitl", "Keep the countersignature note to 300 characters.");
+    const docHash = cur.docHash ?? await sha256Hex(canonical(cur.doc));
+    const at = (/* @__PURE__ */ new Date()).toISOString();
+    const next = { ...cur, id: artefactId, docHash, status: "RATIFIED", countersignedBy: signer.id, ratifiedAt: at, at };
+    await this.warehouse.put("artefact_versions", { ...next, editedBy: signer.id });
+    await this.warehouse.put("countersignatures", { id: newId("sig"), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: "artefact.countersigned", subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy } });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: "artefact.ratified", subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id } });
+    if (agent?.ingestion === "none") return next;
+    return this.ingest(artefactId, signer);
+  }
+  /** Ratified output goes into the document library (exact content) and the Brain (an episode). Safe to repeat if it failed part-way. */
+  async ingest(artefactId, by) {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error("Unknown artefact.");
+    if (by.kind !== "human" || isAutonomous(by.id)) throw new RunRefused("hitl", "Only a named human can ingest.");
+    if (cur.status === "INGESTED") return cur;
+    if (cur.status !== "RATIFIED") throw new RunRefused("hitl", "Only a ratified artefact can be ingested.");
+    const docHash = cur.docHash ?? await sha256Hex(canonical(cur.doc));
+    const at = (/* @__PURE__ */ new Date()).toISOString();
+    const docId = `rat_${artefactId}_v${cur.version}`;
+    if (!this.warehouse.list("documents", (r) => r["id"] === docId).length) {
+      await this.warehouse.put("documents", { id: docId, title: cur.title, origin: "ratified", doc: cur.doc, scan: { scanned: true, notes: ["Ratified artefact: approved and countersigned."] }, dept: cur.dept, by: by.id, at, ratifiedFrom: { artefactId, version: cur.version, docHash, agentId: cur.agentId, approvedBy: cur.approvedBy, countersignedBy: cur.countersignedBy } });
+    }
+    const src2 = `artefact:${artefactId}@${docHash.slice(0, 12)}`;
+    if (!this.brain.all.some((f) => f.provenance.sources.includes(src2))) {
+      const d = deidentify(`Ratified: ${cur.title} (version ${cur.version}), approved by ${cur.approvedBy} and countersigned by ${cur.countersignedBy}.`, [src2], this.knownNames);
+      await this.brain.remember({ tier: "L2", topic: `ratified.${cur.agentId}`, text: d.text, provenance: d.provenance, by: by.id });
+    }
+    const next = { ...cur, id: artefactId, docHash, status: "INGESTED", ingestedAt: at, at };
+    await this.warehouse.put("artefact_versions", { ...next, editedBy: by.id });
+    await this.ledger.append({ orgId: this.orgId, actor: by.id, action: "artefact.ingested", subject: artefactId, detail: { docId, docHash } });
+    return next;
+  }
+  /** A ratified artefact is final. Changing it means a new artefact, copied as a draft, that goes through the whole board again. */
+  async revise(artefactId, by) {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error("Unknown artefact.");
+    if (by.kind !== "human" || isAutonomous(by.id)) throw new RunRefused("hitl", "Only a named human can start a revision.");
+    if (cur.status !== "RATIFIED" && cur.status !== "INGESTED") throw new RunRefused("hitl", "Only a ratified artefact needs a revision; a draft can be edited directly.");
+    const doc = JSON.parse(JSON.stringify(cur.doc));
+    doc.meta = { ...doc.meta, status: "DRAFT", revisionOf: artefactId };
+    const art = { id: newId("art"), orgId: cur.orgId, agentId: cur.agentId, dept: cur.dept, title: cur.title, status: "DRAFT", version: 1, requestedBy: by.id, formats: cur.formats, doc, flags: [], engine: cur.engine, at: (/* @__PURE__ */ new Date()).toISOString(), revisionOf: artefactId };
+    await this.saveVersion(art, by.id);
+    await this.ledger.append({ orgId: this.orgId, actor: by.id, action: "artefact.revise", subject: art.id, detail: { of: artefactId } });
+    return this.artefact(art.id);
+  }
+  /** Learning engine: proposals only. A human must ratify before it enters the Brain (L3/L4). */
+  async captureLearning(before, after, agentId, by, artefactId) {
+    const was = before.blocks.map((b) => b.text ?? "").filter(Boolean);
+    const now = after.blocks.map((b) => b.text ?? "").filter(Boolean);
+    const changed = now.filter((t) => !was.includes(t));
+    if (!changed.length) return;
+    try {
+      const d = deidentify(changed.slice(0, 5).join("\n"), ["human-edit:" + artefactId]);
+      await this.brain.remember({ tier: "L4", topic: `learning.${agentId}`, text: `Human edited ${changed.length} block(s). Sample: ${d.text.slice(0, 280)}`, provenance: d.provenance, by });
+    } catch {
     }
   }
+};
+
+// src/server/autonomy/runner.ts
+var hubEngine = (hub2, actor) => ({
+  name: "model-hub",
+  async complete(req) {
+    return (await hub2.complete({ system: req.system, prompt: req.prompt, purpose: req.purpose, provenance: req.provenance, actor, agent: agentById(req.agentId) })).text;
+  }
+});
+function makeRunner(deps) {
+  const requesterFor = (id, name) => ({ id: `auto:${id}`, name: `Autonomous: ${name}`, kind: "agent", roles: ["autonomous"] });
+  async function run(order, via) {
+    const agent = agentById(order.agentId);
+    if (!agent) throw new Error(`agent ${order.agentId} is no longer registered`);
+    const requester = requesterFor(order.id, order.name);
+    const engine = deps.engineFor?.(requester.id) ?? (deps.hub?.anyReady() ? hubEngine(deps.hub, requester.id) : void 0);
+    const adapter = {
+      load: async () => Object.fromEntries(Object.entries(deps.store.load()).map(([k, v2]) => [k, [...v2]])),
+      append: (c, rec) => deps.appendValidated(c, rec, requester.id)
+    };
+    const platform = await new Platform({ adapter, facts: deps.facts, engine, sequencer: (input, known) => appendLedger(deps.store, input, known, requester.id) }).init();
+    const art = await platform.runAgent(agent, order.inputs, requester, { meta: { order: order.id, trigger: via.kind } });
+    const acc = runAcceptance({ doc: art.doc, agentId: art.agentId, flags: art.flags, requestedBy: requester.id }, agent);
+    const docHash = art.docHash ?? await sha256Hex(canonical(art.doc));
+    deps.store.append("draft_checks", { id: newId("chk"), artefactId: art.id, docHash, orderId: order.id, passed: acc.passed, results: acc.results, at: (/* @__PURE__ */ new Date()).toISOString() });
+    if (!acc.passed) {
+      await platform.flush();
+      return { outcome: "quarantined", artefactId: art.id, checks: acc.results, flags: art.flags };
+    }
+    await platform.submitForReview(art.id, requester);
+    await platform.flush();
+    return { outcome: "submitted", artefactId: art.id, checks: acc.results, flags: art.flags };
+  }
+  async function dryRun(p) {
+    const agent = agentById(p.agentId);
+    const requester = requesterFor("dryrun", p.name);
+    if (!agent) return { passed: false, results: [{ id: "RUN", title: "The agent runs on these inputs", pass: false, detail: "unknown agent" }] };
+    try {
+      const platform = await new Platform({ adapter: new MemoryAdapter(), facts: deps.facts }).init();
+      const art = await platform.runAgent(agent, p.inputs, requester, { meta: { order: "dryrun", trigger: "dry-run" } });
+      return runAcceptance({ doc: art.doc, agentId: art.agentId, flags: art.flags, requestedBy: requester.id }, agent);
+    } catch (e) {
+      return { passed: false, results: [{ id: "RUN", title: "The agent runs on these inputs", pass: false, detail: e.message.slice(0, 200) }] };
+    }
+  }
+  return { run, dryRun };
+}
+
+// src/server/autonomyRoutes.ts
+import { Router } from "express";
+function autonomyRoutes(autonomy2) {
+  const r = Router();
+  const actorOf2 = (res) => res.locals.actor;
+  const wrap2 = (fn) => (req, res) => {
+    Promise.resolve().then(() => fn(req, res)).catch((e) => {
+      if (e instanceof OrderRefused) return void res.status(e.status).json({ error: e.message, checks: e.checks });
+      console.error(e);
+      res.status(500).json({ error: "internal error" });
+    });
+  };
+  r.get("/autonomy", (_q, res) => res.json(autonomy2.status()));
+  r.post("/autonomy/orders", wrap2(async (req, res) => res.json(await autonomy2.propose(actorOf2(res), req.body))));
+  r.post("/autonomy/orders/:id/activate", wrap2(async (req, res) => res.json(await autonomy2.activate(actorOf2(res), req.params.id, String(req.body?.note ?? "")))));
+  r.post("/autonomy/orders/:id/pause", wrap2(async (req, res) => res.json(await autonomy2.pause(actorOf2(res), req.params.id, String(req.body?.reason ?? "")))));
+  r.post("/autonomy/orders/:id/revoke", wrap2(async (req, res) => res.json(await autonomy2.revoke(actorOf2(res), req.params.id, String(req.body?.reason ?? "")))));
+  r.post("/autonomy/orders/:id/run", wrap2(async (req, res) => res.json(await autonomy2.runNow(actorOf2(res), req.params.id))));
+  return r;
+}
+
+// src/server/security.ts
+var CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data: blob:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'"
+].join("; ");
+var securityHeaders = (o) => (req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  if (o.csp) res.setHeader("Content-Security-Policy", CSP);
+  if (o.hsts) res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  if (req.path.startsWith("/api")) res.setHeader("Cache-Control", "no-store");
+  next();
+};
+var tooMany = (res) => res.status(429).set("Retry-After", "60").json({ error: "too many requests: slow down" });
+function requestLimits(o) {
+  const all = new RateLimiter(o.perMinute, 6e4, o.now);
+  const bad2 = new RateLimiter(o.badTokensPerMinute, 6e4, o.now);
+  return {
+    /** Counts every API request. */
+    general: ((req, res, next) => all.allow(req.ip ?? "unknown") ? next() : tooMany(res)),
+    /** Call with the result of authentication: counts only failures, and refuses once a caller has failed too often. */
+    failure: (req, res) => bad2.allow(req.ip ?? "unknown") ? false : (tooMany(res), true)
+  };
+}
+var ROLES = ["officer"];
+function parseRoles(spec, auth2) {
+  const entries = (spec ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (!entries.length) return null;
+  if (auth2.mode !== "users") throw new Error("OPS_ROLES needs OPS_USERS: roles belong to signed-in people");
+  const m = /* @__PURE__ */ new Map();
+  for (const e of entries) {
+    const [id, ...roles2] = e.split(/[:|]/).map((s) => s.trim());
+    if (!id || !roles2.length) throw new Error("OPS_ROLES: entries look like id:officer");
+    if (!auth2.users.some((u) => u.id === id)) throw new Error(`OPS_ROLES: "${id}" is not in OPS_USERS`);
+    for (const r of roles2) {
+      if (!ROLES.includes(r)) throw new Error(`OPS_ROLES: unknown role "${r}" (known: ${ROLES.join(", ")})`);
+      (m.get(id) ?? m.set(id, /* @__PURE__ */ new Set()).get(id)).add(r);
+    }
+  }
+  return m;
+}
+var rolesOf = (t, actor) => t === null ? void 0 : [...t.get(actor ?? "") ?? []];
+var requireRole = (t, role) => (req, res, next) => {
+  if (t === null) return next();
+  const actor = res.locals.actor;
+  if (actor && t.get(actor)?.has(role)) return next();
+  res.status(403).json({ error: `this action needs the "${role}" role` });
+};
+
+// src/generated/ecosystem-snapshot.json
+var ecosystem_snapshot_default = {
+  schema: "infinite-ai.ecosystem-snapshot/1",
+  source: {
+    repo: "Sarah-JaneHarding/infinite-ai-ecosystem",
+    method: "local-checkout-count",
+    note: "Every number below is counted from files. Test PASS counts are not claimed here: they come from CI via the live connector."
+  },
+  repo: {
+    head: "3c2511a",
+    headDate: "2026-10-24",
+    headSubject: "Merge pull request #158 from Sarah-JaneHarding/claude/peaceful-hopper-5p0vtu",
+    visibleCommits: 1,
+    shallow: true
+  },
+  code: {
+    totals: {
+      srcFiles: 500,
+      srcLoc: 94275,
+      testFiles: 350,
+      testLoc: 67595
+    },
+    units: [
+      {
+        kind: "app",
+        name: "gateway",
+        srcFiles: 18,
+        srcLoc: 3134,
+        testFiles: 17,
+        testLoc: 3081
+      },
+      {
+        kind: "app",
+        name: "web",
+        srcFiles: 69,
+        srcLoc: 8661,
+        testFiles: 40,
+        testLoc: 3445
+      },
+      {
+        kind: "app",
+        name: "worker",
+        srcFiles: 20,
+        srcLoc: 3333,
+        testFiles: 15,
+        testLoc: 2879
+      },
+      {
+        kind: "package",
+        name: "agent-builder",
+        srcFiles: 6,
+        srcLoc: 2028,
+        testFiles: 1,
+        testLoc: 567
+      },
+      {
+        kind: "package",
+        name: "agents",
+        srcFiles: 63,
+        srcLoc: 2134,
+        testFiles: 38,
+        testLoc: 2544
+      },
+      {
+        kind: "package",
+        name: "analytics",
+        srcFiles: 8,
+        srcLoc: 1756,
+        testFiles: 7,
+        testLoc: 1666
+      },
+      {
+        kind: "package",
+        name: "billing",
+        srcFiles: 7,
+        srcLoc: 542,
+        testFiles: 5,
+        testLoc: 651
+      },
+      {
+        kind: "package",
+        name: "brain",
+        srcFiles: 18,
+        srcLoc: 2520,
+        testFiles: 17,
+        testLoc: 3266
+      },
+      {
+        kind: "package",
+        name: "compliance",
+        srcFiles: 9,
+        srcLoc: 542,
+        testFiles: 2,
+        testLoc: 753
+      },
+      {
+        kind: "package",
+        name: "config",
+        srcFiles: 3,
+        srcLoc: 298,
+        testFiles: 3,
+        testLoc: 293
+      },
+      {
+        kind: "package",
+        name: "contracts",
+        srcFiles: 81,
+        srcLoc: 44792,
+        testFiles: 52,
+        testLoc: 12766
+      },
+      {
+        kind: "package",
+        name: "curriculum-seed",
+        srcFiles: 23,
+        srcLoc: 2854,
+        testFiles: 18,
+        testLoc: 5924
+      },
+      {
+        kind: "package",
+        name: "db",
+        srcFiles: 29,
+        srcLoc: 4688,
+        testFiles: 33,
+        testLoc: 7940
+      },
+      {
+        kind: "package",
+        name: "deident",
+        srcFiles: 4,
+        srcLoc: 377,
+        testFiles: 3,
+        testLoc: 385
+      },
+      {
+        kind: "package",
+        name: "design-system",
+        srcFiles: 8,
+        srcLoc: 399,
+        testFiles: 2,
+        testLoc: 167
+      },
+      {
+        kind: "package",
+        name: "document-annotation",
+        srcFiles: 4,
+        srcLoc: 423,
+        testFiles: 1,
+        testLoc: 608
+      },
+      {
+        kind: "package",
+        name: "evals",
+        srcFiles: 13,
+        srcLoc: 1587,
+        testFiles: 12,
+        testLoc: 1781
+      },
+      {
+        kind: "package",
+        name: "gamification",
+        srcFiles: 5,
+        srcLoc: 553,
+        testFiles: 2,
+        testLoc: 748
+      },
+      {
+        kind: "package",
+        name: "guardrails",
+        srcFiles: 16,
+        srcLoc: 1774,
+        testFiles: 14,
+        testLoc: 2210
+      },
+      {
+        kind: "package",
+        name: "learner-client",
+        srcFiles: 4,
+        srcLoc: 342,
+        testFiles: 1,
+        testLoc: 582
+      },
+      {
+        kind: "package",
+        name: "learning",
+        srcFiles: 15,
+        srcLoc: 1472,
+        testFiles: 13,
+        testLoc: 2056
+      },
+      {
+        kind: "package",
+        name: "low-tech-assessment",
+        srcFiles: 4,
+        srcLoc: 392,
+        testFiles: 1,
+        testLoc: 456
+      },
+      {
+        kind: "package",
+        name: "orchestrator",
+        srcFiles: 17,
+        srcLoc: 3612,
+        testFiles: 12,
+        testLoc: 3972
+      },
+      {
+        kind: "package",
+        name: "pd-journal",
+        srcFiles: 3,
+        srcLoc: 220,
+        testFiles: 1,
+        testLoc: 562
+      },
+      {
+        kind: "package",
+        name: "policy",
+        srcFiles: 6,
+        srcLoc: 980,
+        testFiles: 7,
+        testLoc: 1443
+      },
+      {
+        kind: "package",
+        name: "prompt-builder",
+        srcFiles: 4,
+        srcLoc: 314,
+        testFiles: 1,
+        testLoc: 348
+      },
+      {
+        kind: "package",
+        name: "prompts",
+        srcFiles: 3,
+        srcLoc: 274,
+        testFiles: 4,
+        testLoc: 386
+      },
+      {
+        kind: "package",
+        name: "provisioning",
+        srcFiles: 6,
+        srcLoc: 451,
+        testFiles: 4,
+        testLoc: 554
+      },
+      {
+        kind: "package",
+        name: "school-setup",
+        srcFiles: 3,
+        srcLoc: 157,
+        testFiles: 1,
+        testLoc: 248
+      },
+      {
+        kind: "package",
+        name: "security",
+        srcFiles: 7,
+        srcLoc: 551,
+        testFiles: 5,
+        testLoc: 601
+      },
+      {
+        kind: "package",
+        name: "system-prompt-builder",
+        srcFiles: 4,
+        srcLoc: 239,
+        testFiles: 1,
+        testLoc: 299
+      },
+      {
+        kind: "package",
+        name: "telemetry",
+        srcFiles: 8,
+        srcLoc: 946,
+        testFiles: 7,
+        testLoc: 866
+      },
+      {
+        kind: "package",
+        name: "testkit",
+        srcFiles: 1,
+        srcLoc: 147,
+        testFiles: 1,
+        testLoc: 116
+      },
+      {
+        kind: "package",
+        name: "warehouse",
+        srcFiles: 11,
+        srcLoc: 1783,
+        testFiles: 9,
+        testLoc: 3432
+      }
+    ]
+  },
+  stages: {
+    count: 116,
+    first: {
+      n: 0,
+      title: "Ground rules, repository, toolchain",
+      date: null
+    },
+    latest: [
+      {
+        n: 106,
+        title: "the header shows the school's name, not its tenant id",
+        date: null
+      },
+      {
+        n: 107,
+        title: "`next` 16.3.6 \u2192 16.3.8 (GHSA-cjq9-62q9-8jv4)",
+        date: null
+      },
+      {
+        n: 108,
+        title: "the SBST tabs stop presenting sample learners and SIAS cases as real",
+        date: null
+      },
+      {
+        n: 109,
+        title: "free local testing manual, local-model timeout, single-provider routing",
+        date: null
+      },
+      {
+        n: 110,
+        title: "live agent and pipeline runners",
+        date: null
+      },
+      {
+        n: 111,
+        title: "dev-only chaining and grounding for MOD-01 (OQ-030, option C)",
+        date: null
+      },
+      {
+        n: 112,
+        title: "the actor is the school's account id, not the provider's `sub` (OQ-033)",
+        date: null
+      },
+      {
+        n: 113,
+        title: "OQ-033 provisioning, step 1: the `user_invitation` table",
+        date: null
+      }
+    ],
+    stageLogLines: 11134
+  },
+  openQuestions: {
+    total: 36,
+    open: 20,
+    openList: [
+      {
+        id: "OQ-002",
+        raised: "2026-07-28",
+        stage: "08",
+        status: "PARTIALLY ANSWERED",
+        title: "Scope confirmed 2026-07-29: full primary, Grades R-7, across all three phases. Update 2026-08-18: 21 CAPS documents ingested \u2014 all core subjects for Grades R-7."
+      },
+      {
+        id: "OQ-003",
+        raised: "2026-07-28",
+        stage: "08",
+        status: "PARTIALLY ANSWERED",
+        title: "Update 2026-08-19: Benjamin Pine Primary School's 2026 Lesson Plan Preparation Template supplied and ingested. Machine-readable `TemplateDefinition` at `package"
+      },
+      {
+        id: "OQ-006",
+        raised: "2026-07-29",
+        stage: "12",
+        status: "PARTIALLY ANSWERED",
+        title: "SACE CPTD point-value schedules are needed for PD-08, which may not compute them. Same supply problem as OQ-002. Update 2026-08-13: The SACE PD Points Schedule "
+      },
+      {
+        id: "OQ-008",
+        raised: "2026-08-05",
+        stage: "19",
+        status: "OPEN",
+        title: "Should the visual AI-workflow builder be its own package (`@infinite-ai/agent-builder`) or built inside `packages/agents`? A separate package is cleaner to main"
+      },
+      {
+        id: "OQ-009",
+        raised: "2026-08-05",
+        stage: "22",
+        status: "OPEN",
+        title: "Should live classroom quiz games (Stage 22) be a standalone product area, or folded into MOD-04's teaching-and-learning toolkit (Stage 11)? Standalone gets more"
+      },
+      {
+        id: "OQ-011",
+        raised: "2026-08-05",
+        stage: "10/19",
+        status: "OPEN",
+        title: "Where should SIAS documentation and workflow live long-term \u2014 inside MOD-02 Support Analytics (Stage 10, where it is currently planned), or split into its own m"
+      },
+      {
+        id: "OQ-012",
+        raised: "2026-08-05",
+        stage: "20/21",
+        status: "OPEN",
+        title: "Should the Master Prompt Builder (Stage 20) and System Prompt Builder (Stage 21) be one combined tool or two separate ones? Separate is clearer about what each "
+      },
+      {
+        id: "OQ-013",
+        raised: "2026-08-05",
+        stage: "08",
+        status: "OPEN",
+        title: "Eight of South Africa's eleven official languages, and Grades 10-12 entirely, are still missing from the CAPS documents supplied so far (see OQ-002). Sepedi, Se"
+      },
+      {
+        id: "OQ-015",
+        raised: "2026-08-05",
+        stage: "06",
+        status: "OPEN (Gap 2's model call resolved; calibration pending OQ-016)",
+        title: "Age-appropriateness needs a supplied content policy. The same guardrail engine's `checkAgeAppropriateness` is a real mechanism with no built-in rule \u2014 this code"
+      },
+      {
+        id: "OQ-016",
+        raised: "2026-08-06",
+        stage: "07",
+        status: "OPEN",
+        title: `The LLM-as-judge scorer has no calibration data. Stage 07 step 2's own text requires the judge to be "calibrated against at least 50 human-labelled cases, and r`
+      },
+      {
+        id: "OQ-017",
+        raised: "2026-08-12",
+        stage: "18",
+        status: "OPEN",
+        title: "k6 load tests need a live environment. Stage 18 step 2 requires load testing at 3\xD7 expected peak (450 concurrent learners, Starter tier) and a spike test for te"
+      },
+      {
+        id: "OQ-018",
+        raised: "2026-08-12",
+        stage: "18",
+        status: "OPEN",
+        title: "Cost model needs real gateway telemetry. `docs/COST_MODEL.md` uses estimated token counts based on typical artefact types. Actual costs depend on real usage pat"
+      },
+      {
+        id: "OQ-020",
+        raised: "2026-08-12",
+        stage: "18",
+        status: "OPEN",
+        title: "Architecture walkthrough recording. Stage 18 step 7 requires a recorded architecture walkthrough (screen + audio) covering the nine-layer diagram, the four inva"
+      },
+      {
+        id: "OQ-030",
+        raised: "2026-10-23",
+        stage: "111",
+        status: "PARTIALLY ANSWERED (2026-10-23)",
+        title: "MOD-01 prompts require _ratified_ upstream artefacts, but the pipeline has one human gate at the end and no store for ratified artefacts. Asked to make pipeline"
+      },
+      {
+        id: "OQ-031",
+        raised: "2026-10-01",
+        stage: "",
+        status: "OPEN",
+        title: "four navigation entries had no page and no data behind them"
+      },
+      {
+        id: "OQ-032",
+        raised: "2026-10-01",
+        stage: "",
+        status: "OPEN",
+        title: "which role wins when an account holds more than one"
+      },
+      {
+        id: "OQ-033",
+        raised: "2026-10-07",
+        stage: "",
+        status: "OPEN",
+        title: "no real person can decide an approval gate: identity mismatch and no provisioning"
+      },
+      {
+        id: "OQ-034",
+        raised: "2026-10-08",
+        stage: "",
+        status: "OPEN",
+        title: "what a district rollup would be, if the product wants one"
+      },
+      {
+        id: "OQ-035",
+        raised: "2026-10-08",
+        stage: "",
+        status: "OPEN",
+        title: "the EGRA screening tab's benchmarks and tier rule have no supplied source"
+      },
+      {
+        id: "OQ-036",
+        raised: "2026-10-24",
+        stage: "",
+        status: "OPEN",
+        title: "is MFA actually enforced for `admin`, `smt` and the platform roles?"
+      }
+    ],
+    all: [
+      {
+        id: "OQ-001",
+        raised: "2026-07-29",
+        stage: "",
+        status: "RESOLVED",
+        title: "where the platform lives"
+      },
+      {
+        id: "OQ-002",
+        raised: "2026-07-28",
+        stage: "08",
+        status: "PARTIALLY ANSWERED",
+        title: "Scope confirmed 2026-07-29: full primary, Grades R-7, across all three phases. Update 2026-08-18: 21 CAPS documents ingested \u2014 all core subjects for Grades R-7."
+      },
+      {
+        id: "OQ-003",
+        raised: "2026-07-28",
+        stage: "08",
+        status: "PARTIALLY ANSWERED",
+        title: "Update 2026-08-19: Benjamin Pine Primary School's 2026 Lesson Plan Preparation Template supplied and ingested. Machine-readable `TemplateDefinition` at `package"
+      },
+      {
+        id: "OQ-004",
+        raised: "2026-07-28",
+        stage: "01",
+        status: "RESOLVED (2026-08-13)",
+        title: "Tenant shape for the seed data: the manual asks for a small primary, a large primary and a school group with two campuses. Should the seed model Benjamin Pine P"
+      },
+      {
+        id: "OQ-005",
+        raised: "2026-07-29",
+        stage: "08",
+        status: "RESOLVED (2026-08-13)",
+        title: "CAPS statements, ATPs and DBE policy documents are Crown-copyright government publications. Redistributing them inside a multi-tenant SaaS product is a licensin"
+      },
+      {
+        id: "OQ-006",
+        raised: "2026-07-29",
+        stage: "12",
+        status: "PARTIALLY ANSWERED",
+        title: "SACE CPTD point-value schedules are needed for PD-08, which may not compute them. Same supply problem as OQ-002. Update 2026-08-13: The SACE PD Points Schedule "
+      },
+      {
+        id: "OQ-007",
+        raised: "2026-07-29",
+        stage: "03",
+        status: "RESOLVED (2026-09-14)",
+        title: "Retention periods per data category. Decision recorded: a 7-year retention period applies to learner and school records for the pilot/release scope, measured fr"
+      },
+      {
+        id: "OQ-008",
+        raised: "2026-08-05",
+        stage: "19",
+        status: "OPEN",
+        title: "Should the visual AI-workflow builder be its own package (`@infinite-ai/agent-builder`) or built inside `packages/agents`? A separate package is cleaner to main"
+      },
+      {
+        id: "OQ-009",
+        raised: "2026-08-05",
+        stage: "22",
+        status: "OPEN",
+        title: "Should live classroom quiz games (Stage 22) be a standalone product area, or folded into MOD-04's teaching-and-learning toolkit (Stage 11)? Standalone gets more"
+      },
+      {
+        id: "OQ-010",
+        raised: "2026-08-05",
+        stage: "25",
+        status: "RESOLVED (Stage 26)",
+        title: "Should the learner-facing app (Stage 25) be a separate PWA, or built into the same `apps/web` every other role uses? Decision: integrated into `apps/web`. The `"
+      },
+      {
+        id: "OQ-011",
+        raised: "2026-08-05",
+        stage: "10/19",
+        status: "OPEN",
+        title: "Where should SIAS documentation and workflow live long-term \u2014 inside MOD-02 Support Analytics (Stage 10, where it is currently planned), or split into its own m"
+      },
+      {
+        id: "OQ-012",
+        raised: "2026-08-05",
+        stage: "20/21",
+        status: "OPEN",
+        title: "Should the Master Prompt Builder (Stage 20) and System Prompt Builder (Stage 21) be one combined tool or two separate ones? Separate is clearer about what each "
+      },
+      {
+        id: "OQ-013",
+        raised: "2026-08-05",
+        stage: "08",
+        status: "OPEN",
+        title: "Eight of South Africa's eleven official languages, and Grades 10-12 entirely, are still missing from the CAPS documents supplied so far (see OQ-002). Sepedi, Se"
+      },
+      {
+        id: "OQ-014",
+        raised: "2026-08-05",
+        stage: "06",
+        status: "RESOLVED (2026-09-13)",
+        title: "Safeguarding escalation needs a real paging integration. Stage 06 step 6's guardrail engine (`packages/guardrails/src/engine.ts`) can attach an `EscalationRoute"
+      },
+      {
+        id: "OQ-015",
+        raised: "2026-08-05",
+        stage: "06",
+        status: "OPEN (Gap 2's model call resolved; calibration pending OQ-016)",
+        title: "Age-appropriateness needs a supplied content policy. The same guardrail engine's `checkAgeAppropriateness` is a real mechanism with no built-in rule \u2014 this code"
+      },
+      {
+        id: "OQ-016",
+        raised: "2026-08-06",
+        stage: "07",
+        status: "OPEN",
+        title: `The LLM-as-judge scorer has no calibration data. Stage 07 step 2's own text requires the judge to be "calibrated against at least 50 human-labelled cases, and r`
+      },
+      {
+        id: "OQ-017",
+        raised: "2026-08-12",
+        stage: "18",
+        status: "OPEN",
+        title: "k6 load tests need a live environment. Stage 18 step 2 requires load testing at 3\xD7 expected peak (450 concurrent learners, Starter tier) and a spike test for te"
+      },
+      {
+        id: "OQ-018",
+        raised: "2026-08-12",
+        stage: "18",
+        status: "OPEN",
+        title: "Cost model needs real gateway telemetry. `docs/COST_MODEL.md` uses estimated token counts based on typical artefact types. Actual costs depend on real usage pat"
+      },
+      {
+        id: "OQ-019",
+        raised: "2026-08-12",
+        stage: "18",
+        status: "RESOLVED (2026-09-09)",
+        title: "Pilot schools have not been identified. `docs/PILOT_PROTOCOL.md` targets 3 schools (small primary, large primary, school group). Pilot school #1 confirmed: Benj"
+      },
+      {
+        id: "OQ-020",
+        raised: "2026-08-12",
+        stage: "18",
+        status: "OPEN",
+        title: "Architecture walkthrough recording. Stage 18 step 7 requires a recorded architecture walkthrough (screen + audio) covering the nine-layer diagram, the four inva"
+      },
+      {
+        id: "OQ-021",
+        raised: "2026-08-12",
+        stage: "18",
+        status: "RESOLVED (2026-09-14)",
+        title: "Dunning emails need a transactional email provider. Decision recorded: use the configured outbound mail account `infinite-ai-ecosystem@protonmail.com` for dunni"
+      },
+      {
+        id: "OQ-022",
+        raised: "2026-08-12",
+        stage: "17",
+        status: "RESOLVED (2026-09-14)",
+        title: "POPIA erasure for append-only tables. Decision recorded: append-only compliance ledgers (`audit_event`, `consent_record`, `tenant_metering_event`) are retained "
+      },
+      {
+        id: "OQ-023",
+        raised: "2026-08-20",
+        stage: "29",
+        status: "RESOLVED (2026-09-11)",
+        title: "`GradeFramework` needs `hoursPerWeek` and `assessmentWeighting` data. Answer: statutory values are not LLM output \u2014 they are gazette facts. A deterministic DBE "
+      },
+      {
+        id: "OQ-024",
+        raised: "2026-08-24",
+        stage: "06",
+        status: "RESOLVED (2026-09-01)",
+        title: "`branch` step conditions cannot see a prior step's actual output. `evaluateCondition` only ever received `run.input`, never what an intervening agent produced, "
+      },
+      {
+        id: "OQ-025",
+        raised: "2026-08-25",
+        stage: "16",
+        status: "RESOLVED (2026-08-25)",
+        title: "The per-request CSP nonce did not reach the client on `/sign-in`. Answer: root cause was `next-auth@4.24.15`'s `withAuth()` unconditionally short-circuiting bef"
+      },
+      {
+        id: "OQ-026",
+        raised: "2026-08-25",
+        stage: "06/10",
+        status: "RESOLVED (2026-09-01)",
+        title: "`checkDiagnosticLanguage` has no caller. Needed to know which of a MOD-02 agent's own output fields are free text before it could be wired in for real, without "
+      },
+      {
+        id: "OQ-027",
+        raised: "2026-09-01",
+        stage: "06/10",
+        status: "RESOLVED 2026-09-02",
+        title: "`support.needs_referral`'s SIAS-status field has no ratified shape. Found while resolving OQ-024: `mod-02.ts`'s `branch-on-referral` is narrated as evaluating \""
+      },
+      {
+        id: "OQ-028",
+        raised: "2026-09-01",
+        stage: "06/11",
+        status: "RESOLVED (2026-09-03)",
+        title: "Three more declared guardrail names have no real caller: `source_grounding_guard`, `grounding_check`, `template_fidelity`; `readability_guard` is now only half-"
+      },
+      {
+        id: "OQ-029",
+        raised: "2026-09-11",
+        stage: "\u2014",
+        status: "RESOLVED (2026-09-13)",
+        title: "GitHub Actions CI has returned `startup_failure` (zero jobs ever created) on every single workflow run since run #276 (2026-09-02T01:37:04Z), and this is not ca"
+      },
+      {
+        id: "OQ-030",
+        raised: "2026-10-23",
+        stage: "111",
+        status: "PARTIALLY ANSWERED (2026-10-23)",
+        title: "MOD-01 prompts require _ratified_ upstream artefacts, but the pipeline has one human gate at the end and no store for ratified artefacts. Asked to make pipeline"
+      },
+      {
+        id: "OQ-031",
+        raised: "2026-10-01",
+        stage: "",
+        status: "OPEN",
+        title: "four navigation entries had no page and no data behind them"
+      },
+      {
+        id: "OQ-032",
+        raised: "2026-10-01",
+        stage: "",
+        status: "OPEN",
+        title: "which role wins when an account holds more than one"
+      },
+      {
+        id: "OQ-033",
+        raised: "2026-10-07",
+        stage: "",
+        status: "OPEN",
+        title: "no real person can decide an approval gate: identity mismatch and no provisioning"
+      },
+      {
+        id: "OQ-034",
+        raised: "2026-10-08",
+        stage: "",
+        status: "OPEN",
+        title: "what a district rollup would be, if the product wants one"
+      },
+      {
+        id: "OQ-035",
+        raised: "2026-10-08",
+        stage: "",
+        status: "OPEN",
+        title: "the EGRA screening tab's benchmarks and tier rule have no supplied source"
+      },
+      {
+        id: "OQ-036",
+        raised: "2026-10-24",
+        stage: "",
+        status: "OPEN",
+        title: "is MFA actually enforced for `admin`, `smt` and the platform roles?"
+      }
+    ]
+  },
+  agents: {
+    contractFiles: 56,
+    byModule: {
+      le: 9,
+      "mod-01": 9,
+      "mod-02": 11,
+      "mod-03": 8,
+      "mod-04": 11,
+      "mod-05": 8
+    },
+    rosterClaimInAgentsMd: "Fifty-five",
+    ids: [
+      "AC-01",
+      "AC-02",
+      "AC-03",
+      "AC-04",
+      "AC-05",
+      "AC-06",
+      "AC-07",
+      "AC-08",
+      "AC-09",
+      "AC-10",
+      "AC-11",
+      "CE-01",
+      "CE-02",
+      "CE-03",
+      "CE-04",
+      "CE-05",
+      "CE-06",
+      "CE-07",
+      "CE-08",
+      "CE-09",
+      "DW-01",
+      "DW-02",
+      "DW-03",
+      "DW-04",
+      "DW-05",
+      "DW-06",
+      "DW-07",
+      "DW-08",
+      "LE-01",
+      "LE-02",
+      "LE-03",
+      "LE-04",
+      "LE-05",
+      "LE-06",
+      "LE-07",
+      "LE-08",
+      "LE-09",
+      "PD-01",
+      "PD-02",
+      "PD-03",
+      "PD-04",
+      "PD-05",
+      "PD-06",
+      "PD-07",
+      "PD-08",
+      "TB-01",
+      "TB-02",
+      "TB-03",
+      "TB-04",
+      "TB-05",
+      "TB-06",
+      "TB-07",
+      "TB-08",
+      "TB-09",
+      "TB-10",
+      "TB-11"
+    ]
+  },
+  docs: {
+    files: [
+      "AGENTS.md",
+      "ARCHITECTURE.md",
+      "AWS_MIGRATION_AUDIT.md",
+      "BRAND_KIT.md",
+      "COST_MODEL.md",
+      "DEPENDENCIES.md",
+      "DEV_SETUP.md",
+      "FREE_LOCAL_TESTING.md",
+      "HOW_TO_ADD_AN_AGENT.md",
+      "INCIDENT_PROCESS.md",
+      "INFINITE-AI-PRODUCTION-READINESS-AUDIT.html",
+      "INFINITE-AI-VERIFIED-PILOT-AUDIT-V3.html",
+      "ONBOARDING_GUIDE.md",
+      "OPEN_QUESTIONS.md",
+      "OPERATOR_MANUAL.md",
+      "PEDAGOGY.md",
+      "PILOT_PROTOCOL.md",
+      "POPIA.md",
+      "PROMPTS.md",
+      "PROVISIONING_DESIGN.md",
+      "REPOSITORY_AUDIT_2026-09-25.md",
+      "RETENTION_SCHEDULE_TEMPLATE.md",
+      "SECURITY.md",
+      "SOURCE_DOCUMENTS.md",
+      "STAGE_LOG.md",
+      "aws-cost-estimate.html",
+      "brand-identity.html",
+      "financial-model.html",
+      "infinite-ai-business-planning.html",
+      "sbom.json"
+    ],
+    runbooks: [
+      "README.md",
+      "bad-prompt-promotion-rollback.md",
+      "brain-restore.md",
+      "canary-deploy.md",
+      "database-restore.md",
+      "drill-results",
+      "provider-outage.md",
+      "queue-backlog.md",
+      "region-loss.md",
+      "suspected-breach.md",
+      "tenant-data-erasure.md"
+    ],
+    ciWorkflows: [
+      "cd.yml",
+      "ci.yml",
+      "docker-publish.yml",
+      "terraform.yml"
+    ]
+  }
+};
+
+// src/connector/snapshot.ts
+var snapshot = ecosystem_snapshot_default;
+var WORDS = { forty: 40, fifty: 50, "fifty-five": 55, "fifty-six": 56, "forty-six": 46 };
+function snapshotFacts(s = snapshot) {
+  return {
+    "eco.head": s.repo.head ?? "unknown",
+    "eco.headDate": s.repo.headDate ?? "unknown",
+    "eco.units": s.code.units.length,
+    "eco.srcFiles": s.code.totals.srcFiles,
+    "eco.srcLoc": s.code.totals.srcLoc,
+    "eco.testFiles": s.code.totals.testFiles,
+    "eco.testLoc": s.code.totals.testLoc,
+    "eco.stages": s.stages.count,
+    "eco.latestStage": s.stages.latest.at(-1)?.n ?? 0,
+    "eco.oq.total": s.openQuestions.total,
+    "eco.oq.open": s.openQuestions.open,
+    "eco.agents.contracts": s.agents.contractFiles,
+    "eco.agents.documented": s.agents.rosterClaimInAgentsMd ? WORDS[s.agents.rosterClaimInAgentsMd.toLowerCase()] ?? s.agents.rosterClaimInAgentsMd : "unknown",
+    ...Object.fromEntries(Object.entries(s.agents.byModule).map(([m, n]) => [`eco.agents.${m}`, n])),
+    "eco.runbooks": s.docs.runbooks.length,
+    "eco.ciWorkflows": s.docs.ciWorkflows.length,
+    "eco.docs": s.docs.files.length
+  };
+}
+
+// src/server/models/hub.ts
+import { createHash as createHash2 } from "node:crypto";
+
+// src/server/models/rules.ts
+var RULES2 = [
+  { id: "M1", title: "Provenance first", text: "Every request must carry a de-identified stamp with its sources. An unstamped payload is refused even when the detector finds nothing." },
+  { id: "M2", title: "No personal data or injection in any prompt", text: "The system text, the prompt, every history message and every tool result are scanned. Names with titles, emails, phone numbers, ID numbers and learner identifiers are refused; instruction-override patterns are refused." },
+  { id: "M3", title: "Purpose limitation", text: "A request declares one purpose from the closed list, and when it comes from an agent the purpose must be one that agent is contracted for." },
+  { id: "M4", title: "Size limits", text: "Input, history, tool results, tool turns and output are capped, so a request cannot be used to move bulk data to a provider." },
+  { id: "M5", title: "A human must attest each provider and model", text: "A provider cannot be used until a named person has attested that they reviewed its terms for the exact model configured. Changing the model requires a new attestation. If an agent's contract lists the providers it may use, only those are tried. There is no override." },
+  { id: "M6", title: "Rate and daily budget", text: "Each user is rate limited and each provider has a daily call budget, counted from the audit ledger so a restart does not reset it." },
+  { id: "M7", title: "Every call is audited, and the audit comes first", text: "A ledger entry is written before the provider is called and another after it answers, refuses or fails. They record who, which model, purpose, sizes and a hash of the prompt, never its content. If the ledger cannot be written the call is not made." },
+  { id: "M8", title: "Output is always a draft", text: "Model output is scanned for personal data and has unsourced figures stripped. It is returned marked as a draft and nothing in this module can approve, ratify or ingest it." },
+  { id: "M9", title: "Tools see only what is allowed, and only de-identified", text: "Tools read an allow-list of collections that is empty by default, can never include the ledger, erasure records, integration settings or approvals, and every tool result is scanned before it reaches the model." },
+  { id: "M10", title: "One door", text: "The model hub is the only code that can call a model provider. Keys stay on the server and are never returned by any API." }
 ];
-var GeminiOperationsService = class {
-  constructor(apiKey) {
-    this.ai = null;
-    const key = apiKey || process.env.GEMINI_API_KEY;
-    if (key) {
-      this.ai = new GoogleGenAI({
-        apiKey: key,
-        httpOptions: { headers: { "User-Agent": "aistudio-build" } }
-      });
-    }
+var LIMITS = {
+  maxInputChars: 2e4,
+  maxHistory: 6,
+  maxToolResultChars: 12e3,
+  maxToolTurns: 3,
+  maxOutputTokens: 1024
+};
+var NEVER_MODEL_READABLE = /* @__PURE__ */ new Set(["ledger", "tombstones", "erasure_requests", "integration_settings", "chat_log", "connector_events", "approvals", "brain", "model_attestations", "custom_defs", "standing_orders", "draft_checks"]);
+var ModelRefused = class extends Error {
+  constructor(rule, message, status = 422) {
+    super(message);
+    this.rule = rule;
+    this.status = status;
   }
-  isAvailable() {
-    return this.ai !== null;
+};
+function checkRequest(req) {
+  const p = req.provenance;
+  if (!p || p.deidentified !== true || !Array.isArray(p.sources) || !p.sources.length || p.sources.some((s) => typeof s !== "string" || !s)) {
+    throw new ModelRefused("M1", "Refused: the payload is not stamped de-identified with sources.");
   }
-  /**
-   * Execute one of the domain tools against the platform store and business models
-   */
-  async executeTool(name, args, store2) {
-    switch (name) {
-      case "query_data_warehouse": {
-        const collection = String(args.collection || "all");
-        const query = typeof args.query === "string" ? args.query.toLowerCase() : "";
-        const limit = typeof args.limit === "number" ? Math.max(1, Math.min(args.limit, 50)) : 10;
-        const warehouseData = store2.load();
-        const results = {};
-        const filterItems = (items) => {
-          if (!query) return items.slice(0, limit);
-          return items.filter((item) => {
-            const str = JSON.stringify(item).toLowerCase();
-            return str.includes(query);
-          }).slice(0, limit);
-        };
-        if (collection === "all") {
-          for (const [k, v2] of Object.entries(warehouseData)) {
-            results[k] = filterItems(v2);
-          }
-        } else if (collection in warehouseData) {
-          results[collection] = filterItems(warehouseData[collection]);
-        } else {
-          results[collection] = [];
-        }
-        return {
-          collection,
-          totalCollections: Object.keys(warehouseData).length,
-          resultsCount: Object.values(results).reduce((acc, curr) => acc + curr.length, 0),
-          data: results
-        };
-      }
-      case "calculate_school_unit_economics": {
-        const activeSchools = Number(args.activeSchools) || 1;
-        const monthlyFeeZar = Number(args.monthlyFeeZar) || 4e3;
-        const llmTokens = Number(args.llmTokensPerSchoolPerMonth) || 15e4;
-        const serverCostZar = Number(args.serverCostPerMonthZar) || 850;
-        const usdToZar = 18.5;
-        const blendedCostPerTokenUsd = 2e-7;
-        const tokenCostPerSchoolUsd = llmTokens * blendedCostPerTokenUsd;
-        const tokenCostPerSchoolZar = Math.round(tokenCostPerSchoolUsd * usdToZar * 100) / 100;
-        const totalLlmCostZar = Math.round(tokenCostPerSchoolZar * activeSchools * 100) / 100;
-        const monthlyRevenueZar = activeSchools * monthlyFeeZar;
-        const annualRecurringRevenueZar = monthlyRevenueZar * 12;
-        const totalDirectCostZar = serverCostZar + totalLlmCostZar;
-        const monthlyGrossProfitZar = monthlyRevenueZar - totalDirectCostZar;
-        const grossMarginPercent = monthlyRevenueZar > 0 ? Math.round(monthlyGrossProfitZar / monthlyRevenueZar * 1e3) / 10 : 0;
-        const breakEvenSchools = Math.ceil(serverCostZar / (monthlyFeeZar - tokenCostPerSchoolZar));
-        return {
-          modelParameters: {
-            activeSchools,
-            monthlyFeeZar,
-            llmTokensPerSchoolPerMonth: llmTokens,
-            serverCostPerMonthZar: serverCostZar,
-            region: "AWS Cape Town (af-south-1) - In-Country Data Residency"
-          },
-          financialSummary: {
-            monthlyRecurringRevenueZar: monthlyRevenueZar,
-            annualRecurringRevenueZar,
-            totalDirectCostZar,
-            tokenCostPerSchoolZar,
-            monthlyGrossProfitZar,
-            grossMarginPercent: `${grossMarginPercent}%`,
-            breakEvenSchools,
-            viabilityStatus: grossMarginPercent > 70 ? "HIGHLY_VIABLE" : grossMarginPercent > 50 ? "VIABLE" : "SUBSIDY_REQUIRED"
-          },
-          southAfricanSchoolViability: {
-            targetQuintile: "Quintile 4-5 and Independent Primary Schools",
-            affordabilityBenchmark: "R4,000/month covers full multi-user ops & CAPS analytics",
-            popiaComplianceSurcharge: "R0 (Included in base tier with local data residency)"
-          }
-        };
-      }
-      case "audit_compliance_and_guardrails": {
-        const content = String(args.content || "");
-        const piiIssues = detectPii(content);
-        const injectionIssues = detectInjection(content);
-        const checkPopia72 = args.checkPopiaSection72 !== false;
-        const popia72Violations = [];
-        const crossBorderKeywords = ["us-east-1", "openai foreign server", "unencrypted s3 us", "eu central cross-border without agreement"];
-        for (const kw of crossBorderKeywords) {
-          if (content.toLowerCase().includes(kw)) {
-            popia72Violations.push(`Cross-border data transfer flagged (${kw}): POPIA Section 72 requires adequate safeguards, binding corporate rules, or explicit consent.`);
-          }
-        }
-        const saIdRegex = /\b\d{13}\b/g;
-        const saIdMatches = content.match(saIdRegex) || [];
-        return {
-          contentLength: content.length,
-          compliant: piiIssues.length === 0 && injectionIssues.length === 0 && popia72Violations.length === 0 && saIdMatches.length === 0,
-          piiFindings: piiIssues,
-          saIdNumbersFound: saIdMatches.length,
-          injectionFindings: injectionIssues,
-          popiaSection72Findings: popia72Violations,
-          remediationAdvice: [
-            ...piiIssues.length ? ["Strip learner names, cell numbers, and email addresses prior to drafting."] : [],
-            ...saIdMatches.length ? ["Replace 13-digit SA national ID numbers with pseudonymous learner UUIDs."] : [],
-            ...popia72Violations.length ? ["Ensure cloud data residency remains within AWS Cape Town (af-south-1)."] : [],
-            "Enforce Law 02: Human-in-the-Loop second approver sign-off on all drafted operational documents."
-          ]
-        };
-      }
-      case "inspect_department_agent": {
-        const id = String(args.agentId || "").trim();
-        const agent = agentById(id);
-        if (!agent) {
-          return { error: `Agent '${id}' not found in the 16 Infinite-AI departments.` };
-        }
-        return {
-          id: agent.id,
-          name: agent.name,
-          purpose: agent.purpose,
-          summary: agent.summary,
-          framework: agent.framework,
-          inputs: agent.inputs.map((i) => ({ key: i.key, label: i.label, kind: i.kind, required: i.required })),
-          formats: agent.formats,
-          secondApprover: agent.secondApprover,
-          lawsCovered: ["Law 01 (De-identification)", "Law 02 (Human Ratification)", "Law 03 (POPIA s72 Residency)"]
-        };
-      }
-      case "generate_task_recommendations": {
-        const id = String(args.agentId || "").trim();
-        const agent = agentById(id);
-        if (!agent) return { error: `Agent '${id}' not found.` };
-        const recs = this.getDeterministicRecommendations(agent);
-        return { ...recs, agentId: id };
-      }
-      default:
-        return { error: `Unknown tool: ${name}` };
-    }
-  }
-  /**
-   * Run the Operations Copilot conversation with tool execution loop
-   */
-  async runCopilot(message, history, store2) {
-    const invocations = [];
-    if (!this.ai) {
-      return this.fallbackCopilotResponse(message, store2);
-    }
-    try {
-      const contents = [];
-      for (const h of history.slice(-6)) {
-        contents.push({
-          role: h.role,
-          parts: [{ text: h.text }]
-        });
-      }
-      contents.push({
-        role: "user",
-        parts: [{ text: message }]
-      });
-      const systemInstruction = `You are the Infinite AI Operations Copilot for South African primary school business operations.
-Your core mission is supporting operational workflows across 16 departments and 48 specialist agents.
-Key operational invariants:
-- Standard primary school subscription price: R4,000/month in South African Rand (ZAR).
-- Hosting: AWS Cape Town (af-south-1) local data residency.
-- Compliance: South African POPIA Section 72, learner PII protection, CAPS curriculum alignment, SIAS multi-tier support.
-- Non-bypassable Human-in-the-Loop gate (Law 02): You recommend, analyze, and draft; named human operators approve and ratify.
-Use the provided tools whenever you need to inspect the data warehouse, compute unit economics, check compliance, or look up department agents.`;
-      let response = await this.ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents,
-        config: {
-          systemInstruction,
-          tools: [{ functionDeclarations: GEMINI_OPERATIONS_TOOLS }]
-        }
-      });
-      let turns = 0;
-      while (response.functionCalls && response.functionCalls.length > 0 && turns < 3) {
-        turns++;
-        const call = response.functionCalls[0];
-        const toolName = call.name;
-        if (!toolName) break;
-        const toolArgs = call.args || {};
-        const toolResult = await this.executeTool(toolName, toolArgs, store2);
-        invocations.push({
-          name: toolName,
-          args: toolArgs,
-          result: toolResult
-        });
-        contents.push({
-          role: "model",
-          parts: [{ functionCall: { name: toolName, args: toolArgs } }]
-        });
-        contents.push({
-          role: "user",
-          parts: [{
-            functionResponse: {
-              name: toolName,
-              response: toolResult
-            }
-          }]
-        });
-        response = await this.ai.models.generateContent({
-          model: "gemini-3.8-flash",
-          contents,
-          config: {
-            systemInstruction,
-            tools: [{ functionDeclarations: GEMINI_OPERATIONS_TOOLS }]
-          }
-        });
-      }
-      return {
-        text: response.text || "Operational analysis completed.",
-        toolInvocations: invocations
-      };
-    } catch (err) {
-      console.error("Gemini copilot error, falling back to local reasoning:", err);
-      return this.fallbackCopilotResponse(message, store2, err.message);
-    }
-  }
-  /**
-   * Generates tailored strategic recommendations and optimal input parameter values for any agent task
-   */
-  async getAgentRecommendations(agent, currentValues, store2) {
-    const toolsUsed = [];
-    if (!this.ai) {
-      const rec = this.getDeterministicRecommendations(agent, currentValues);
-      return { ...rec, toolsUsed, generatedWith: "deterministic-fallback" };
-    }
-    try {
-      toolsUsed.push("inspect_department_agent");
-      toolsUsed.push("audit_compliance_and_guardrails");
-      const prompt = `You are the Infinite AI Operations Specialist.
-Analyze the following agent task and provide tailored operational suggestions, recommended parameter values, and compliance safeguards.
-
-Agent ID: ${agent.id}
-Agent Name: ${agent.name}
-Summary: ${agent.summary}
-Purpose: ${agent.purpose}
-Inputs required: ${JSON.stringify(agent.inputs)}
-Current inputs filled by operator: ${JSON.stringify(currentValues)}
-
-Operating context:
-- South African primary school operations platform (R4,000/month standard baseline).
-- Strict POPIA Section 72 and learner data de-identification.
-- Human-in-the-Loop decision governance.
-
-Respond strictly with a JSON object in this exact structure:
-{
-  "strategicRecommendations": ["recommendation 1", "recommendation 2", "recommendation 3"],
-  "recommendedInputs": {
-    "key1": "value1",
-    "key2": "value2"
-  },
-  "complianceGuidance": ["guidance 1", "guidance 2"],
-  "suggestedNextSteps": ["step 1", "step 2"]
+  if (!PURPOSES.includes(req.purpose)) throw new ModelRefused("M3", "Refused: the purpose is not on the closed purpose list.");
+  if (req.agentPurposes && !req.agentPurposes.includes(req.purpose)) throw new ModelRefused("M3", `Refused: purpose "${req.purpose}" is not permitted for agent ${req.agentId ?? ""}.`.replace(" .", "."));
+  if (typeof req.system !== "string" || typeof req.prompt !== "string" || !req.prompt.trim()) throw new ModelRefused("M4", "Refused: a prompt is required.", 400);
+  if (!Array.isArray(req.history) || req.history.length > LIMITS.maxHistory || req.history.some((h) => h.role !== "user" && h.role !== "assistant" || typeof h.text !== "string")) throw new ModelRefused("M4", `Refused: history must be at most ${LIMITS.maxHistory} messages of text.`, 400);
+  const total = req.system.length + req.prompt.length + req.history.reduce((n, h) => n + h.text.length, 0);
+  if (total > LIMITS.maxInputChars) throw new ModelRefused("M4", `Refused: input exceeds ${LIMITS.maxInputChars} characters.`, 400);
+  const texts = [req.system, req.prompt, ...req.history.map((h) => h.text)];
+  const found = texts.flatMap((t) => detectPii(t));
+  if (found.some((f) => f.kind === "learner_identifier")) throw new ModelRefused("M2", "Refused: learner-level identifiers are never sent to a model.");
+  if (found.length) throw new ModelRefused("M2", `Refused: personal data detected (${[...new Set(found.map((f) => f.kind))].join(", ")}). Remove it and retry.`);
+  if ([req.prompt, ...req.history.map((h) => h.text)].some((t) => detectInjection(t).length)) throw new ModelRefused("M2", "Refused: the text looks like an attempt to override platform controls.");
 }
-Ensure recommendedInputs maps each input key (${agent.inputs.map((i) => i.key).join(", ")}) to a high-quality, realistic, POPIA-compliant South African operational value.`;
-      const response = await this.ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-      const parsed = JSON.parse(response.text || "{}");
-      return {
-        agentId: agent.id,
-        strategicRecommendations: Array.isArray(parsed.strategicRecommendations) && parsed.strategicRecommendations.length ? parsed.strategicRecommendations : this.getDeterministicRecommendations(agent, currentValues).strategicRecommendations,
-        recommendedInputs: typeof parsed.recommendedInputs === "object" && parsed.recommendedInputs !== null ? parsed.recommendedInputs : this.getDeterministicRecommendations(agent, currentValues).recommendedInputs,
-        complianceGuidance: Array.isArray(parsed.complianceGuidance) && parsed.complianceGuidance.length ? parsed.complianceGuidance : this.getDeterministicRecommendations(agent, currentValues).complianceGuidance,
-        suggestedNextSteps: Array.isArray(parsed.suggestedNextSteps) && parsed.suggestedNextSteps.length ? parsed.suggestedNextSteps : this.getDeterministicRecommendations(agent, currentValues).suggestedNextSteps,
-        toolsUsed,
-        generatedWith: "gemini-3.8-flash"
-      };
-    } catch (err) {
-      console.warn("Gemini recommendation call failed, using deterministic fallback:", err.message);
-      const rec = this.getDeterministicRecommendations(agent, currentValues);
-      return { ...rec, toolsUsed, generatedWith: "deterministic-fallback" };
-    }
+function checkToolResult(result) {
+  const s = JSON.stringify(result) ?? "";
+  if (s.length > LIMITS.maxToolResultChars) return "result too large; narrow the query";
+  const found = detectPii(s);
+  if (found.some((f) => f.kind === "learner_identifier")) return "withheld: contained learner-level identifiers";
+  if (found.length) return `withheld: contained personal data (${[...new Set(found.map((f) => f.kind))].join(", ")})`;
+  return null;
+}
+var numbersIn = (s) => [...s.matchAll(/\d[\d,]*(?:\.\d+)?/g)].map((m) => m[0].replace(/,/g, ""));
+function checkModelOutput(text, inputs) {
+  const allowed = inputs.flatMap(numbersIn);
+  const o = checkOutput(text, allowed, []);
+  return { text: o.text, flags: o.flags };
+}
+
+// src/server/models/providers.ts
+var PROVIDER_IDS = ["anthropic", "gemini"];
+var ProviderError = class extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
   }
-  /**
-   * Deterministic recommendations providing domain intelligence even without external network/keys
-   */
-  getDeterministicRecommendations(agent, currentValues = {}) {
-    const strategicRecommendations = [];
-    const recommendedInputs = {};
-    const complianceGuidance = [
-      "POPIA Section 72 Invariant: Ensure all learner and operational data remains resident in AWS Cape Town (af-south-1).",
-      "Law 02 (Human-in-the-Loop): All drafted artefacts require recorded human approval before publishing or outbound dispatch.",
-      "De-identification: Use pseudonymous learner identifiers (e.g. LRN-7402) rather than national ID numbers or full names."
-    ];
-    const suggestedNextSteps = [
-      'Click "Apply to Form" to populate the recommended operational parameters.',
-      "Review drafted output in Studio Artefacts viewer.",
-      agent.secondApprover ? "Route to second approver for required dual-signoff." : "Execute human ratification to commit to the audit ledger."
-    ];
-    for (const input of agent.inputs) {
-      if (currentValues[input.key]) {
-        recommendedInputs[input.key] = currentValues[input.key];
-        continue;
-      }
-      if (input.kind === "select" && input.options && input.options.length > 0) {
-        recommendedInputs[input.key] = input.options[0];
-      } else if (input.kind === "number") {
-        if (input.key.toLowerCase().includes("fee") || input.key.toLowerCase().includes("price") || input.key.toLowerCase().includes("rate")) {
-          recommendedInputs[input.key] = "4000";
-        } else if (input.key.toLowerCase().includes("count") || input.key.toLowerCase().includes("schools") || input.key.toLowerCase().includes("tenants")) {
-          recommendedInputs[input.key] = "12";
-        } else if (input.key.toLowerCase().includes("day") || input.key.toLowerCase().includes("term")) {
-          recommendedInputs[input.key] = "30";
-        } else {
-          recommendedInputs[input.key] = "10";
-        }
-      } else if (input.kind === "longtext") {
-        recommendedInputs[input.key] = `Comprehensive operational review for South African primary school deployment. Aligned with CAPS Curriculum standards, POPIA Section 72 data sovereignty, and SIAS tiered learning interventions under the R4,000/month model.`;
-      } else {
-        if (input.key.toLowerCase().includes("school")) {
-          recommendedInputs[input.key] = "Strelitzia Primary School (Western Cape)";
-        } else if (input.key.toLowerCase().includes("period") || input.key.toLowerCase().includes("date")) {
-          recommendedInputs[input.key] = "2026-Q1";
-        } else if (input.key.toLowerCase().includes("name") || input.key.toLowerCase().includes("title")) {
-          recommendedInputs[input.key] = `Infinite-AI Operational Directive - ${agent.name}`;
-        } else if (input.key.toLowerCase().includes("curr") || input.key.toLowerCase().includes("mon")) {
-          recommendedInputs[input.key] = "ZAR";
-        } else {
-          recommendedInputs[input.key] = `Standard ops baseline for ${agent.name}`;
-        }
-      }
-    }
-    if (agent.id.startsWith("OPS-FIN")) {
-      strategicRecommendations.push("Maintain R4,000/mo flat subscription fee per primary school tenant to uphold 85%+ gross margins.");
-      strategicRecommendations.push("Factor in Cape Town AWS data hosting overhead (approx R850/mo) and Gemini inference token margins.");
-      strategicRecommendations.push("Ensure South African VAT (15%) treatment is transparently represented in financial schedules.");
-    } else if (agent.id.startsWith("OPS-SEC") || agent.id.startsWith("OPS-LEG")) {
-      strategicRecommendations.push("Confirm data residency within the Republic of South Africa pursuant to POPIA Section 72.");
-      strategicRecommendations.push("Verify student de-identification pipeline strips 13-digit SA ID numbers prior to any LLM ingestion.");
-      strategicRecommendations.push("Ensure Information Officer registration with the South African Information Regulator is active.");
-    } else if (agent.id.startsWith("OPS-CURR") || agent.id.startsWith("OPS-PROD")) {
-      strategicRecommendations.push("Align learner outcomes with South African Department of Basic Education (DBE) CAPS requirements.");
-      strategicRecommendations.push("Structure tiered learning plans strictly within SIAS (Screening, Identification, Assessment & Support) guidelines.");
-      strategicRecommendations.push("Support both English and Afrikaans primary school language instructional media.");
-    } else {
-      strategicRecommendations.push(`Optimize ${agent.name} inputs for standardized South African primary school operations.`);
-      strategicRecommendations.push("Review department handoffs and ensure all downstream ledger entries are cryptographic and tamper-evident.");
-      strategicRecommendations.push("Verify operational outputs can export cleanly to PDF, DOCX, and XLSX formats.");
-    }
+};
+async function post(ctx, url, headers, body) {
+  let res;
+  try {
+    res = await ctx.fetchImpl(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(3e4) });
+  } catch {
+    throw new ProviderError(0, "provider unreachable");
+  }
+  if (!res.ok) throw new ProviderError(res.status, `provider returned ${res.status}`);
+  return await res.json().catch(() => ({}));
+}
+var JSON_ONLY = "\n\nRespond with a single JSON object and nothing else.";
+var anthropic = {
+  id: "anthropic",
+  label: "Anthropic (Claude)",
+  keyEnv: "ANTHROPIC_API_KEY",
+  modelEnv: "ANTHROPIC_MODEL",
+  baseEnv: "ANTHROPIC_API_BASE",
+  defaultModel: "claude-sonnet-5-5",
+  defaultBase: "https://api.anthropic.com",
+  async step(req, ctx) {
+    const messages = req.messages.map((m) => {
+      if (m.role === "user") return { role: "user", content: m.text };
+      if (m.role === "assistant") return { role: "assistant", content: [...m.text ? [{ type: "text", text: m.text }] : [], ...m.toolCalls.map((c) => ({ type: "tool_use", id: c.id, name: c.name, input: c.args }))] };
+      return { role: "user", content: m.results.map((r) => ({ type: "tool_result", tool_use_id: r.id, content: JSON.stringify(r.result) })) };
+    });
+    const body = { model: req.model, max_tokens: req.maxTokens, system: req.system + (req.json ? JSON_ONLY : ""), messages };
+    if (req.tools.length) body.tools = req.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters }));
+    const j = await post(ctx, `${ctx.base}/v1/messages`, { "x-api-key": ctx.apiKey, "anthropic-version": "2023-06-01" }, body);
+    const blocks = Array.isArray(j.content) ? j.content : [];
+    const usage = j.usage ?? {};
     return {
-      agentId: agent.id,
-      strategicRecommendations,
-      recommendedInputs,
-      complianceGuidance,
-      suggestedNextSteps
+      text: blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join(""),
+      toolCalls: blocks.filter((b) => b.type === "tool_use").map((b, i) => ({ id: b.id ?? `call_${i}`, name: b.name ?? "", args: b.input ?? {} })),
+      inputTokens: usage.input_tokens,
+      outputTokens: usage.output_tokens
     };
   }
-  /**
-   * Fallback reasoning engine for Copilot when API key is not present
-   */
-  fallbackCopilotResponse(message, store2, reason) {
-    const invocations = [];
-    const lower = message.toLowerCase();
-    if (lower.includes("economic") || lower.includes("margin") || lower.includes("cost") || lower.includes("revenue") || lower.includes("r4,000") || lower.includes("r4000")) {
-      const matchSchools = message.match(/\b(\d+)\s*schools?/i);
-      const schools = matchSchools ? parseInt(matchSchools[1], 10) : 15;
-      const result = {
-        modelParameters: {
-          activeSchools: schools,
-          monthlyFeeZar: 4e3,
-          llmTokensPerSchoolPerMonth: 15e4,
-          serverCostPerMonthZar: 850,
-          region: "AWS Cape Town (af-south-1)"
-        },
-        financialSummary: {
-          monthlyRecurringRevenueZar: schools * 4e3,
-          annualRecurringRevenueZar: schools * 4e3 * 12,
-          totalDirectCostZar: 850 + Math.round(schools * 0.55 * 100) / 100,
-          grossMarginPercent: `${Math.round((schools * 4e3 - 850) / (schools * 4e3) * 1e3) / 10}%`,
-          viabilityStatus: "HIGHLY_VIABLE"
-        }
-      };
-      invocations.push({
-        name: "calculate_school_unit_economics",
-        args: { activeSchools: schools, monthlyFeeZar: 4e3 },
-        result
-      });
-      return {
-        text: `### South African Primary School Unit Economics Analysis
+};
+var geminiSchema = (s) => ({
+  type: s.type.toUpperCase(),
+  ...s.description ? { description: s.description } : {},
+  ...s.enum ? { enum: s.enum } : {},
+  ...s.properties ? { properties: Object.fromEntries(Object.entries(s.properties).map(([k, v2]) => [k, geminiSchema(v2)])) } : {},
+  ...s.required ? { required: s.required } : {},
+  ...s.items ? { items: geminiSchema(s.items) } : {}
+});
+var gemini = {
+  id: "gemini",
+  label: "Google Gemini",
+  keyEnv: "GEMINI_API_KEY",
+  modelEnv: "GEMINI_MODEL",
+  baseEnv: "GEMINI_API_BASE",
+  defaultModel: "gemini-3.8-flash",
+  defaultBase: "https://generativelanguage.googleapis.com",
+  async step(req, ctx) {
+    const contents = req.messages.map((m) => {
+      if (m.role === "user") return { role: "user", parts: [{ text: m.text }] };
+      if (m.role === "assistant") return { role: "model", parts: [...m.text ? [{ text: m.text }] : [], ...m.toolCalls.map((c) => ({ functionCall: { name: c.name, args: c.args } }))] };
+      return { role: "user", parts: m.results.map((r) => ({ functionResponse: { name: r.name, response: r.result } })) };
+    });
+    const body = {
+      systemInstruction: { parts: [{ text: req.system }] },
+      contents,
+      generationConfig: { maxOutputTokens: req.maxTokens, ...req.json ? { responseMimeType: "application/json" } : {} }
+    };
+    if (req.tools.length) body.tools = [{ functionDeclarations: req.tools.map((t) => ({ name: t.name, description: t.description, parameters: geminiSchema(t.parameters) })) }];
+    const j = await post(ctx, `${ctx.base}/v1beta/models/${encodeURIComponent(req.model)}:generateContent`, { "x-goog-api-key": ctx.apiKey }, body);
+    const cand = Array.isArray(j.candidates) ? j.candidates[0] : void 0;
+    const parts = cand?.content?.parts ?? [];
+    const usage = j.usageMetadata ?? {};
+    return {
+      text: parts.map((p) => p.text ?? "").join(""),
+      toolCalls: parts.filter((p) => p.functionCall).map((p, i) => ({ id: `call_${i}`, name: p.functionCall?.name ?? "", args: p.functionCall?.args ?? {} })),
+      inputTokens: usage.promptTokenCount,
+      outputTokens: usage.candidatesTokenCount
+    };
+  }
+};
+var ADAPTERS = { anthropic, gemini };
+var LOOPBACK2 = /* @__PURE__ */ new Set(["127.0.0.1", "::1", "localhost", "[::1]"]);
+function validateBase(name, value) {
+  let u;
+  try {
+    u = new URL(value);
+  } catch {
+    throw new Error(`${name} is not a valid URL`);
+  }
+  if (u.protocol !== "https:" && !(u.protocol === "http:" && LOOPBACK2.has(u.hostname))) throw new Error(`${name} must be https (plain http is only allowed for localhost)`);
+  return value.replace(/\/+$/, "");
+}
+function readProviders(env2) {
+  return PROVIDER_IDS.map((id) => {
+    const a = ADAPTERS[id];
+    const key = env2[a.keyEnv]?.trim();
+    const model = env2[a.modelEnv]?.trim() || a.defaultModel;
+    if (!/^[A-Za-z0-9._:-]{1,80}$/.test(model)) throw new Error(`${a.modelEnv} has characters a model name cannot contain`);
+    const base = validateBase(a.baseEnv, env2[a.baseEnv]?.trim() || a.defaultBase);
+    return { id, label: a.label, configured: Boolean(key), model, keyEnv: a.keyEnv, modelEnv: a.modelEnv, baseEnv: a.baseEnv, base, apiKey: key || void 0 };
+  });
+}
+function readOrder(env2) {
+  const raw = (env2.OPS_MODEL_ORDER ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (!raw.length) return [...PROVIDER_IDS];
+  const bad2 = raw.filter((r) => !PROVIDER_IDS.includes(r));
+  if (bad2.length) throw new Error(`OPS_MODEL_ORDER names an unknown provider: ${bad2.join(", ")} (known: ${PROVIDER_IDS.join(", ")})`);
+  return [...new Set(raw)];
+}
+var SETUP = {
+  anthropic: {
+    where: "Anthropic Console",
+    url: "https://console.anthropic.com/",
+    steps: [
+      "Sign in to the Anthropic Console and create an API key for this platform. Use a key dedicated to it, so it can be revoked on its own.",
+      "Put it in the server's .env as ANTHROPIC_API_KEY (never in the browser, the repository or a chat).",
+      "Optional: set ANTHROPIC_MODEL to pin the model. Leave it out to use the platform default.",
+      'Restart the server, then return here: the card will show "Configured".'
+    ]
+  },
+  gemini: {
+    where: "Google AI Studio",
+    url: "https://aistudio.google.com/apikey",
+    steps: [
+      "Sign in to Google AI Studio and create an API key for this platform. Use a key dedicated to it.",
+      "Put it in the server's .env as GEMINI_API_KEY (never in the browser, the repository or a chat).",
+      "Optional: set GEMINI_MODEL to pin the model. Leave it out to use the platform default.",
+      'Restart the server, then return here: the card will show "Configured".'
+    ]
+  }
+};
+
+// src/server/models/schema.ts
+var Type = { OBJECT: "object", STRING: "string", INTEGER: "integer", NUMBER: "number", BOOLEAN: "boolean", ARRAY: "array" };
+
+// src/server/models/local.ts
+function getDeterministicRecommendations(agent, currentValues = {}) {
+  const strategicRecommendations = [];
+  const recommendedInputs = {};
+  const complianceGuidance = [
+    "POPIA Section 72 Invariant: Ensure all learner and operational data remains resident in AWS Cape Town (af-south-1).",
+    "Law 02 (Human-in-the-Loop): All drafted artefacts require recorded human approval before publishing or outbound dispatch.",
+    "De-identification: Use pseudonymous learner identifiers (e.g. LRN-7402) rather than national ID numbers or full names."
+  ];
+  const suggestedNextSteps = [
+    'Click "Apply to Form" to populate the recommended operational parameters.',
+    "Review drafted output in Studio Artefacts viewer.",
+    agent.secondApprover ? "Route to second approver for required dual-signoff." : "Execute human ratification to commit to the audit ledger."
+  ];
+  for (const input of agent.inputs) {
+    if (currentValues[input.key]) {
+      recommendedInputs[input.key] = currentValues[input.key];
+      continue;
+    }
+    if (input.kind === "select" && input.options && input.options.length > 0) {
+      recommendedInputs[input.key] = input.options[0];
+    } else if (input.kind === "number") {
+      if (input.key.toLowerCase().includes("fee") || input.key.toLowerCase().includes("price") || input.key.toLowerCase().includes("rate")) {
+        recommendedInputs[input.key] = "4000";
+      } else if (input.key.toLowerCase().includes("count") || input.key.toLowerCase().includes("schools") || input.key.toLowerCase().includes("tenants")) {
+        recommendedInputs[input.key] = "12";
+      } else if (input.key.toLowerCase().includes("day") || input.key.toLowerCase().includes("term")) {
+        recommendedInputs[input.key] = "30";
+      } else {
+        recommendedInputs[input.key] = "10";
+      }
+    } else if (input.kind === "longtext") {
+      recommendedInputs[input.key] = `Comprehensive operational review for South African primary school deployment. Aligned with CAPS Curriculum standards, POPIA Section 72 data sovereignty, and SIAS tiered learning interventions under the R4,000/month model.`;
+    } else {
+      if (input.key.toLowerCase().includes("school")) {
+        recommendedInputs[input.key] = "Strelitzia Primary School (Western Cape)";
+      } else if (input.key.toLowerCase().includes("period") || input.key.toLowerCase().includes("date")) {
+        recommendedInputs[input.key] = "2026-Q1";
+      } else if (input.key.toLowerCase().includes("name") || input.key.toLowerCase().includes("title")) {
+        recommendedInputs[input.key] = `Infinite-AI Operational Directive - ${agent.name}`;
+      } else if (input.key.toLowerCase().includes("curr") || input.key.toLowerCase().includes("mon")) {
+        recommendedInputs[input.key] = "ZAR";
+      } else {
+        recommendedInputs[input.key] = `Standard ops baseline for ${agent.name}`;
+      }
+    }
+  }
+  if (agent.id.startsWith("OPS-FIN")) {
+    strategicRecommendations.push("Maintain R4,000/mo flat subscription fee per primary school tenant to uphold 85%+ gross margins.");
+    strategicRecommendations.push("Factor in Cape Town AWS data hosting overhead (approx R850/mo) and Gemini inference token margins.");
+    strategicRecommendations.push("Ensure South African VAT (15%) treatment is transparently represented in financial schedules.");
+  } else if (agent.id.startsWith("OPS-SEC") || agent.id.startsWith("OPS-LEG")) {
+    strategicRecommendations.push("Confirm data residency within the Republic of South Africa pursuant to POPIA Section 72.");
+    strategicRecommendations.push("Verify student de-identification pipeline strips 13-digit SA ID numbers prior to any LLM ingestion.");
+    strategicRecommendations.push("Ensure Information Officer registration with the South African Information Regulator is active.");
+  } else if (agent.id.startsWith("OPS-CURR") || agent.id.startsWith("OPS-PROD")) {
+    strategicRecommendations.push("Align learner outcomes with South African Department of Basic Education (DBE) CAPS requirements.");
+    strategicRecommendations.push("Structure tiered learning plans strictly within SIAS (Screening, Identification, Assessment & Support) guidelines.");
+    strategicRecommendations.push("Support both English and Afrikaans primary school language instructional media.");
+  } else {
+    strategicRecommendations.push(`Optimize ${agent.name} inputs for standardized South African primary school operations.`);
+    strategicRecommendations.push("Review department handoffs and ensure all downstream ledger entries are cryptographic and tamper-evident.");
+    strategicRecommendations.push("Verify operational outputs can export cleanly to PDF, DOCX, and XLSX formats.");
+  }
+  return {
+    agentId: agent.id,
+    strategicRecommendations,
+    recommendedInputs,
+    complianceGuidance,
+    suggestedNextSteps
+  };
+}
+function fallbackCopilot(message, collections, reason) {
+  const invocations = [];
+  const lower = message.toLowerCase();
+  if (lower.includes("economic") || lower.includes("margin") || lower.includes("cost") || lower.includes("revenue") || lower.includes("r4,000") || lower.includes("r4000")) {
+    const matchSchools = message.match(/\b(\d+)\s*schools?/i);
+    const schools = matchSchools ? parseInt(matchSchools[1], 10) : 15;
+    const result = {
+      modelParameters: {
+        activeSchools: schools,
+        monthlyFeeZar: 4e3,
+        llmTokensPerSchoolPerMonth: 15e4,
+        serverCostPerMonthZar: 850,
+        region: "AWS Cape Town (af-south-1)"
+      },
+      financialSummary: {
+        monthlyRecurringRevenueZar: schools * 4e3,
+        annualRecurringRevenueZar: schools * 4e3 * 12,
+        totalDirectCostZar: 850 + Math.round(schools * 0.55 * 100) / 100,
+        grossMarginPercent: `${Math.round((schools * 4e3 - 850) / (schools * 4e3) * 1e3) / 10}%`,
+        viabilityStatus: "HIGHLY_VIABLE"
+      }
+    };
+    invocations.push({
+      name: "calculate_school_unit_economics",
+      args: { activeSchools: schools, monthlyFeeZar: 4e3 },
+      result
+    });
+    return {
+      text: `### South African Primary School Unit Economics Analysis
 - **Active School Count**: ${schools} primary schools
 - **Subscription Model**: R4,000/month flat fee
 - **Monthly Recurring Revenue (MRR)**: R${(schools * 4e3).toLocaleString()} ZAR
@@ -2681,48 +4762,46 @@ Ensure recommendedInputs maps each input key (${agent.inputs.map((i) => i.key).j
 - **AWS Cape Town Infra Overhead**: R850/month
 - **Blended Gross Margin**: **${result.financialSummary.grossMarginPercent}**
 - **Sovereignty & Compliance**: In-country AWS Cape Town hosting adheres to POPIA Section 72 without extra cross-border data transfer tariffs.`,
-        toolInvocations: invocations
-      };
-    }
-    if (lower.includes("warehouse") || lower.includes("store") || lower.includes("records") || lower.includes("data")) {
-      const data = store2.load();
-      const collections = Object.keys(data);
-      invocations.push({
-        name: "query_data_warehouse",
-        args: { collection: "all", limit: 5 },
-        result: { collections, status: "operational" }
-      });
-      return {
-        text: `### Data Warehouse Inspection
+      toolInvocations: invocations
+    };
+  }
+  if (lower.includes("warehouse") || lower.includes("store") || lower.includes("records") || lower.includes("data")) {
+    invocations.push({
+      name: "query_data_warehouse",
+      args: { collection: "all", limit: 5 },
+      result: { collections, status: "operational" }
+    });
+    return {
+      text: `### Data Warehouse Inspection
 - **Operational Collections**: ${collections.join(", ") || "Initialized (clean state)"}
 - **Storage Layer**: Local append-only ledger & file store with SHA-256 sequencing.
 - **POPIA Invariant**: Learner PII de-identified before warehouse persistence.`,
-        toolInvocations: invocations
-      };
-    }
-    if (lower.includes("agent") || lower.includes("ops-")) {
-      const match = message.match(/OPS-[A-Z]+-\d+/i);
-      const agentId = match ? match[0].toUpperCase() : "OPS-EXEC-01";
-      const agent = agentById(agentId);
-      if (agent) {
-        invocations.push({
-          name: "inspect_department_agent",
-          args: { agentId },
-          result: { id: agent.id, name: agent.name, purpose: agent.purpose, framework: agent.framework }
-        });
-        return {
-          text: `### Specialist Agent Inspection: ${agent.id} (${agent.name})
+      toolInvocations: invocations
+    };
+  }
+  if (lower.includes("agent") || lower.includes("ops-")) {
+    const match = message.match(/OPS-[A-Z]+-\d+/i);
+    const agentId = match ? match[0].toUpperCase() : "OPS-EXEC-01";
+    const agent = agentById(agentId);
+    if (agent) {
+      invocations.push({
+        name: "inspect_department_agent",
+        args: { agentId },
+        result: { id: agent.id, name: agent.name, purpose: agent.purpose, framework: agent.framework }
+      });
+      return {
+        text: `### Specialist Agent Inspection: ${agent.id} (${agent.name})
 - **Department Framework**: ${agent.framework}
 - **Purpose**: ${agent.purpose}
 - **Required Inputs**: ${agent.inputs.map((i) => i.label).join(", ")}
 - **Supported Formats**: ${agent.formats.join(", ")}
 - **Second Approver**: ${agent.secondApprover ? "Required (Dual-authorization)" : "Single human approver"}`,
-          toolInvocations: invocations
-        };
-      }
+        toolInvocations: invocations
+      };
     }
-    return {
-      text: `### Infinite AI Operations Platform
+  }
+  return {
+    text: `### Infinite AI Operations Platform
 The platform is running with full generative AI capabilities and tool integration (model: \`gemini-3.8-flash\`).
 Available generative tools:
 1. \`query_data_warehouse\`: Query contracts, schools, policies, and documents.
@@ -2732,32 +4811,605 @@ Available generative tools:
 5. \`generate_task_recommendations\`: Generate suggestions and parameter presets for any agent task.
 
 ${reason ? `*(Operating in local deterministic reasoning mode: ${reason})*` : ""}`,
-      toolInvocations: invocations
-    };
+    toolInvocations: invocations
+  };
+}
+
+// src/server/models/tools.ts
+var TOOLS = [
+  { name: "query_data_warehouse", description: "Inspect the data warehouse. Always returns collection names and record counts. Returns record contents only for collections an administrator has allowed for model access (none by default), and only de-identified.", parameters: { type: Type.OBJECT, properties: { collection: { type: Type.STRING, description: 'A collection name, or "all" for counts of every collection' }, query: { type: Type.STRING, description: "Optional keyword filter (allowed collections only)" }, limit: { type: Type.INTEGER, description: "Maximum records to return (default 10, at most 20)" } }, required: ["collection"] } },
+  { name: "calculate_school_unit_economics", description: "Computes illustrative unit economics for a number of primary schools from the inputs given. Inputs left out use stated defaults; treat the result as a draft model, not a sourced figure.", parameters: { type: Type.OBJECT, properties: { activeSchools: { type: Type.INTEGER, description: "Number of subscribed primary schools" }, monthlyFeeZar: { type: Type.NUMBER, description: "Monthly subscription fee per school in ZAR (default 4000)" }, llmTokensPerSchoolPerMonth: { type: Type.INTEGER, description: "Average monthly model tokens per school (default 150000)" }, serverCostPerMonthZar: { type: Type.NUMBER, description: "Fixed monthly hosting and storage cost in ZAR (default 850)" } }, required: ["activeSchools"] } },
+  { name: "audit_compliance_and_guardrails", description: "Checks text for personal identifiers, South African ID numbers, instruction-override patterns and cross-border transfer indicators. A screening aid, not legal advice.", parameters: { type: Type.OBJECT, properties: { content: { type: Type.STRING, description: "Text to check" }, checkPopiaSection72: { type: Type.BOOLEAN, description: "Also check for cross-border transfer indicators" }, checkStudentPii: { type: Type.BOOLEAN, description: "Also check for learner identifiers" }, checkSiasTierSafeguards: { type: Type.BOOLEAN, description: "Reserved" } }, required: ["content"] } },
+  { name: "inspect_department_agent", description: "Returns a specialist agent contract (purpose, inputs, formats, approvers, framework).", parameters: { type: Type.OBJECT, properties: { agentId: { type: Type.STRING, description: "The agent id, for example OPS-FIN-01" } }, required: ["agentId"] } },
+  { name: "generate_task_recommendations", description: "Returns illustrative suggestions, input presets and next steps for an agent task. Presets are placeholders to edit, not facts.", parameters: { type: Type.OBJECT, properties: { agentId: { type: Type.STRING, description: "The agent id" }, contextSummary: { type: Type.STRING, description: "Brief context or objective" } }, required: ["agentId"] } }
+];
+var TOOL_NAMES = new Set(TOOLS.map((t) => t.name));
+function readReadable(env2) {
+  const names = (env2.OPS_MODEL_READABLE_COLLECTIONS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const never = names.filter((n) => NEVER_MODEL_READABLE.has(n));
+  if (never.length) throw new Error(`OPS_MODEL_READABLE_COLLECTIONS may never include: ${never.join(", ")}`);
+  const bad2 = names.filter((n) => !/^[a-z0-9_]{1,64}$/.test(n));
+  if (bad2.length) throw new Error(`OPS_MODEL_READABLE_COLLECTIONS has an invalid collection name: ${bad2.join(", ")}`);
+  return new Set(names);
+}
+var slim = (r) => Object.fromEntries(Object.entries(r).filter(([, v2]) => typeof v2 === "number" || typeof v2 === "boolean" || typeof v2 === "string" && v2.length <= 200));
+async function executeTool(name, args, ctx) {
+  switch (name) {
+    case "query_data_warehouse": {
+      const collection = String(args.collection || "all");
+      const query = typeof args.query === "string" ? args.query.toLowerCase() : "";
+      const limit = typeof args.limit === "number" ? Math.max(1, Math.min(Math.floor(args.limit), 20)) : 10;
+      const all = ctx.load();
+      const counts = Object.fromEntries(Object.entries(all).filter(([c]) => !NEVER_MODEL_READABLE.has(c)).map(([c, v2]) => [c, v2.length]));
+      if (collection === "all" || !ctx.readable.has(collection)) {
+        return { collection, counts, note: collection === "all" || NEVER_MODEL_READABLE.has(collection) || !(collection in all) ? void 0 : "Contents of this collection are not available to models; only counts are." };
+      }
+      const rows2 = (all[collection] ?? []).map(slim).filter((r) => !query || JSON.stringify(r).toLowerCase().includes(query)).slice(0, limit);
+      const clean = JSON.parse(deidentify(JSON.stringify(rows2), ["tool:query_data_warehouse"]).text);
+      return { collection, counts, records: clean };
+    }
+    case "calculate_school_unit_economics": {
+      const activeSchools = Number(args.activeSchools) || 1;
+      const monthlyFeeZar = Number(args.monthlyFeeZar) || 4e3;
+      const llmTokens = Number(args.llmTokensPerSchoolPerMonth) || 15e4;
+      const serverCostZar = Number(args.serverCostPerMonthZar) || 850;
+      const usdToZar = 18.5;
+      const blendedCostPerTokenUsd = 2e-7;
+      const tokenCostPerSchoolUsd = llmTokens * blendedCostPerTokenUsd;
+      const tokenCostPerSchoolZar = Math.round(tokenCostPerSchoolUsd * usdToZar * 100) / 100;
+      const totalLlmCostZar = Math.round(tokenCostPerSchoolZar * activeSchools * 100) / 100;
+      const monthlyRevenueZar = activeSchools * monthlyFeeZar;
+      const annualRecurringRevenueZar = monthlyRevenueZar * 12;
+      const totalDirectCostZar = serverCostZar + totalLlmCostZar;
+      const monthlyGrossProfitZar = monthlyRevenueZar - totalDirectCostZar;
+      const grossMarginPercent = monthlyRevenueZar > 0 ? Math.round(monthlyGrossProfitZar / monthlyRevenueZar * 1e3) / 10 : 0;
+      const breakEvenSchools = Math.ceil(serverCostZar / (monthlyFeeZar - tokenCostPerSchoolZar));
+      return {
+        modelParameters: {
+          activeSchools,
+          monthlyFeeZar,
+          llmTokensPerSchoolPerMonth: llmTokens,
+          serverCostPerMonthZar: serverCostZar,
+          region: "AWS Cape Town (af-south-1) - In-Country Data Residency"
+        },
+        financialSummary: {
+          monthlyRecurringRevenueZar: monthlyRevenueZar,
+          annualRecurringRevenueZar,
+          totalDirectCostZar,
+          tokenCostPerSchoolZar,
+          monthlyGrossProfitZar,
+          grossMarginPercent: `${grossMarginPercent}%`,
+          breakEvenSchools,
+          viabilityStatus: grossMarginPercent > 70 ? "HIGHLY_VIABLE" : grossMarginPercent > 50 ? "VIABLE" : "SUBSIDY_REQUIRED"
+        },
+        southAfricanSchoolViability: {
+          targetQuintile: "Quintile 4-5 and Independent Primary Schools",
+          affordabilityBenchmark: "R4,000/month covers full multi-user ops & CAPS analytics",
+          popiaComplianceSurcharge: "R0 (Included in base tier with local data residency)"
+        }
+      };
+    }
+    case "audit_compliance_and_guardrails": {
+      const content = String(args.content || "");
+      const piiIssues = detectPii(content);
+      const injectionIssues = detectInjection(content);
+      const checkPopia72 = args.checkPopiaSection72 !== false;
+      const popia72Violations = [];
+      const crossBorderKeywords = ["us-east-1", "openai foreign server", "unencrypted s3 us", "eu central cross-border without agreement"];
+      for (const kw of crossBorderKeywords) {
+        if (content.toLowerCase().includes(kw)) {
+          popia72Violations.push(`Cross-border data transfer flagged (${kw}): POPIA Section 72 requires adequate safeguards, binding corporate rules, or explicit consent.`);
+        }
+      }
+      const saIdRegex = /\b\d{13}\b/g;
+      const saIdMatches = content.match(saIdRegex) || [];
+      return {
+        contentLength: content.length,
+        compliant: piiIssues.length === 0 && injectionIssues.length === 0 && popia72Violations.length === 0 && saIdMatches.length === 0,
+        piiFindings: piiIssues,
+        saIdNumbersFound: saIdMatches.length,
+        injectionFindings: injectionIssues,
+        popiaSection72Findings: popia72Violations,
+        remediationAdvice: [
+          ...piiIssues.length ? ["Strip learner names, cell numbers, and email addresses prior to drafting."] : [],
+          ...saIdMatches.length ? ["Replace 13-digit SA national ID numbers with pseudonymous learner UUIDs."] : [],
+          ...popia72Violations.length ? ["Ensure cloud data residency remains within AWS Cape Town (af-south-1)."] : [],
+          "Enforce Law 02: Human-in-the-Loop second approver sign-off on all drafted operational documents."
+        ]
+      };
+    }
+    case "inspect_department_agent": {
+      const id = String(args.agentId || "").trim();
+      const agent = agentById(id);
+      if (!agent) {
+        return { error: `Agent '${id}' not found in the 16 Infinite-AI departments.` };
+      }
+      return {
+        id: agent.id,
+        name: agent.name,
+        purpose: agent.purpose,
+        summary: agent.summary,
+        framework: agent.framework,
+        inputs: agent.inputs.map((i) => ({ key: i.key, label: i.label, kind: i.kind, required: i.required })),
+        formats: agent.formats,
+        secondApprover: agent.secondApprover,
+        lawsCovered: ["Law 01 (De-identification)", "Law 02 (Human Ratification)", "Law 03 (POPIA s72 Residency)"]
+      };
+    }
+    case "generate_task_recommendations": {
+      const id = String(args.agentId || "").trim();
+      const agent = agentById(id);
+      if (!agent) return { error: `Agent '${id}' not found.` };
+      const recs = getDeterministicRecommendations(agent);
+      return { ...recs, agentId: id };
+    }
+    default:
+      return { error: `Unknown tool: ${name}` };
+  }
+}
+
+// src/server/models/hub.ts
+var ModelUnavailable = class extends Error {
+  constructor() {
+    super(...arguments);
+    this.status = 502;
   }
 };
+var sha = (s) => createHash2("sha256").update(s).digest("hex");
+var today = (iso) => iso.slice(0, 10);
+var ModelHub = class {
+  /** Throws on a bad configuration (unknown provider in the order, an unreadable collection on the never-list, a bad base URL). */
+  constructor(o) {
+    this.store = o.store;
+    this.providers = readProviders(o.env);
+    this.order = readOrder(o.env);
+    this.readable = readReadable(o.env);
+    const budget = o.env.OPS_MODEL_DAILY_CALLS?.trim();
+    this.dailyBudget = budget ? Number(budget) : 500;
+    if (!Number.isInteger(this.dailyBudget) || this.dailyBudget < 1) throw new Error("OPS_MODEL_DAILY_CALLS must be a whole number of at least 1");
+    this.limiter = o.limiter ?? new RateLimiter(20, 6e4);
+    this.fetchImpl = o.fetchImpl ?? fetch;
+  }
+  // ---------------------------------------------------------------- status
+  cfg(id) {
+    return this.providers.find((p) => p.id === id);
+  }
+  latestAttestation(id) {
+    return this.store.list("model_attestations").filter((r) => r.provider === id).at(-1);
+  }
+  stateOf(p) {
+    if (!p.configured) return "not_configured";
+    const a = this.latestAttestation(p.id);
+    if (!a || a.status !== "ATTESTED") return "needs_attestation";
+    return a.model === p.model ? "ready" : "reattest";
+  }
+  /** Providers that may be called, in routing order (rule M5). */
+  ready(only) {
+    return this.order.filter((id) => !only || id === only).map((id) => this.cfg(id)).filter((p) => this.stateOf(p) === "ready");
+  }
+  entriesToday(action, prefix) {
+    const ledger = this.store.list("ledger");
+    const day = today((/* @__PURE__ */ new Date()).toISOString());
+    const out = [];
+    for (let i = ledger.length - 1; i >= 0; i--) {
+      const e = ledger[i];
+      if (today(String(e.at)) < day) break;
+      if (e.action === action && (!prefix || String(e.subject).startsWith(prefix))) out.push(e);
+    }
+    return out;
+  }
+  callsToday(id) {
+    return this.entriesToday("model.request", `${id}:`).length;
+  }
+  status() {
+    const tests = this.store.list("ledger").filter((e) => e.action === "model.test");
+    const providers = this.order.map((id) => {
+      const p = this.cfg(id);
+      const a = this.latestAttestation(id);
+      const t = tests.filter((e) => String(e.subject) === `${id}:${p.model}`).at(-1);
+      const d = t?.detail ?? {};
+      const ok = a?.status === "ATTESTED";
+      return {
+        id,
+        label: p.label,
+        state: this.stateOf(p),
+        configured: p.configured,
+        model: p.model,
+        keyEnv: p.keyEnv,
+        modelEnv: p.modelEnv,
+        attestation: ok ? { by: String(a.by), at: String(a.at), note: String(a.note), model: String(a.model) } : null,
+        lastTest: t ? { ok: d.ok === true, at: String(t.at), ms: Number(d.ms ?? 0), error: d.error } : null,
+        callsToday: this.callsToday(id),
+        setup: { ...SETUP[id], envExample: [`${p.keyEnv}=<paste the key here>`, `${p.modelEnv}=${p.model}`, `OPS_MODEL_ORDER=${this.order.join(",")}`] }
+      };
+    });
+    const responses = this.entriesToday("model.response");
+    return {
+      providers,
+      order: this.order,
+      rules: RULES2,
+      limits: { ...LIMITS, dailyCallsPerProvider: this.dailyBudget },
+      readableCollections: [...this.readable],
+      toolNames: [...TOOL_NAMES],
+      usage: { calls: this.entriesToday("model.request").length, inputTokens: responses.reduce((n, e) => n + Number(e.detail.inputTokens ?? 0), 0), outputTokens: responses.reduce((n, e) => n + Number(e.detail.outputTokens ?? 0), 0) }
+    };
+  }
+  // ----------------------------------------------------------- attestation
+  /** A named person confirms they reviewed the provider's terms for this exact model. Recorded in the warehouse and the ledger. */
+  async attest(id, by, note) {
+    const p = this.cfg(id);
+    if (!p.configured) throw new ModelRefused("M5", `${p.label} has no key configured (${p.keyEnv}). Add it and restart first.`, 409);
+    const n = (note ?? "").trim();
+    if (n.length < 10 || n.length > 300) throw new ModelRefused("M5", `Say what you reviewed, in 10 to 300 characters (for example: "Reviewed the provider's data-processing terms and retention settings").`, 400);
+    if (detectPii(n).length) throw new ModelRefused("M2", "The note must not contain personal data.", 400);
+    const rec = { id: newId("att"), provider: id, model: p.model, status: "ATTESTED", by: by ?? "open-dev", note: n, at: (/* @__PURE__ */ new Date()).toISOString() };
+    this.store.append("model_attestations", rec);
+    await this.audit("model.attested", rec.by, `${id}:${p.model}`, { note: n });
+    return rec;
+  }
+  async revoke(id, by, reason) {
+    const r = (reason ?? "").trim();
+    if (r.length < 5 || r.length > 300) throw new ModelRefused("M5", "Give a reason, in 5 to 300 characters.", 400);
+    if (detectPii(r).length) throw new ModelRefused("M2", "The reason must not contain personal data.", 400);
+    const rec = { id: newId("att"), provider: id, model: this.cfg(id).model, status: "REVOKED", by: by ?? "open-dev", note: r, at: (/* @__PURE__ */ new Date()).toISOString() };
+    this.store.append("model_attestations", rec);
+    await this.audit("model.revoked", rec.by, `${id}:${rec.model}`, { reason: r });
+    return rec;
+  }
+  // ----------------------------------------------------------------- audit
+  async audit(action, actor, subject, detail) {
+    const last = this.store.list("ledger").at(-1);
+    await appendLedger(this.store, { orgId: "infinite-ai", actor, action, subject, detail }, Number(last?.seq ?? 0), null);
+  }
+  /** Rule M7: if the audit cannot be written, the model is not called (or its answer is withheld). */
+  async auditStrict(action, actor, subject, detail) {
+    try {
+      await this.audit(action, actor, subject, detail);
+    } catch {
+      throw new ModelRefused("M7", "The audit ledger could not be written, so the model was not used.", 503);
+    }
+  }
+  // -------------------------------------------------------------- the door
+  /**
+   * Every model call in the platform goes through here (rule M10). The order is fixed: rules M1-M4, a ready provider (M5),
+   * rate and budget (M6), audit before the call (M7), the call, the output scan (M8), audit after.
+   */
+  async execute(req, useTools, only) {
+    const who = req.actor ?? "open";
+    const refuse = async (e, subject = "none") => {
+      await this.audit("model.refused", who, subject, { rule: e.rule, capability: req.capability, purpose: req.purpose }).catch(() => void 0);
+      throw e;
+    };
+    try {
+      checkRequest(req);
+    } catch (e) {
+      if (e instanceof ModelRefused) return refuse(e);
+      throw e;
+    }
+    const allowed = req.agentProviders;
+    const candidates = this.ready(only).filter((p) => !allowed || allowed.includes(p.id));
+    if (allowed && !candidates.length && this.ready(only).length) return refuse(new ModelRefused("M5", `None of the providers this agent's contract allows (${allowed.join(", ")}) is ready.`, 503));
+    if (!candidates.length) return refuse(new ModelRefused("M5", only ? "That provider is not ready: configure it and attest it first." : "No model provider is ready. Open the Model Hub to configure and attest one.", 503));
+    if (!this.limiter.allow(who)) return refuse(new ModelRefused("M6", "Rate limit: try again in a minute.", 429));
+    const inputs = [req.system, req.prompt, ...req.history.map((h) => h.text)];
+    let budgetHit = false;
+    let lastStatus = 0;
+    for (const p of candidates) {
+      if (this.callsToday(p.id) >= this.dailyBudget) {
+        budgetHit = true;
+        await this.audit("model.refused", who, `${p.id}:${p.model}`, { rule: "M6", capability: req.capability, purpose: req.purpose, reason: "daily budget" }).catch(() => void 0);
+        continue;
+      }
+      const subject = `${p.id}:${p.model}`;
+      await this.auditStrict("model.request", who, subject, { capability: req.capability, purpose: req.purpose, agentId: req.agentId, inputChars: inputs.reduce((n, s) => n + s.length, 0), promptSha256: sha(inputs.join("\n")), sources: req.provenance?.sources, tools: useTools });
+      const started = Date.now();
+      try {
+        const r = await this.loop(p, req, useTools, who, subject, inputs);
+        const out = checkModelOutput(r.text, [...inputs, ...r.invocations.map((i) => JSON.stringify(i.result))]);
+        await this.auditStrict("model.response", who, subject, { outputChars: out.text.length, flags: out.flags, ms: Date.now() - started, inputTokens: r.inputTokens, outputTokens: r.outputTokens, toolCalls: r.invocations.length });
+        return { text: out.text, draft: true, provider: p.id, model: p.model, flags: out.flags, toolInvocations: r.invocations, usage: { inputTokens: r.inputTokens, outputTokens: r.outputTokens } };
+      } catch (e) {
+        if (e instanceof ProviderError) {
+          lastStatus = e.status;
+          await this.audit("model.failed", who, subject, { status: e.status, ms: Date.now() - started, capability: req.capability }).catch(() => void 0);
+          continue;
+        }
+        throw e;
+      }
+    }
+    if (budgetHit && !lastStatus) throw new ModelRefused("M6", "The daily model budget is used up for every ready provider.", 429);
+    throw new ModelUnavailable(`No provider could answer${lastStatus ? ` (last status ${lastStatus})` : ""}.`);
+  }
+  async loop(p, req, useTools, who, subject, inputs) {
+    const adapter = ADAPTERS[p.id];
+    const messages = [...req.history.map((h) => h.role === "user" ? { role: "user", text: h.text } : { role: "assistant", text: h.text, toolCalls: [] }), { role: "user", text: req.prompt }];
+    const invocations = [];
+    let inputTokens = 0;
+    let outputTokens = 0;
+    const ctx = { apiKey: p.apiKey, base: p.base, fetchImpl: this.fetchImpl };
+    for (let turn = 0; turn <= LIMITS.maxToolTurns; turn++) {
+      const tools = useTools && turn < LIMITS.maxToolTurns ? TOOLS : [];
+      const step = await adapter.step({ model: p.model, system: req.system, messages, tools, maxTokens: LIMITS.maxOutputTokens, json: Boolean(req.json) }, ctx);
+      inputTokens += step.inputTokens ?? 0;
+      outputTokens += step.outputTokens ?? 0;
+      if (!step.toolCalls.length) return { text: step.text, invocations, inputTokens, outputTokens };
+      if (turn === LIMITS.maxToolTurns) return { text: "No final answer was produced within the tool limit. Narrow the question and try again.", invocations, inputTokens, outputTokens };
+      const calls = step.toolCalls.slice(0, 4).map((c) => ({ call: c, dirty: detectPii(JSON.stringify(c.args)).length > 0 }));
+      messages.push({ role: "assistant", text: step.text, toolCalls: calls.map(({ call, dirty }) => dirty ? { ...call, args: {} } : call) });
+      const results = [];
+      for (const { call, dirty } of calls) results.push(await this.runTool(dirty ? { ...call, args: {} } : call, who, subject, invocations, dirty));
+      messages.push({ role: "tool", results });
+    }
+    return { text: "", invocations, inputTokens, outputTokens };
+  }
+  /** Rule M9: the tool runs, and its result reaches the model only if it passes the scan. */
+  async runTool(call, who, subject, invocations, dirtyArgs = false) {
+    let result;
+    let withheld = null;
+    if (dirtyArgs) {
+      result = { error: "rejected: the arguments contained personal data" };
+      withheld = "rejected: arguments contained personal data";
+    } else if (!TOOL_NAMES.has(call.name) || JSON.stringify(call.args).length > 2e3) {
+      result = { error: "unknown tool or arguments too large" };
+      withheld = "rejected";
+    } else {
+      try {
+        result = await executeTool(call.name, call.args, { load: () => this.store.load(), readable: this.readable });
+        withheld = checkToolResult(result);
+      } catch (e) {
+        if (!(e instanceof LearnerDataRefused)) throw e;
+        result = {};
+        withheld = "withheld: contained learner-level identifiers";
+      }
+      if (withheld) result = { error: withheld };
+    }
+    await this.auditStrict("model.tool", who, subject, { tool: call.name, resultChars: JSON.stringify(result).length, withheld });
+    invocations.push({ name: call.name, args: call.args, result });
+    return { id: call.id, name: call.name, result };
+  }
+  // ------------------------------------------------- what the platform asks
+  /** True when at least one provider could be called right now. */
+  anyReady() {
+    return this.ready().length > 0;
+  }
+  /** For text the server itself composes: refuse anything with personal data, then stamp it (the stamp's only producer is deidentify). Refusals are audited. */
+  async stamp(texts, sources, who, capability, purpose) {
+    try {
+      return this.stampSync(texts, sources);
+    } catch (e) {
+      if (e instanceof ModelRefused) await this.audit("model.refused", who ?? "open", "none", { rule: e.rule, capability, purpose }).catch(() => void 0);
+      throw e;
+    }
+  }
+  stampSync(texts, sources) {
+    try {
+      const d = deidentify(texts.join("\n"), sources);
+      if (d.findings.length) throw new ModelRefused("M2", `Refused: personal data detected (${[...new Set(d.findings.map((f) => f.kind))].join(", ")}). Remove it and retry.`);
+      return d.provenance;
+    } catch (e) {
+      if (e instanceof LearnerDataRefused) throw new ModelRefused("M2", "Refused: learner-level identifiers are never sent to a model.");
+      throw e;
+    }
+  }
+  /** A plain completion for a payload the caller has already de-identified and stamped (the in-browser gateway). */
+  complete(r) {
+    return this.execute({ capability: "complete", purpose: r.purpose, system: r.system, prompt: r.prompt, history: [], provenance: r.provenance, actor: r.actor, agentId: r.agent?.id, agentPurposes: r.agent?.allowedPurposes, agentProviders: r.agent?.models }, false);
+  }
+  /** The operations copilot: free text from a person, with tools. Falls back to the deterministic engine when no provider is ready. */
+  async copilot(message, history, actor) {
+    const h = (Array.isArray(history) ? history : []).slice(-LIMITS.maxHistory).map((m) => ({ role: m?.role === "user" ? "user" : "assistant", text: String(m?.text ?? "") }));
+    const system = "You are the Infinite-AI Operations Copilot for South African primary-school business operations. You recommend, analyse and draft; named humans review, edit, countersign and ratify. Never state a figure you were not given or did not get from a tool. Say when something needs a source. Use the tools to inspect counts, compute illustrative economics, screen text or inspect agent contracts.";
+    const provenance = await this.stamp([message, ...h.map((m) => m.text)], [`copilot-input:${actor ?? "open"}`], actor, "copilot", "strategy_planning");
+    if (!this.ready().length) return this.local(fallbackCopilot(message, Object.keys(this.store.load())));
+    return this.execute({ capability: "copilot", purpose: "strategy_planning", system, prompt: message, history: h, provenance, actor }, true);
+  }
+  async recommend(agent, currentValues, actor) {
+    const values = Object.fromEntries(Object.entries(currentValues ?? {}).filter(([k, v2]) => agent.inputs.some((i) => i.key === k) && typeof v2 === "string").map(([k, v2]) => [k, String(v2).slice(0, 500)]));
+    const fallback = () => ({ ...getDeterministicRecommendations(agent, values), toolsUsed: [], generatedWith: "deterministic-fallback", draft: true, flags: ["deterministic", "illustrative_defaults"] });
+    const prompt = `Suggest how to complete this agent task. Agent: ${agent.id} (${agent.name}). Purpose: ${agent.purpose}. Summary: ${agent.summary}.
+Inputs: ${JSON.stringify(agent.inputs.map((i) => ({ key: i.key, label: i.label, kind: i.kind, options: i.options })))}
+Current values: ${JSON.stringify(values)}
+Reply with a JSON object: {"strategicRecommendations": string[], "recommendedInputs": {<input key>: string}, "complianceGuidance": string[], "suggestedNextSteps": string[]}. Do not invent figures, names or facts: where a value needs one, say what source is required.`;
+    const provenance = await this.stamp([prompt], [`agent:${agent.id}`, `input:${actor ?? "open"}`], actor, "recommend", agent.purpose);
+    if (!this.ready().length) return fallback();
+    const r = await this.execute({ capability: "recommend", purpose: agent.purpose, agentId: agent.id, agentPurposes: agent.allowedPurposes, agentProviders: agent.models, system: "You are an operations specialist. You produce drafts for a human to review. Output only the JSON object asked for.", prompt, history: [], provenance, actor, json: true }, false);
+    let parsed = {};
+    try {
+      parsed = JSON.parse(r.text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+    } catch {
+      return { ...fallback(), flags: [...r.flags, "model_reply_not_json", "deterministic"] };
+    }
+    const det = getDeterministicRecommendations(agent, values);
+    const strings = (v2, d) => Array.isArray(v2) && v2.length ? v2.map(String).slice(0, 8) : d;
+    const recIn = typeof parsed.recommendedInputs === "object" && parsed.recommendedInputs !== null ? parsed.recommendedInputs : {};
+    const recommendedInputs = Object.fromEntries(agent.inputs.map((i) => [i.key, typeof recIn[i.key] === "string" ? String(recIn[i.key]) : det.recommendedInputs[i.key] ?? ""]));
+    return { agentId: agent.id, strategicRecommendations: strings(parsed.strategicRecommendations, det.strategicRecommendations), recommendedInputs, complianceGuidance: strings(parsed.complianceGuidance, det.complianceGuidance), suggestedNextSteps: strings(parsed.suggestedNextSteps, det.suggestedNextSteps), toolsUsed: [], generatedWith: `${r.provider}:${r.model}`, draft: true, flags: r.flags };
+  }
+  /** A fixed, harmless prompt through the full rule path, to prove a provider is wired up. It still needs attestation first. */
+  async selfTest(id, actor) {
+    const p = this.cfg(id);
+    const started = Date.now();
+    let out;
+    try {
+      await this.execute({ capability: "self-test", purpose: "ai_governance", system: "You are a connectivity check.", prompt: "Reply with the single word OK.", history: [], provenance: { deidentified: true, sources: ["hub-self-test"] }, actor }, false, id);
+      out = { ok: true, model: p.model };
+    } catch (e) {
+      if (e instanceof ModelRefused && e.rule !== "M5" && e.rule !== "M6" && e.rule !== "M7") throw e;
+      out = { ok: false, error: e.message, model: p.model };
+    }
+    const ms = Date.now() - started;
+    await this.audit("model.test", actor ?? "open", `${id}:${p.model}`, { ok: out.ok, ms, error: out.error }).catch(() => void 0);
+    return { ...out, ms };
+  }
+  local(r) {
+    return { text: r.text, draft: true, provider: "local", model: "deterministic", flags: ["deterministic"], toolInvocations: r.toolInvocations, usage: { inputTokens: 0, outputTokens: 0 } };
+  }
+};
+
+// src/core/contract.ts
+var CONTRACT_MAX_PROMPT_CHARS = 2e4;
+var KNOWN_PROVIDERS = ["anthropic", "gemini"];
+var TIERS = ["L0", "L1", "L2", "L3", "L4"];
+var FORMATS = ["md", "html", "pdf", "csv", "json", "docx", "xlsx"];
+var CEILINGS = ["public", "internal", "confidential", "personal"];
+function checkContract(a, env2) {
+  const out = [];
+  const bad2 = (rule, message) => out.push({ rule, message });
+  const str = (x2, min, max) => typeof x2 === "string" && x2.trim().length >= min && x2.length <= max;
+  const x = a;
+  if (typeof a.id !== "string" || !/^(OPS-[A-Z]+-\d{2}|CUS-[A-Z]+-\d{2}|agt-[a-z0-9]+)$/.test(a.id)) bad2("C1", "id must look like OPS-DEPT-nn or agt-xxxx");
+  if (typeof a.version !== "string" || !/^\d+\.\d+\.\d+$/.test(a.version)) bad2("C1", "version must be semver (1.0.0)");
+  if (!str(a.name, 3, 80)) bad2("C1", "name must be 3 to 80 characters");
+  if (!str(a.summary, 5, 400)) bad2("C1", "summary must be 5 to 400 characters");
+  if (!str(a.framework, 3, 200)) bad2("C1", "the method (framework) must be named");
+  if (!env2.departments.includes(a.dept)) bad2("C1", `department "${String(a.dept)}" is not registered`);
+  if (!str(x.owner, 3, 60)) bad2("C2", "an owner role is required (3 to 60 characters)");
+  else if (detectPii(String(x.owner)).length) bad2("C2", "the owner must be a role, not personal data");
+  if (!PURPOSES.includes(a.purpose)) bad2("C3", "purpose is not on the closed purpose list");
+  if (!Array.isArray(a.allowedPurposes) || !a.allowedPurposes.length) bad2("C3", "allowedPurposes must not be empty");
+  else {
+    if (a.allowedPurposes.some((p) => !PURPOSES.includes(p))) bad2("C3", "allowedPurposes holds a purpose that is not on the list");
+    if (new Set(a.allowedPurposes).size !== a.allowedPurposes.length) bad2("C3", "allowedPurposes has a duplicate");
+    if (!a.allowedPurposes.includes(a.purpose)) bad2("C3", "purpose must be one of allowedPurposes");
+  }
+  if (!CEILINGS.includes(a.dataClass)) bad2("C4", a.dataClass === "learner" ? "learner data is never admitted to this platform" : "unknown data class");
+  if (a.dataClass === "personal" && !(a.lawfulBasis && LAWFUL_BASES.includes(a.lawfulBasis))) bad2("C4", "personal data needs a lawful basis (POPIA s11)");
+  if (a.requiresApproval !== true) bad2("C5", "requiresApproval must be true: no agent skips the human");
+  if (/^(agt-|CUS-)/.test(String(a.id)) && a.secondApprover !== true) bad2("C5", "a custom agent needs a second approver");
+  if (x.models !== void 0) {
+    const known = env2.providers ?? KNOWN_PROVIDERS;
+    if (!Array.isArray(x.models) || !x.models.length) bad2("C6", "models, when present, must be a non-empty list of providers");
+    else if (x.models.some((m) => typeof m !== "string" || !known.includes(m))) bad2("C6", "models names a provider that is not known");
+    else if (new Set(x.models).size !== x.models.length) bad2("C6", "models has a duplicate");
+  }
+  const budget = a.budget?.maxPromptChars;
+  if (typeof budget !== "number" || !Number.isInteger(budget) || budget < 100 || budget > CONTRACT_MAX_PROMPT_CHARS) bad2("C7", `budget.maxPromptChars must be a whole number from 100 to ${CONTRACT_MAX_PROMPT_CHARS}`);
+  if (typeof a.evalRef !== "string" || !/^test\/[A-Za-z0-9._/-]+\.test\.ts$/.test(a.evalRef) || a.evalRef.includes("..")) bad2("C8", "evalRef must point at a test file under test/");
+  if (!Array.isArray(a.inputs) || a.inputs.length > 12) bad2("C9", "an agent has at most 12 inputs");
+  else {
+    const keys = a.inputs.map((i) => i?.key);
+    if (keys.some((k) => typeof k !== "string" || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k))) bad2("C9", "every input needs a simple key");
+    if (new Set(keys).size !== keys.length) bad2("C9", "two inputs share a key");
+    if (a.inputs.some((i) => !str(i?.label, 1, 120))) bad2("C9", "every input needs a label");
+    if (a.inputs.some((i) => i?.kind === "select" && !i.options?.length)) bad2("C9", "a choice input needs options");
+    if (a.inputs.some((i) => !["text", "longtext", "number", "select"].includes(String(i?.kind)))) bad2("C9", "an input has an unknown kind");
+  }
+  if (!Array.isArray(a.reads) || a.reads.some((t) => !TIERS.includes(t))) bad2("C10", "reads holds an unknown Brain tier");
+  if (!Array.isArray(a.formats) || !a.formats.length || a.formats.some((f) => !FORMATS.includes(f))) bad2("C10", "formats must be a non-empty list of known formats");
+  if (a.ingestion !== void 0 && a.ingestion !== "library" && a.ingestion !== "none") bad2("C10", "ingestion must be library or none");
+  if (typeof a.build !== "function") bad2("C10", "build must be a function");
+  return out;
+}
+function checkRegistry(agents, env2) {
+  const out = {};
+  const seen = /* @__PURE__ */ new Set();
+  for (const a of agents) {
+    const p = checkContract(a, env2);
+    if (seen.has(a.id)) p.push({ rule: "C1", message: "duplicate id" });
+    seen.add(a.id);
+    if (p.length) out[String(a.id)] = p;
+  }
+  return out;
+}
+var formatProblems = (r) => Object.entries(r).map(([id, ps]) => `${id}: ${ps.map((p) => `${p.rule} ${p.message}`).join("; ")}`).join("\n");
+
+// src/server/modelRoutes.ts
+import { Router as Router2 } from "express";
+function modelRoutes(hub2) {
+  const r = Router2();
+  const actorOf2 = (res) => res.locals.actor;
+  const wrap2 = (fn) => (req, res) => {
+    Promise.resolve().then(() => fn(req, res)).catch((e) => {
+      if (e instanceof ModelRefused) return void res.status(e.status).json({ error: e.message, rule: e.rule });
+      if (e instanceof ModelUnavailable) return void res.status(e.status).json({ error: e.message });
+      console.error(e);
+      res.status(500).json({ error: "internal error" });
+    });
+  };
+  const provider = (req) => {
+    const id = req.params.id;
+    if (!PROVIDER_IDS.includes(id)) throw new ModelRefused("M5", "Unknown provider.", 404);
+    return id;
+  };
+  r.get("/models/hub", (_q, res) => res.json(hub2.status()));
+  r.post("/models/providers/:id/attest", wrap2(async (req, res) => res.json(await hub2.attest(provider(req), actorOf2(res), String(req.body?.note ?? "")))));
+  r.post("/models/providers/:id/revoke", wrap2(async (req, res) => res.json(await hub2.revoke(provider(req), actorOf2(res), String(req.body?.reason ?? "")))));
+  r.post("/models/providers/:id/test", wrap2(async (req, res) => res.json(await hub2.selfTest(provider(req), actorOf2(res)))));
+  r.post("/gateway/complete", wrap2(async (req, res) => {
+    const { system = "", prompt = "", provenance, purpose, agentId } = req.body ?? {};
+    const agent = typeof agentId === "string" ? agentById(agentId) : void 0;
+    const out = await hub2.complete({ system: typeof system === "string" ? system : "", prompt: typeof prompt === "string" ? prompt : "", purpose, provenance, actor: actorOf2(res), agent });
+    res.json({ text: out.text, draft: out.draft, provider: out.provider, model: out.model, flags: out.flags });
+  }));
+  r.get("/ai/tools", (_q, res) => res.json({ providerReady: hub2.anyReady(), tools: TOOLS.map((t) => ({ name: t.name, description: t.description })) }));
+  r.post("/ai/copilot", wrap2(async (req, res) => {
+    const { message = "", history = [] } = req.body ?? {};
+    if (typeof message !== "string" || !message.trim()) return void res.status(400).json({ error: "message string is required" });
+    const out = await hub2.copilot(message, history, actorOf2(res));
+    res.json({ text: out.text, toolInvocations: out.toolInvocations, draft: out.draft, provider: out.provider, model: out.model, flags: out.flags });
+  }));
+  r.post("/ai/agent-recommendations", wrap2(async (req, res) => {
+    const { agentId, currentValues = {} } = req.body ?? {};
+    if (typeof agentId !== "string" || !agentId) return void res.status(400).json({ error: "agentId is required" });
+    const agent = agentById(agentId);
+    if (!agent) return void res.status(404).json({ error: `Agent ${agentId} not found` });
+    res.json(await hub2.recommend(agent, currentValues, actorOf2(res)));
+  }));
+  return r;
+}
 
 // server.ts
 var env = process.env;
 var REPO = env.ECOSYSTEM_REPO ?? "Sarah-JaneHarding/infinite-ai-ecosystem";
 var PORT = Number(env.PORT ?? 3e3);
-var HOST = env.HOST ?? "0.0.0.0";
-if (!env.OPS_USERS && !env.OPS_API_TOKEN && !env.OPS_OPEN_DEV) {
-  env.OPS_OPEN_DEV = "true";
-}
+var HOST = env.HOST || "127.0.0.1";
 var auth;
 try {
-  auth = parseAuth(env);
+  auth = parseAuth({ ...env, HOST });
 } catch (err) {
-  console.warn(`WARNING: Auth configuration notice (${err.message}). Starting in open dev mode.`);
-  auth = { mode: "open" };
+  console.error(`FATAL: ${err.message}`);
+  process.exit(1);
+}
+var contractProblems = checkRegistry(AGENTS, { departments: DEPARTMENTS.map((d) => d.id) });
+if (Object.keys(contractProblems).length) {
+  console.error(`FATAL: agent contracts do not hold:
+${formatProblems(contractProblems)}`);
+  process.exit(1);
 }
 var store = new FileStore();
 var reader = new GithubReader(REPO, env.GITHUB_TOKEN);
 var publisher = new ProposalPublisher(REPO, env.GITHUB_TOKEN, env.OPS_ALLOW_ECOSYSTEM_WRITES === "true");
-var geminiService = new GeminiOperationsService(env.GEMINI_API_KEY);
+var hub;
+try {
+  hub = new ModelHub({ env, store, limiter: new RateLimiter(20, 6e4) });
+} catch (err) {
+  console.error(`FATAL: model hub configuration: ${err.message}`);
+  process.exit(1);
+}
+var appendValidated = (collection, rec, actor) => serial(async () => {
+  const v2 = await validateAppend(collection, rec, { actor, store });
+  store.append(collection, v2);
+});
+var autonomy;
+try {
+  autonomy = new AutonomyService({ env, store, runner: makeRunner({ store, appendValidated, hub, facts: () => ({ ...snapshotFacts(), ...cache ? liveFacts(cache.status) : {} }) }) });
+} catch (err) {
+  console.error(`FATAL: autonomy configuration: ${err.message}`);
+  process.exit(1);
+}
+var roles;
+try {
+  roles = parseRoles(env.OPS_ROLES, auth);
+} catch (err) {
+  console.error(`FATAL: ${err.message}`);
+  process.exit(1);
+}
+var limits = requestLimits({ perMinute: Number(env.OPS_RATE_PER_MINUTE) > 0 ? Number(env.OPS_RATE_PER_MINUTE) : 300, badTokensPerMinute: 10 });
 var app = express();
 app.disable("x-powered-by");
+if (env.OPS_TRUST_PROXY === "1") app.set("trust proxy", 1);
+app.use(securityHeaders({ csp: env.NODE_ENV === "production", hsts: env.OPS_HSTS === "on" }));
+app.use("/api", limits.general);
 var wrap = (fn) => (req, res, next) => {
   Promise.resolve().then(() => fn(req, res)).catch(next);
 };
@@ -2773,8 +5425,9 @@ app.get("/api/health", (_q, res) => res.json({
   repo: REPO,
   auth: auth.mode,
   githubToken: Boolean(env.GITHUB_TOKEN),
-  llm: Boolean(env.ANTHROPIC_API_KEY || geminiService.isAvailable()),
-  gemini: geminiService.isAvailable(),
+  llm: hub.anyReady(),
+  autonomy: autonomy.enabled,
+  roles: roles !== null,
   ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === "true",
   webhook: Boolean(env.GITHUB_WEBHOOK_SECRET),
   outbound: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST).length > 0
@@ -2796,12 +5449,13 @@ app.post("/api/connector/webhook", express.raw({ type: "*/*", limit: "1mb" }), w
   events.length = Math.min(events.length, 100);
   store.append("connector_events", { id: `ev_${Date.now()}`, ...ev });
   cache = null;
+  void autonomy.onEvent(ev.kind).catch((e) => console.error("autonomy event failed:", e.message));
   res.json({ ok: true });
 }));
 app.use(express.json({ limit: "512kb" }));
 app.use("/api", (req, res, next) => {
   const actor = authenticate(auth, req.header("x-ops-token"));
-  if (auth.mode === "users" && !actor) return res.status(401).json({ error: "unauthorised" });
+  if (auth.mode === "users" && !actor) return limits.failure(req, res) ? void 0 : res.status(401).json({ error: "unauthorised" });
   res.locals.actor = actor;
   next();
 });
@@ -2819,7 +5473,8 @@ app.post("/api/connector/publish", wrap(async (req, res) => {
     const id = String(req.body?.artefactId ?? "");
     const art = store.list("artefact_versions").filter((r) => r.id === id).at(-1);
     if (!art) return res.status(404).json({ error: "unknown artefact" });
-    if (!store.list("approvals").some((r) => r.artefactId === id && r.decision === "APPROVED" && r.approver === art.approvedBy)) return res.status(403).json({ error: "No recorded human approval for this artefact." });
+    const problem = ratifiedProblem(store, art);
+    if (problem) return res.status(403).json({ error: problem });
     const summary = String(req.body?.summary ?? "").slice(0, 4e3);
     const out = await publisher.openIssue(art, proposalFromArtefact(art, summary));
     store.append("connector_events", { id: `pub_${Date.now()}`, kind: "issue_opened", summary: out.url, by: actor, at: (/* @__PURE__ */ new Date()).toISOString() });
@@ -2838,7 +5493,8 @@ app.post("/api/integrations/send", wrap(async (req, res) => {
   const id = String(req.body?.artefactId ?? "");
   const art = store.list("artefact_versions").filter((r2) => r2.id === id).at(-1);
   if (!art) return res.status(404).json({ error: "unknown artefact" });
-  if (art.status !== "APPROVED" || !store.list("approvals").some((r2) => r2.artefactId === id && r2.decision === "APPROVED" && r2.approver === art.approvedBy)) return res.status(403).json({ error: "Only an approved artefact with a recorded human approval can be sent." });
+  const problem = ratifiedProblem(store, art);
+  if (problem) return res.status(403).json({ error: problem });
   try {
     const addrs = await lookup(t.url.hostname, { all: true });
     if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) return res.status(403).json({ error: "That host resolves to a non-public address." });
@@ -2852,64 +5508,13 @@ app.post("/api/integrations/send", wrap(async (req, res) => {
   store.append("connector_events", { id: `out_${Date.now()}`, kind: "artefact_sent", summary: `${art.id} v${art.version} to ${t.url.hostname}: ${r.status}`, by: actor, at: (/* @__PURE__ */ new Date()).toISOString() });
   res.status(r.ok ? 200 : 502).json({ ok: r.ok, status: r.status, host: t.url.hostname });
 }));
-var limiter = new RateLimiter(20, 6e4);
-app.post("/api/gateway/complete", wrap(async (req, res) => {
-  const { system = "", prompt = "", provenance } = req.body ?? {};
-  if (!env.ANTHROPIC_API_KEY && !geminiService.isAvailable()) return res.status(503).json({ error: "No LLM configured (ANTHROPIC_API_KEY or GEMINI_API_KEY)" });
-  if (typeof system !== "string" || typeof prompt !== "string" || !prompt || system.length + prompt.length > 2e4) return res.status(400).json({ error: "system and prompt must be strings (prompt required, 20k characters in total at most)" });
-  if (provenance?.deidentified !== true || !Array.isArray(provenance.sources) || !provenance.sources.length) return res.status(422).json({ error: "refused: payload is not stamped de-identified with sources" });
-  if (!limiter.allow(actorOf(res) ?? "open")) return res.status(429).json({ error: "rate limit: try again in a minute" });
-  if (detectPii(`${system}
-${prompt}`).length || detectInjection(prompt).length) return res.status(422).json({ error: "refused: personal data or injection pattern" });
-  try {
-    if (env.ANTHROPIC_API_KEY) {
-      const text2 = await completeWithClaude({ apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL ?? "claude-sonnet-5-5", system, prompt });
-      return res.json({ text: text2 });
-    }
-    const { text } = await geminiService.runCopilot(`${system ? `System: ${system}
-
-` : ""}${prompt}`, [], store);
-    res.json({ text });
-  } catch (e) {
-    res.status(e instanceof ClaudeError ? 502 : 500).json({ error: e.message });
-  }
-}));
-app.get("/api/ai/tools", (_q, res) => {
-  res.json({
-    model: "gemini-3.8-flash",
-    geminiActive: geminiService.isAvailable(),
-    tools: GEMINI_OPERATIONS_TOOLS
-  });
-});
-app.post("/api/ai/agent-recommendations", wrap(async (req, res) => {
-  const { agentId, currentValues = {} } = req.body ?? {};
-  if (typeof agentId !== "string" || !agentId) {
-    return res.status(400).json({ error: "agentId is required" });
-  }
-  const agent = agentById(agentId);
-  if (!agent) {
-    return res.status(404).json({ error: `Agent ${agentId} not found` });
-  }
-  const result = await geminiService.getAgentRecommendations(agent, currentValues, store);
-  res.json(result);
-}));
-app.post("/api/ai/copilot", wrap(async (req, res) => {
-  const { message = "", history = [] } = req.body ?? {};
-  if (typeof message !== "string" || !message.trim()) {
-    return res.status(400).json({ error: "message string is required" });
-  }
-  if (!limiter.allow(actorOf(res) ?? "open")) {
-    return res.status(429).json({ error: "rate limit: try again in a minute" });
-  }
-  if (detectPii(message).length || detectInjection(message).length) {
-    return res.status(422).json({ error: "refused: personal data or prompt injection detected" });
-  }
-  const result = await geminiService.runCopilot(message, history, store);
-  res.json(result);
-}));
+app.post("/api/models/providers/:id/attest", requireRole(roles, "officer"));
+app.post("/api/autonomy/orders/:id/activate", requireRole(roles, "officer"));
+app.use("/api", modelRoutes(hub));
+app.use("/api", autonomyRoutes(autonomy));
 app.post("/api/ledger", wrap(async (req, res) => {
   try {
-    const out = await appendLedger(store, req.body?.input, req.body?.knownSeq, actorOf(res));
+    const out = await appendLedger(store, req.body?.input, req.body?.knownSeq, actorOf(res), void 0, { client: true });
     res.json(out);
   } catch (e) {
     if (e instanceof Rejected) return res.status(e.status).json({ error: e.message });
@@ -2920,7 +5525,7 @@ app.get("/api/warehouse", (_q, res) => res.json(store.load()));
 app.post("/api/warehouse/:collection", wrap(async (req, res) => {
   try {
     await serial(async () => {
-      const rec = await validateAppend(req.params.collection, req.body, { actor: actorOf(res), store });
+      const rec = await validateAppend(req.params.collection, req.body, { actor: actorOf(res), store, roles: rolesOf(roles, actorOf(res)) });
       store.append(req.params.collection, rec);
     });
     res.json({ ok: true });
@@ -2949,8 +5554,11 @@ async function start() {
     app.use(express.static(dist));
     app.get("*", (_q, res) => res.sendFile(path.join(dist, "index.html")));
   }
+  if (autonomy.enabled) {
+    setInterval(() => void autonomy.tick().catch((e) => console.error("autonomy tick failed:", e.message)), 6e4).unref();
+  }
   app.listen(PORT, HOST, () => {
-    console.log(`Infinite-AI Ops Platform on http://${HOST}:${PORT}  (repo: ${REPO}; auth: ${auth.mode})`);
+    console.log(`Infinite-AI Ops Platform on http://${HOST}:${PORT}  (repo: ${REPO}; auth: ${auth.mode}; autonomy: ${autonomy.enabled ? "on" : "off"})`);
     if (auth.mode === "open") console.warn("WARNING: no users configured (OPS_USERS). Open dev mode: identity is self-declared and publishing is disabled.");
   });
 }
