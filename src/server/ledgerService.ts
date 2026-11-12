@@ -43,11 +43,19 @@ async function write(store: LedgerStore, input: unknown, knownSeq: unknown, acto
   const subject = i.subject as string;
 
   // Human acts are recorded under the authenticated person, never a name the client picked.
-  if (actor && /^(hitl|artefact|subject)\./.test(action) && who !== actor) bad('ledger actor is not you', 403);
+  if (actor && /^(hitl|artefact|subject|erasure)\./.test(action) && who !== actor) bad('ledger actor is not you', 403);
   // A decision or submission is only ledgered if the warehouse already holds the matching state.
   const art = store.list('artefact_versions').filter((r) => r.id === subject).at(-1);
   if (/^hitl\.(approved|rejected)$/.test(action) && (art?.status !== action.slice(5).toUpperCase() || art.approvedBy !== who)) bad('no recorded decision matches this ledger entry', 409);
   if (action === 'artefact.submit' && art?.status !== 'IN_REVIEW') bad('artefact is not in review', 409);
+  // Erasure acts are only ledgered when the warehouse holds the matching state, by the same person.
+  const er = store.list('erasure_requests').filter((r) => r.id === subject).at(-1);
+  if (action === 'erasure.requested' && (er?.status !== 'REQUESTED' || er.requestedBy !== who)) bad('no recorded erasure request matches this ledger entry', 409);
+  if (/^erasure\.(approved|rejected)$/.test(action)) {
+    const want = action === 'erasure.approved' ? ['APPROVED', 'EXECUTED'] : ['REJECTED']; // approval is ledgered before the tombstone is applied, but a retry may come after
+    if (!er || !want.includes(er.status as string) || er.decidedBy !== who) bad('no recorded erasure decision matches this ledger entry', 409);
+  }
+  if (action === 'subject.tombstone' && !store.list('tombstones').some((t) => t.id === subject)) bad('no recorded tombstone matches this ledger entry', 409);
 
   const ledger = store.list('ledger');
   if (ledger.length >= MAX_RECORDS) bad('collection is full', 507);

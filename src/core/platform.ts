@@ -6,7 +6,8 @@ import { Gateway, type Engine } from './gateway';
 import { checkInput, checkOutput, runGates } from './guardrails/engine';
 import type { AgentContract, RunContext } from './agent';
 import type { Actor, Doc, LedgerEntry, Status } from './types';
-import { deidentify, LearnerDataRefused } from './guardrails/pii';
+import { deidentify, detectPii, LearnerDataRefused } from './guardrails/pii';
+import { ERASURE_CATEGORIES, normalizeSubject, type ErasureCategory, type ErasureRequest } from './erasure';
 
 export interface Artefact {
   id: string;
@@ -25,6 +26,9 @@ export interface Artefact {
   approvedBy?: string;
   note?: string;
 }
+
+/** A stored request without the warehouse's own bookkeeping (hash, storedAt) and its timestamp, ready to become the next version. */
+const erasureFields = (r: ErasureRequest): Omit<ErasureRequest, 'at'> => ({ id: r.id, subjectHash: r.subjectHash, category: r.category, note: r.note, status: r.status, requestedBy: r.requestedBy, decidedBy: r.decidedBy, decisionNote: r.decisionNote, version: r.version });
 
 export class RunRefused extends Error {
   constructor(public readonly kind: string, message: string) {
@@ -110,18 +114,83 @@ export class Platform {
 
   /** Erase a data subject: recorded in the warehouse and the ledger, so it survives a reload. Only a hash is kept. */
   async tombstone(subjectId: string, by: string) {
-    const subjectHash = await sha256Hex(subjectId);
+    const subjectHash = await sha256Hex(normalizeSubject(subjectId));
     if (this.tombstoned.has(subjectHash)) return;
     await this.warehouse.put('tombstones', { id: `ts_${subjectHash.slice(0, 16)}`, subjectHash, by });
     this.tombstoned.add(subjectHash);
     await this.ledger.append({ orgId: this.orgId, actor: by, action: 'subject.tombstone', subject: `ts_${subjectHash.slice(0, 16)}` });
   }
 
+  // ---- erasure requests: one person asks, a different person decides, approval applies the tombstone ----
+
+  /** Newest version of each request, newest first. */
+  erasureRequests(): ErasureRequest[] {
+    return this.warehouse.latest<ErasureRequest>('erasure_requests').sort((a, b) => b.at.localeCompare(a.at));
+  }
+
+  private erasureRequest(id: string): ErasureRequest {
+    const r = this.erasureRequests().find((x) => x.id === id);
+    if (!r) throw new RunRefused('erasure', 'Unknown erasure request.');
+    return r;
+  }
+
+  private async saveErasure(next: Omit<ErasureRequest, 'at'>): Promise<ErasureRequest> {
+    return this.warehouse.put('erasure_requests', { ...next, at: new Date().toISOString() }) as unknown as Promise<ErasureRequest>;
+  }
+
+  async requestErasure(subjectRef: string, category: ErasureCategory, note: string, requester: Actor): Promise<ErasureRequest> {
+    if (requester.kind !== 'human') throw new RunRefused('erasure', 'Only a named human can raise an erasure request.');
+    const ref = normalizeSubject(subjectRef);
+    const n = note.trim();
+    if (ref.length < 3 || ref.length > 100) throw new RunRefused('erasure', 'Enter the subject reference (3 to 100 characters).');
+    if (!ERASURE_CATEGORIES.includes(category)) throw new RunRefused('erasure', 'Choose a reason category.');
+    if (n.length > 200) throw new RunRefused('erasure', 'Keep the note to 200 characters.');
+    if (category === 'other' && !n) throw new RunRefused('erasure', 'Explain "other" in the note.');
+    // Requests are append-only and kept forever, so they must never carry the personal data being erased.
+    if (detectPii(ref, this.knownNames).length || detectPii(n, this.knownNames).length) throw new RunRefused('pii', 'Use an opaque reference. The reference and note must not contain a name, email, phone number or ID number.');
+    const subjectHash = await sha256Hex(ref);
+    if (this.tombstoned.has(subjectHash)) throw new RunRefused('erasure', 'That subject has already been erased.');
+    if (this.erasureRequests().some((r) => r.subjectHash === subjectHash && (r.status === 'REQUESTED' || r.status === 'APPROVED'))) throw new RunRefused('erasure', 'There is already an open erasure request for that subject.');
+    const req = await this.saveErasure({ id: newId('er'), subjectHash, category, note: n, status: 'REQUESTED', requestedBy: requester.id, version: 1 });
+    await this.ledger.append({ orgId: this.orgId, actor: requester.id, action: 'erasure.requested', subject: req.id, detail: { category } });
+    return req;
+  }
+
+  /**
+   * HITL. A second person decides. To approve, they retype the subject reference, which must hash to the request's:
+   * that proves they know exactly who is being erased. The approval is recorded before the tombstone is applied.
+   */
+  async decideErasure(id: string, approver: Actor, decision: 'APPROVED' | 'REJECTED', note: string, subjectRef = ''): Promise<ErasureRequest> {
+    if (approver.kind !== 'human') throw new RunRefused('hitl', 'Only a named human can decide an erasure request.');
+    const cur = this.erasureRequest(id);
+    if (cur.status !== 'REQUESTED') throw new RunRefused('hitl', 'Only a request that is waiting for a decision can be decided.');
+    if (approver.id === cur.requestedBy) throw new RunRefused('hitl', 'A second person must decide an erasure request.');
+    if (decision === 'REJECTED' && !note.trim()) throw new RunRefused('hitl', 'A rejection needs a reason.');
+    if (decision === 'APPROVED') await this.assertReference(cur, subjectRef);
+    const next = await this.saveErasure({ ...erasureFields(cur), status: decision, decidedBy: approver.id, decisionNote: note.trim(), version: cur.version + 1 });
+    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'erasure.' + decision.toLowerCase(), subject: id, detail: { note: note.trim() } });
+    return decision === 'APPROVED' ? this.applyErasure(id, approver, subjectRef) : next;
+  }
+
+  /** Applies an approved erasure. Also the retry if applying failed after the approval was recorded; safe to repeat. */
+  async applyErasure(id: string, by: Actor, subjectRef: string): Promise<ErasureRequest> {
+    if (by.kind !== 'human') throw new RunRefused('hitl', 'Only a named human can apply an erasure.');
+    const cur = this.erasureRequest(id);
+    if (cur.status !== 'APPROVED') throw new RunRefused('hitl', 'Only an approved request can be applied.');
+    await this.assertReference(cur, subjectRef);
+    await this.tombstone(subjectRef, by.id);
+    return this.saveErasure({ ...erasureFields(cur), status: 'EXECUTED', version: cur.version + 1 });
+  }
+
+  private async assertReference(req: ErasureRequest, subjectRef: string) {
+    if ((await sha256Hex(normalizeSubject(subjectRef))) !== req.subjectHash) throw new RunRefused('erasure', 'That reference does not match this request.');
+  }
+
   async runAgent(agent: AgentContract, rawInput: Record<string, string>, requester: Actor, opts: { subjectId?: string } = {}): Promise<Artefact> {
     const log = (action: string, subject: string, detail: Record<string, unknown> = {}) => this.ledger.append({ orgId: this.orgId, actor: requester.id, action, subject, detail });
 
     // 1. gates: tombstone → purpose → lawful basis
-    const gate = runGates({ subjectId: opts.subjectId ? await sha256Hex(opts.subjectId) : undefined, tombstoned: this.tombstoned, purpose: agent.purpose, allowedPurposes: agent.allowedPurposes, dataClass: agent.dataClass, lawfulBasis: agent.lawfulBasis });
+    const gate = runGates({ subjectId: opts.subjectId ? await sha256Hex(normalizeSubject(opts.subjectId)) : undefined, tombstoned: this.tombstoned, purpose: agent.purpose, allowedPurposes: agent.allowedPurposes, dataClass: agent.dataClass, lawfulBasis: agent.lawfulBasis });
     if (gate) {
       await log('run.refused', agent.id, { gate: gate.gate });
       throw new RunRefused(gate.gate, gate.reason);

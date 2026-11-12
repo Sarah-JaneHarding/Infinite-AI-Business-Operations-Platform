@@ -45,7 +45,7 @@ Without any keys it still works: the committed ecosystem snapshot is used and a 
 
 1. No personal information reaches a model; learner identifiers are refused outright.
 2. Purpose limitation: gate order erased-subject → purpose → lawful basis.
-3. Ledger and Brain are append-only; erasure is a tombstone.
+3. Ledger and Brain are append-only; erasure is a tombstone, raised in the UI by one person and approved by a different one.
 4. Every output is a DRAFT; only a named human approves; some agents need a second person.
 5. No invented numbers: unsourced figures become `[UNSOURCED]`.
 6. The connector reads with GET only; its single write is a human-approved GitHub issue, off by default.
