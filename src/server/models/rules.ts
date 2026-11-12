@@ -13,7 +13,7 @@ export const RULES = [
   { id: 'M2', title: 'No personal data or injection in any prompt', text: 'The system text, the prompt, every history message and every tool result are scanned. Names with titles, emails, phone numbers, ID numbers and learner identifiers are refused; instruction-override patterns are refused.' },
   { id: 'M3', title: 'Purpose limitation', text: 'A request declares one purpose from the closed list, and when it comes from an agent the purpose must be one that agent is contracted for.' },
   { id: 'M4', title: 'Size limits', text: 'Input, history, tool results, tool turns and output are capped, so a request cannot be used to move bulk data to a provider.' },
-  { id: 'M5', title: 'A human must attest each provider and model', text: 'A provider cannot be used until a named person has attested that they reviewed its terms for the exact model configured. Changing the model requires a new attestation. There is no override.' },
+  { id: 'M5', title: 'A human must attest each provider and model', text: 'A provider cannot be used until a named person has attested that they reviewed its terms for the exact model configured. Changing the model requires a new attestation. If an agent\'s contract lists the providers it may use, only those are tried. There is no override.' },
   { id: 'M6', title: 'Rate and daily budget', text: 'Each user is rate limited and each provider has a daily call budget, counted from the audit ledger so a restart does not reset it.' },
   { id: 'M7', title: 'Every call is audited, and the audit comes first', text: 'A ledger entry is written before the provider is called and another after it answers, refuses or fails. They record who, which model, purpose, sizes and a hash of the prompt, never its content. If the ledger cannot be written the call is not made.' },
   { id: 'M8', title: 'Output is always a draft', text: 'Model output is scanned for personal data and has unsourced figures stripped. It is returned marked as a draft and nothing in this module can approve, ratify or ingest it.' },
@@ -52,6 +52,8 @@ export interface ModelRequest {
   /** The contracted agent, when the request comes from one. */
   agentId?: string;
   agentPurposes?: readonly Purpose[];
+  /** Providers the agent's contract allows. Absent means any attested provider (rule M5). */
+  agentProviders?: readonly string[];
   json?: boolean;
 }
 

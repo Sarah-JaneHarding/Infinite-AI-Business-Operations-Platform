@@ -14,7 +14,7 @@ const bot: Actor = { id: 'OPS-X-01', name: 'bot', kind: 'agent', roles: [] };
 const agent: AgentContract = {
   id: 'OPS-TEST-01', version: '1.0.0', dept: 'test', name: 'Test agent', summary: '', framework: 'Test',
   allowedPurposes: ['strategy_planning'], purpose: 'strategy_planning', dataClass: 'internal', reads: ['L1'],
-  formats: ['md', 'csv', 'docx', 'xlsx'], requiresApproval: true, secondApprover: true,
+  formats: ['md', 'csv', 'docx', 'xlsx'], owner: 'Test owner', requiresApproval: true, secondApprover: true,
   budget: { maxPromptChars: 500 }, evalRef: 'test/platform.test.ts',
   inputs: [{ key: 'goal', label: 'Goal', kind: 'longtext', required: true }],
   build: (c) => ({ title: 'Plan', blocks: [{ type: 'p', text: `Goal: ${c.input.goal}. Stages: ${c.facts['eco.stages']} [src:eco.stages]. Growth 40%.` }, { type: 'table', headers: ['a', 'b'], rows: [['x', 1]] }], meta: {} }),

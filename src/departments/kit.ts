@@ -27,6 +27,9 @@ export interface AgentDef {
   formats?: ArtefactFormat[];
   inputs: InputField[];
   secondApprover?: boolean;
+  /** Accountable role. Defaults to the department head (a placeholder role until the organisation names owners: OPQ-022). */
+  owner?: string;
+  models?: string[];
   sections: (ctx: RunContext) => Sec[];
   narrative?: (ctx: RunContext) => Record<string, string | number>;
   title?: (ctx: RunContext) => string;
@@ -50,6 +53,8 @@ export function blocksFrom(secs: Sec[]): Block[] {
   return out;
 }
 
+const DEPT_OWNER: Record<string, string> = { executive: 'Executive', product: 'Product', curriculum: 'Curriculum', ai: 'AI and Brain', security: 'Security', legal: 'Legal', finance: 'Finance', sales: 'Sales', marketing: 'Marketing', success: 'Customer Success', support: 'Support', government: 'Government Relations', people: 'People', devops: 'Infrastructure', procurement: 'Procurement', research: 'Research' };
+
 export function defineAgent(dept: string, code: string, d: AgentDef): AgentContract {
   const id = `OPS-${code}-${String(d.n).padStart(2, '0')}`;
   return {
@@ -59,6 +64,8 @@ export function defineAgent(dept: string, code: string, d: AgentDef): AgentContr
     name: d.name,
     summary: d.summary,
     framework: d.framework,
+    owner: d.owner ?? `Head of ${DEPT_OWNER[dept] ?? dept}`,
+    models: d.models,
     purpose: d.purpose,
     allowedPurposes: [d.purpose],
     dataClass: 'internal',

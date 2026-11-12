@@ -64,3 +64,7 @@ Without any keys it still works: the committed ecosystem snapshot is used and a 
 5. No invented numbers: unsourced figures become `[UNSOURCED]`.
 6. The connector reads with GET only; its single write is a human-approved GitHub issue, off by default.
 7. Everything is scoped by org id.
+
+## Agent contracts
+
+Every agent is a machine-checked contract (owner, purpose, data ceiling, allowed providers, budget, evaluation, no approval bypass). The server refuses to start if a built-in breaks one, and the model hub enforces the purpose and provider limits. See `docs/AGENT_CONTRACTS.md`; the register is under **Agent Contracts** in the app.

@@ -34,4 +34,8 @@ describe('App shell keeps what authenticated mode needs', () => {
     expect(app).toMatch(/name: 'models'/);
     expect(app).toMatch(/<ModelHub \/>/);
   });
+  it('offers the Agent Contracts register', () => {
+    expect(app).toMatch(/name: 'contracts'/);
+    expect(app).toMatch(/<Contracts \/>/);
+  });
 });

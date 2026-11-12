@@ -19,6 +19,8 @@ import { snapshotFacts } from './src/connector/snapshot';
 import type { Artefact } from './src/core/platform';
 import type { Rec } from './src/core/warehouse';
 import { ModelHub } from './src/server/models/hub';
+import { AGENTS, DEPARTMENTS } from './src/departments';
+import { checkRegistry, formatProblems } from './src/core/contract';
 import { modelRoutes } from './src/server/modelRoutes';
 
 const env = process.env;
@@ -34,6 +36,13 @@ try {
   auth = parseAuth({ ...env, HOST });
 } catch (err) {
   console.error(`FATAL: ${(err as Error).message}`);
+  process.exit(1);
+}
+
+// A built-in agent that breaks its contract stops the boot: better no server than an agent without its promises.
+const contractProblems = checkRegistry(AGENTS, { departments: DEPARTMENTS.map((d) => d.id) });
+if (Object.keys(contractProblems).length) {
+  console.error(`FATAL: agent contracts do not hold:\n${formatProblems(contractProblems)}`);
   process.exit(1);
 }
 
