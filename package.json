@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "dev:ui": "vite --port=3000 --host=127.0.0.1",
-    "build": "vite build",
+    "build": "vite build && npm run build:server",
     "build:server": "esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=server.js",
     "start": "NODE_ENV=production node server.js",
     "preview": "vite preview",
@@ -17,6 +17,7 @@
     "server": "tsx server.ts"
   },
   "dependencies": {
+    "@google/genai": "^3.2.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2"
   },
