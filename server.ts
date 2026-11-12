@@ -15,10 +15,13 @@ import { ratifiedProblem } from './src/server/finality';
 import { AutonomyService } from './src/server/autonomy/service';
 import { makeRunner } from './src/server/autonomy/runner';
 import { autonomyRoutes } from './src/server/autonomyRoutes';
+import { parseRoles, requestLimits, requireRole, rolesOf, securityHeaders, type RoleTable } from './src/server/security';
 import { snapshotFacts } from './src/connector/snapshot';
 import type { Artefact } from './src/core/platform';
 import type { Rec } from './src/core/warehouse';
 import { ModelHub } from './src/server/models/hub';
+import { AGENTS, DEPARTMENTS } from './src/departments';
+import { checkRegistry, formatProblems } from './src/core/contract';
 import { modelRoutes } from './src/server/modelRoutes';
 
 const env = process.env;
@@ -34,6 +37,13 @@ try {
   auth = parseAuth({ ...env, HOST });
 } catch (err) {
   console.error(`FATAL: ${(err as Error).message}`);
+  process.exit(1);
+}
+
+// A built-in agent that breaks its contract stops the boot: better no server than an agent without its promises.
+const contractProblems = checkRegistry(AGENTS, { departments: DEPARTMENTS.map((d) => d.id) });
+if (Object.keys(contractProblems).length) {
+  console.error(`FATAL: agent contracts do not hold:\n${formatProblems(contractProblems)}`);
   process.exit(1);
 }
 
@@ -61,8 +71,21 @@ try {
   process.exit(1);
 }
 
+let roles: RoleTable;
+try {
+  roles = parseRoles(env.OPS_ROLES, auth);
+} catch (err) {
+  console.error(`FATAL: ${(err as Error).message}`);
+  process.exit(1);
+}
+const limits = requestLimits({ perMinute: Number(env.OPS_RATE_PER_MINUTE) > 0 ? Number(env.OPS_RATE_PER_MINUTE) : 300, badTokensPerMinute: 10 });
+
 const app = express();
 app.disable('x-powered-by');
+// Behind one reverse proxy, set OPS_TRUST_PROXY=1 so limits see the caller's address, not the proxy's.
+if (env.OPS_TRUST_PROXY === '1') app.set('trust proxy', 1);
+app.use(securityHeaders({ csp: env.NODE_ENV === 'production', hsts: env.OPS_HSTS === 'on' }));
+app.use('/api', limits.general); // before the webhook and health too: every API address is limited
 
 /** Express 4 does not catch a rejected async handler; this routes it to the error handler instead of crashing. */
 const wrap = (fn: (req: Request, res: Response) => unknown): RequestHandler => (req, res, next) => {
@@ -86,6 +109,7 @@ app.get('/api/health', (_q, res) => res.json({
   githubToken: Boolean(env.GITHUB_TOKEN),
   llm: hub.anyReady(),
   autonomy: autonomy.enabled,
+  roles: roles !== null,
   ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true',
   webhook: Boolean(env.GITHUB_WEBHOOK_SECRET),
   outbound: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST).length > 0
@@ -117,7 +141,7 @@ app.post('/api/connector/webhook', express.raw({ type: '*/*', limit: '1mb' }), w
 app.use(express.json({ limit: '512kb' }));
 app.use('/api', (req, res, next) => {
   const actor = authenticate(auth, req.header('x-ops-token'));
-  if (auth.mode === 'users' && !actor) return res.status(401).json({ error: 'unauthorised' });
+  if (auth.mode === 'users' && !actor) return limits.failure(req, res) ? undefined : res.status(401).json({ error: 'unauthorised' });
   res.locals.actor = actor;
   next();
 });
@@ -175,6 +199,10 @@ app.post('/api/integrations/send', wrap(async (req, res) => {
 }));
 
 // ---- models: the hub is the only door to a model provider (docs/MODEL_HUB.md). Gateway, copilot, recommendations, setup. ----
+// Provider attestation and activating an autonomous order are legal and security judgements: they need the officer role once roles exist (OPQ-015, OPQ-019).
+// Stopping things (revoke, pause) stays open to everyone signed in: it is always the safe direction.
+app.post('/api/models/providers/:id/attest', requireRole(roles, 'officer'));
+app.post('/api/autonomy/orders/:id/activate', requireRole(roles, 'officer'));
 app.use('/api', modelRoutes(hub));
 
 // ---- autonomy: standing orders, runs by request, and the budgets. Agents only ever draft; people sign (docs/AUTONOMY.md). ----
@@ -196,7 +224,7 @@ app.get('/api/warehouse', (_q, res) => res.json(store.load()));
 app.post('/api/warehouse/:collection', wrap(async (req, res) => {
   try {
     await serial(async () => {
-      const rec = await validateAppend(req.params.collection, req.body, { actor: actorOf(res), store });
+      const rec = await validateAppend(req.params.collection, req.body, { actor: actorOf(res), store, roles: rolesOf(roles, actorOf(res)) });
       store.append(req.params.collection, rec);
     });
     res.json({ ok: true });

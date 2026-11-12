@@ -32,7 +32,7 @@ export interface RunnerDeps {
 const hubEngine = (hub: Pick<ModelHub, 'complete'>, actor: string): Engine => ({
   name: 'model-hub',
   async complete(req) {
-    return (await hub.complete({ system: req.system, prompt: req.prompt, purpose: req.purpose, provenance: req.provenance, actor })).text;
+    return (await hub.complete({ system: req.system, prompt: req.prompt, purpose: req.purpose, provenance: req.provenance, actor, agent: agentById(req.agentId) })).text;
   },
 });
 

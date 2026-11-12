@@ -31,7 +31,12 @@ const bad = (message: string, status = 400): never => {
 
 export interface ReadStore { list(collection: string): readonly Rec[] }
 /** `actor` is the authenticated user, or null in open dev mode (identity is then only what the client claims). */
-export interface AppendCtx { actor: string | null; store: ReadStore }
+export interface AppendCtx {
+  actor: string | null;
+  store: ReadStore;
+  /** The actor's roles, when roles are configured. Undefined means roles are not enforced. */
+  roles?: readonly string[];
+}
 
 const latestById = (rows: readonly Rec[], id: unknown) => rows.filter((r) => r.id === id).at(-1);
 const isHash = (v: unknown) => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
@@ -198,6 +203,7 @@ function erasure(rec: Rec, ctx: AppendCtx) {
     if (typeof by !== 'string' || !by) bad('a decision needs decidedBy');
     if (ctx.actor && by !== ctx.actor) bad('decidedBy is not you', 403);
     if (by === cur.requestedBy) bad('a second person must decide an erasure request', 403);
+    if (ctx.roles && !ctx.roles.includes('officer')) bad('deciding an erasure request needs the officer role', 403);
     if (rec.status === 'REJECTED' && !String(rec.decisionNote ?? '').trim()) bad('a rejection needs a reason');
   } else if (cur.status === 'APPROVED' && rec.status === 'EXECUTED') {
     if (!hasTombstone(cur.subjectHash)) bad('the erasure has not been applied: no tombstone is recorded', 409);

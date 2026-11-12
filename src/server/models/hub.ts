@@ -196,7 +196,9 @@ export class ModelHub {
       if (e instanceof ModelRefused) return refuse(e);
       throw e;
     }
-    const candidates = this.ready(only);
+    const allowed = req.agentProviders;
+    const candidates = this.ready(only).filter((p) => !allowed || allowed.includes(p.id));
+    if (allowed && !candidates.length && this.ready(only).length) return refuse(new ModelRefused('M5', `None of the providers this agent's contract allows (${allowed.join(', ')}) is ready.`, 503));
     if (!candidates.length) return refuse(new ModelRefused('M5', only ? 'That provider is not ready: configure it and attest it first.' : 'No model provider is ready. Open the Model Hub to configure and attest one.', 503));
     if (!this.limiter.allow(who)) return refuse(new ModelRefused('M6', 'Rate limit: try again in a minute.', 429));
 
@@ -310,8 +312,8 @@ export class ModelHub {
   }
 
   /** A plain completion for a payload the caller has already de-identified and stamped (the in-browser gateway). */
-  complete(r: { system: string; prompt: string; purpose: Purpose; provenance: ModelRequest['provenance']; actor: string | null }) {
-    return this.execute({ capability: 'complete', purpose: r.purpose, system: r.system, prompt: r.prompt, history: [], provenance: r.provenance, actor: r.actor }, false);
+  complete(r: { system: string; prompt: string; purpose: Purpose; provenance: ModelRequest['provenance']; actor: string | null; agent?: Pick<AgentContract, 'id' | 'allowedPurposes' | 'models'> }) {
+    return this.execute({ capability: 'complete', purpose: r.purpose, system: r.system, prompt: r.prompt, history: [], provenance: r.provenance, actor: r.actor, agentId: r.agent?.id, agentPurposes: r.agent?.allowedPurposes, agentProviders: r.agent?.models }, false);
   }
 
   /** The operations copilot: free text from a person, with tools. Falls back to the deterministic engine when no provider is ready. */
@@ -329,7 +331,7 @@ export class ModelHub {
     const prompt = `Suggest how to complete this agent task. Agent: ${agent.id} (${agent.name}). Purpose: ${agent.purpose}. Summary: ${agent.summary}.\nInputs: ${JSON.stringify(agent.inputs.map((i) => ({ key: i.key, label: i.label, kind: i.kind, options: i.options })))}\nCurrent values: ${JSON.stringify(values)}\nReply with a JSON object: {"strategicRecommendations": string[], "recommendedInputs": {<input key>: string}, "complianceGuidance": string[], "suggestedNextSteps": string[]}. Do not invent figures, names or facts: where a value needs one, say what source is required.`;
     const provenance = await this.stamp([prompt], [`agent:${agent.id}`, `input:${actor ?? 'open'}`], actor, 'recommend', agent.purpose);
     if (!this.ready().length) return fallback();
-    const r = await this.execute({ capability: 'recommend', purpose: agent.purpose, agentId: agent.id, agentPurposes: agent.allowedPurposes, system: 'You are an operations specialist. You produce drafts for a human to review. Output only the JSON object asked for.', prompt, history: [], provenance, actor, json: true }, false);
+    const r = await this.execute({ capability: 'recommend', purpose: agent.purpose, agentId: agent.id, agentPurposes: agent.allowedPurposes, agentProviders: agent.models, system: 'You are an operations specialist. You produce drafts for a human to review. Output only the JSON object asked for.', prompt, history: [], provenance, actor, json: true }, false);
     let parsed: Record<string, unknown> = {};
     try {
       parsed = JSON.parse(r.text.replace(/^```(?:json)?\s*|\s*```$/g, '')) as Record<string, unknown>;

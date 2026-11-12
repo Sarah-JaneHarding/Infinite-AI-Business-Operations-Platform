@@ -32,8 +32,10 @@ export function modelRoutes(hub: ModelHub): Router {
 
   // ---- the in-browser gateway: payload already de-identified and stamped by the Platform ----
   r.post('/gateway/complete', wrap(async (req, res) => {
-    const { system = '', prompt = '', provenance, purpose } = req.body ?? {};
-    const out = await hub.complete({ system: typeof system === 'string' ? system : '', prompt: typeof prompt === 'string' ? prompt : '', purpose: purpose as Purpose, provenance, actor: actorOf(res) });
+    const { system = '', prompt = '', provenance, purpose, agentId } = req.body ?? {};
+    // A built-in agent's contract binds the call (purpose and providers). Custom agents live in the browser's warehouse, so their id is only logged.
+    const agent = typeof agentId === 'string' ? agentById(agentId) : undefined;
+    const out = await hub.complete({ system: typeof system === 'string' ? system : '', prompt: typeof prompt === 'string' ? prompt : '', purpose: purpose as Purpose, provenance, actor: actorOf(res), agent });
     res.json({ text: out.text, draft: out.draft, provider: out.provider, model: out.model, flags: out.flags });
   }));
 

@@ -7,6 +7,7 @@
 import type { AgentContract, InputField } from '../core/agent';
 import { PURPOSES, type Doc, type Purpose } from '../core/types';
 import { defineAgent, v, type Sec } from './kit';
+import { checkContract } from '../core/contract';
 import { DEPARTMENTS } from './index';
 import type { CalcOut } from './calc';
 import type { Col, Widget } from './types';
@@ -151,7 +152,10 @@ export function customAgents(s: DefStore, dept?: string): AgentContract[] {
   const out: AgentContract[] = [];
   for (const d of s.latest<CustomDef>('custom_defs', 'id').filter((x): x is CustomAgentDef => x.kind === 'agent' && !x.deleted).sort((x, y) => x.at.localeCompare(y.at) || x.id.localeCompare(y.id))) {
     seen[d.dept] = (seen[d.dept] ?? 0) + 1;
-    if (!dept || d.dept === dept) out.push(buildCustomAgent(d, seen[d.dept]));
+    if (dept && d.dept !== dept) continue;
+    // A definition that breaks the contract rules is not registered, so it cannot run.
+    const a = buildCustomAgent(d, seen[d.dept]);
+    if (!checkContract(a, { departments: DEPARTMENTS.map((x) => x.id) }).length) out.push(a);
   }
   return out;
 }

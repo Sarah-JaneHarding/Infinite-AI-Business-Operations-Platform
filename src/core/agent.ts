@@ -35,6 +35,10 @@ export interface AgentContract {
   reads: BrainTier[];
   formats: ArtefactFormat[];
   inputs: InputField[];
+  /** The accountable role (never a person) who answers for what this agent drafts. */
+  owner: string;
+  /** Providers allowed to serve this agent. Absent: any attested provider. The model rules still apply to every call. */
+  models?: string[];
   requiresApproval: true; // literal: there is no agent that skips the human
   secondApprover?: boolean; // approver must differ from requester
   /** Where a ratified artefact goes: the document library and a Brain episode (default), or nowhere when ingesting it would not be relevant. */
