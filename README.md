@@ -15,6 +15,14 @@ npm run lint             # strict TypeScript
 npm run audit:ecosystem -- /path/to/infinite-ai-ecosystem   # refresh src/generated/ecosystem-snapshot.json
 ```
 
+### Autonomous agents
+
+Agents can run on schedules and events under standing orders (proposed by one person, activated by another). They only produce drafts, tested automatically, that go to the board. Off by default: `docs/AUTONOMY.md`.
+
+### Review board
+
+Output is a draft until a reviewer approves it, a different person countersigns it, and it is ratified and ingested. See `docs/REVIEW_BOARD.md`.
+
 ### AI models
 
 Connect and configure models in the **Model Hub** (sidebar). Setup, rules and troubleshooting: `docs/MODEL_HUB.md`. Every model

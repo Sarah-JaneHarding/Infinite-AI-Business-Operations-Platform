@@ -66,15 +66,26 @@ export class Warehouse {
   async put<T extends Record<string, unknown>>(collection: string, rec: T & { id: string }): Promise<T & { id: string; hash: string }> {
     const hash = await sha256Hex(canonical(rec));
     const stored = { ...rec, hash, storedAt: rec['storedAt'] ?? new Date().toISOString() } as unknown as Rec;
-    (this.cols[collection] ??= []).push(stored);
-    await this.adapter.append(collection, stored);
+    await this.persist(collection, stored);
     return stored as unknown as T & { id: string; hash: string };
   }
 
   /** Store a record exactly as given (used for ledger entries, which carry their own hash). */
   async putRaw(collection: string, rec: Rec): Promise<void> {
-    (this.cols[collection] ??= []).push(rec);
-    await this.adapter.append(collection, rec);
+    await this.persist(collection, rec);
+  }
+
+  /** The record is visible locally while it is being saved, and is taken back out if saving fails, so this view never holds a record the store does not. */
+  private async persist(collection: string, rec: Rec): Promise<void> {
+    const rows = (this.cols[collection] ??= []);
+    rows.push(rec);
+    try {
+      await this.adapter.append(collection, rec);
+    } catch (e) {
+      const i = rows.lastIndexOf(rec);
+      if (i >= 0) rows.splice(i, 1);
+      throw e;
+    }
   }
 
   list<T = Rec>(collection: string, where?: (r: Rec) => boolean): T[] {

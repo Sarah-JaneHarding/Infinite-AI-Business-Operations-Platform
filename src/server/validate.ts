@@ -1,10 +1,13 @@
+import { canonical, sha256Hex } from '../core/crypto';
 import { DEPARTMENTS, agentById } from '../departments';
 import type { Rec } from '../core/warehouse';
 import { ERASURE_CATEGORIES } from '../core/erasure';
+import { failedChecks, runAcceptance } from '../core/acceptance';
+import type { Doc } from '../core/types';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
-const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'tombstones', 'erasure_requests'];
+const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'countersignatures', 'tombstones', 'erasure_requests'];
 /** Document library, builder definitions, chat history and integration settings (no secrets are ever stored here). */
 const LIBRARY = ['documents', 'document_chunks', 'custom_defs', 'chat_log', 'integration_settings'];
 /** Collections behind widgets made in the widget builder. */
@@ -47,8 +50,10 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
   if (ctx.store.list(collection).length >= MAX_RECORDS) bad('collection is full', 507);
 
   switch (collection) {
-    case 'artefact_versions': artefact(rec, ctx); break;
+    case 'artefact_versions': await artefact(rec, ctx); break;
     case 'approvals': approval(rec, ctx); break;
+    case 'countersignatures': countersignature(rec, ctx); break;
+    case 'documents': await document(rec, ctx); break;
     case 'brain': brain(rec, ctx); break;
     case 'erasure_requests': erasure(rec, ctx); break;
     case 'tombstones': tombstone(rec, ctx); break;
@@ -56,36 +61,93 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
   return rec;
 }
 
-function artefact(rec: Rec, ctx: AppendCtx) {
+async function artefact(rec: Rec, ctx: AppendCtx) {
+  // Every signature is bound to docHash, so the server never takes it on trust: it must be the hash of the document sent with it.
+  if (typeof rec.doc !== 'object' || rec.doc === null || typeof rec.docHash !== 'string' || (await sha256Hex(canonical(rec.doc))) !== rec.docHash) bad('docHash does not match the document');
   const status = rec.status;
-  if (status !== 'DRAFT' && status !== 'IN_REVIEW' && status !== 'APPROVED' && status !== 'REJECTED') bad('bad artefact status');
+  if (status !== 'DRAFT' && status !== 'IN_REVIEW' && status !== 'APPROVED' && status !== 'RATIFIED' && status !== 'INGESTED' && status !== 'REJECTED') bad('bad artefact status');
   const customIds = new Set(ctx.store.list('custom_defs').filter((d) => d.kind === 'agent' && !d.deleted).map((d) => d.id));
   if (typeof rec.agentId !== 'string' || !(agentById(rec.agentId) || customIds.has(rec.agentId))) bad('unknown agent');
-  if (status !== 'APPROVED' && status !== 'REJECTED' && rec.approvedBy !== undefined) bad('only a decision carries approvedBy');
+  if (status !== 'APPROVED' && status !== 'REJECTED' && status !== 'RATIFIED' && status !== 'INGESTED' && rec.approvedBy !== undefined) bad('only a decision carries approvedBy');
+  if (status !== 'RATIFIED' && status !== 'INGESTED' && rec.countersignedBy !== undefined) bad('only a ratified artefact carries countersignedBy');
   const cur = latestById(ctx.store.list('artefact_versions'), rec.id);
 
   if (!cur) {
     if (status !== 'DRAFT' || rec.version !== 1) bad('a new artefact starts as DRAFT v1');
     if (ctx.actor && rec.requestedBy !== ctx.actor) bad('requestedBy is not you', 403);
+    if (String(rec.requestedBy).startsWith('auto:')) {
+      // An autonomous draft can only be created by the autonomy runner, for an ACTIVE standing order, by the agent it names.
+      const orderId = String(rec.requestedBy).slice(5);
+      const order = latestById(ctx.store.list('standing_orders'), orderId);
+      if (ctx.actor !== rec.requestedBy) bad('only the autonomy runner can create an autonomous draft', 403);
+      if (!order || order.status !== 'ACTIVE') return bad('there is no active standing order for this autonomous draft', 403);
+      if (order.agentId !== rec.agentId) bad('the draft is from a different agent than its standing order', 403);
+      if ((rec.doc as Doc | undefined)?.meta?.order !== orderId) bad('the draft does not name its standing order');
+    }
+    if (rec.revisionOf !== undefined) {
+      const of = latestById(ctx.store.list('artefact_versions'), rec.revisionOf);
+      if (of?.status !== 'RATIFIED' && of?.status !== 'INGESTED') bad('only a ratified artefact can be revised', 409);
+    }
     return;
   }
   if (rec.requestedBy !== cur.requestedBy || rec.agentId !== cur.agentId || rec.orgId !== cur.orgId) bad('requestedBy, agent and org cannot change');
   const sameDoc = rec.docHash === cur.docHash && rec.version === cur.version;
 
   if (status === 'DRAFT') {
+    if (cur.status === 'RATIFIED' || cur.status === 'INGESTED') bad('a ratified artefact is final: start a revision instead', 409);
     if (rec.version !== Number(cur.version) + 1) bad('an edit is a new version');
   } else if (cur.status === 'DRAFT' && status === 'IN_REVIEW') {
     if (!sameDoc) bad('submitting for review cannot change the document');
+    if (String(rec.requestedBy).startsWith('auto:')) {
+      // Strictly tested: the server runs the acceptance suite itself rather than trusting whoever submits.
+      const acc = runAcceptance({ doc: rec.doc as Doc, agentId: String(rec.agentId), flags: Array.isArray(rec.flags) ? rec.flags.map(String) : [], requestedBy: String(rec.requestedBy) }, agentById(String(rec.agentId)));
+      if (!acc.passed) bad(`it did not pass the acceptance suite: ${failedChecks(acc).map((c) => `${c.id} ${c.detail}`).join('; ')}`, 422);
+    }
   } else if (cur.status === 'IN_REVIEW' && (status === 'APPROVED' || status === 'REJECTED')) {
     if (!sameDoc) bad('a decision cannot change the document');
     const approver = rec.approvedBy;
     if (typeof approver !== 'string' || !approver) bad('a decision needs approvedBy');
+    if (String(approver).startsWith('auto:')) bad('an autonomous actor can never approve', 403);
     if (ctx.actor && approver !== ctx.actor) bad('approvedBy is not you', 403);
     if ((agentById(String(cur.agentId))?.secondApprover || customIds.has(String(cur.agentId))) && approver === cur.requestedBy) bad('this agent requires a second person to approve', 403);
     if (status === 'REJECTED' && !String(rec.note ?? '').trim()) bad('a rejection needs a reason');
+  } else if (cur.status === 'APPROVED' && status === 'RATIFIED') {
+    // The second signature: a different human countersigns exactly what was approved.
+    if (!sameDoc) bad('a countersignature cannot change the document');
+    const signer = rec.countersignedBy;
+    if (typeof signer !== 'string' || !signer) bad('ratifying needs countersignedBy');
+    if (String(signer).startsWith('auto:')) bad('an autonomous actor can never countersign', 403);
+    if (ctx.actor && signer !== ctx.actor) bad('countersignedBy is not you', 403);
+    if (signer === cur.approvedBy) bad('a different person from the approver must countersign', 403);
+    if (rec.approvedBy !== cur.approvedBy) bad('approvedBy cannot change');
+    if (typeof rec.ratifiedAt !== 'string') bad('ratifying needs ratifiedAt');
+  } else if (cur.status === 'RATIFIED' && status === 'INGESTED') {
+    if (!sameDoc) bad('ingesting cannot change the document');
+    if (rec.approvedBy !== cur.approvedBy || rec.countersignedBy !== cur.countersignedBy) bad('signers cannot change');
+    if (agentById(String(cur.agentId))?.ingestion === 'none') bad('this agent\'s contract says its output is not ingested', 409);
+    const doc = latestById(ctx.store.list('documents'), `rat_${String(cur.id)}_v${String(cur.version)}`);
+    if (!doc || doc.origin !== 'ratified' || (doc.ratifiedFrom as { docHash?: string } | undefined)?.docHash !== cur.docHash) bad('the ratified document is not in the library yet', 409);
+    if (typeof rec.ingestedAt !== 'string') bad('ingesting needs ingestedAt');
   } else {
     bad(`cannot go from ${String(cur.status)} to ${status}`, 409);
   }
+}
+
+function countersignature(rec: Rec, ctx: AppendCtx) {
+  const art = latestById(ctx.store.list('artefact_versions'), rec.artefactId);
+  if (!art || art.status !== 'RATIFIED' || art.countersignedBy !== rec.signer || art.docHash !== rec.docHash || art.version !== rec.version) bad('countersignature does not match a ratified artefact', 409);
+  if (ctx.actor && rec.signer !== ctx.actor) bad('signer is not you', 403);
+}
+
+/** A ratified library document is the exact approved-and-countersigned content, and once written it never changes. */
+async function document(rec: Rec, ctx: AppendCtx) {
+  if (latestById(ctx.store.list('documents'), rec.id)?.origin === 'ratified') bad('a ratified document is immutable', 409);
+  if (rec.origin !== 'ratified') return;
+  const from = rec.ratifiedFrom as { artefactId?: string; docHash?: string } | undefined;
+  const art = latestById(ctx.store.list('artefact_versions'), from?.artefactId);
+  if (!art || art.status !== 'RATIFIED' || art.docHash !== from?.docHash || rec.id !== `rat_${String(art.id)}_v${String(art.version)}`) return bad('a ratified document must come from a ratified artefact', 409);
+  if ((await sha256Hex(canonical(rec.doc))) !== art.docHash) bad('the document does not match what was ratified');
+  if (ctx.actor && rec.by !== ctx.actor) bad('by is not you', 403);
 }
 
 function approval(rec: Rec, ctx: AppendCtx) {

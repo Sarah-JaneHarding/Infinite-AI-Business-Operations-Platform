@@ -10,7 +10,7 @@ const LABEL: Record<IntState, string> = { live: 'live', built_in: 'built in', of
 export function Integrations() {
   const { p, health, mode, tick } = useOps();
   const list = useMemo(() => integrations(health, mode === 'server'), [health, mode]);
-  const approved = useMemo(() => (p?.artefacts() ?? []).filter((a) => a.status === 'APPROVED'), [p, tick]);
+  const approved = useMemo(() => (p?.artefacts() ?? []).filter((a) => a.status === 'RATIFIED' || a.status === 'INGESTED'), [p, tick]);
   const [hosts, setHosts] = useState<string[]>([]);
   const [host, setHost] = useState('');
   const [path, setPath] = useState('/');

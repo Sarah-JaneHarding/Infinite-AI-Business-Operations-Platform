@@ -22,6 +22,14 @@ describe('App shell keeps what authenticated mode needs', () => {
     expect(app).toMatch(/name: 'erasure'/);
     expect(app).toMatch(/<ErasureView \/>/);
   });
+  it('offers Autonomous Agents', () => {
+    expect(app).toMatch(/name: 'autonomy'/);
+    expect(app).toMatch(/<Autonomy \/>/);
+  });
+  it('offers the Review Board', () => {
+    expect(app).toMatch(/name: 'board'/);
+    expect(app).toMatch(/<Board \/>/);
+  });
   it('offers the Model Hub', () => {
     expect(app).toMatch(/name: 'models'/);
     expect(app).toMatch(/<ModelHub \/>/);

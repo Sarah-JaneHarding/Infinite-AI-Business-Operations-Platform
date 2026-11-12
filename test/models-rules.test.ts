@@ -66,7 +66,7 @@ describe('M9: tool results', () => {
     expect(checkToolResult({ note: 'learner number 4471' })).toMatch(/learner-level identifiers/);
   });
   it('never lets the ledger, erasure records, settings or approvals be model-readable, whatever the configuration says', () => {
-    for (const c of ['ledger', 'tombstones', 'erasure_requests', 'integration_settings', 'chat_log', 'connector_events', 'approvals', 'brain', 'model_attestations', 'custom_defs']) {
+    for (const c of ['ledger', 'tombstones', 'erasure_requests', 'integration_settings', 'chat_log', 'connector_events', 'approvals', 'brain', 'model_attestations', 'custom_defs', 'standing_orders', 'draft_checks']) {
       expect(NEVER_MODEL_READABLE.has(c)).toBe(true);
       expect(() => readReadable({ OPS_MODEL_READABLE_COLLECTIONS: `vendors,${c}` })).toThrow(/may never include/);
     }

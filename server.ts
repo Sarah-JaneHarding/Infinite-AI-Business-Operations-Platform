@@ -11,6 +11,11 @@ import { authenticate, parseAuth } from './src/server/auth';
 import { Rejected, validateAppend } from './src/server/validate';
 import { RateLimiter } from './src/server/rate';
 import { appendLedger } from './src/server/ledgerService';
+import { ratifiedProblem } from './src/server/finality';
+import { AutonomyService } from './src/server/autonomy/service';
+import { makeRunner } from './src/server/autonomy/runner';
+import { autonomyRoutes } from './src/server/autonomyRoutes';
+import { snapshotFacts } from './src/connector/snapshot';
 import type { Artefact } from './src/core/platform';
 import type { Rec } from './src/core/warehouse';
 import { ModelHub } from './src/server/models/hub';
@@ -43,6 +48,19 @@ try {
   process.exit(1);
 }
 
+/** A server-side write takes the same validated, serialised path a client write takes. */
+const appendValidated = (collection: string, rec: Rec, actor: string) => serial(async () => {
+  const v = await validateAppend(collection, rec, { actor, store });
+  store.append(collection, v);
+});
+let autonomy: AutonomyService;
+try {
+  autonomy = new AutonomyService({ env, store, runner: makeRunner({ store, appendValidated, hub, facts: () => ({ ...snapshotFacts(), ...(cache ? liveFacts(cache.status) : {}) }) }) });
+} catch (err) {
+  console.error(`FATAL: autonomy configuration: ${(err as Error).message}`);
+  process.exit(1);
+}
+
 const app = express();
 app.disable('x-powered-by');
 
@@ -67,6 +85,7 @@ app.get('/api/health', (_q, res) => res.json({
   auth: auth.mode,
   githubToken: Boolean(env.GITHUB_TOKEN),
   llm: hub.anyReady(),
+  autonomy: autonomy.enabled,
   ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true',
   webhook: Boolean(env.GITHUB_WEBHOOK_SECRET),
   outbound: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST).length > 0
@@ -90,6 +109,8 @@ app.post('/api/connector/webhook', express.raw({ type: '*/*', limit: '1mb' }), w
   events.length = Math.min(events.length, 100);
   store.append('connector_events', { id: `ev_${Date.now()}`, ...ev });
   cache = null; // next status call refetches
+  // A signed event can start the active standing orders listening for it. Not awaited: the webhook answers GitHub at once.
+  void autonomy.onEvent(ev.kind).catch((e: Error) => console.error('autonomy event failed:', e.message));
   res.json({ ok: true });
 }));
 
@@ -119,8 +140,8 @@ app.post('/api/connector/publish', wrap(async (req, res) => {
     const id = String(req.body?.artefactId ?? '');
     const art = store.list('artefact_versions').filter((r) => r.id === id).at(-1) as unknown as Artefact | undefined;
     if (!art) return res.status(404).json({ error: 'unknown artefact' });
-    // The decision must also exist in the approvals record, made by the person named on the artefact.
-    if (!store.list('approvals').some((r) => r.artefactId === id && r.decision === 'APPROVED' && r.approver === art.approvedBy)) return res.status(403).json({ error: 'No recorded human approval for this artefact.' });
+    const problem = ratifiedProblem(store, art as unknown as Rec);
+    if (problem) return res.status(403).json({ error: problem });
     const summary = String(req.body?.summary ?? '').slice(0, 4000);
     const out = await publisher.openIssue(art, proposalFromArtefact(art, summary));
     store.append('connector_events', { id: `pub_${Date.now()}`, kind: 'issue_opened', summary: out.url, by: actor, at: new Date().toISOString() });
@@ -142,7 +163,8 @@ app.post('/api/integrations/send', wrap(async (req, res) => {
   const id = String(req.body?.artefactId ?? '');
   const art = store.list('artefact_versions').filter((r) => r.id === id).at(-1) as unknown as Artefact | undefined;
   if (!art) return res.status(404).json({ error: 'unknown artefact' });
-  if (art.status !== 'APPROVED' || !store.list('approvals').some((r) => r.artefactId === id && r.decision === 'APPROVED' && r.approver === art.approvedBy)) return res.status(403).json({ error: 'Only an approved artefact with a recorded human approval can be sent.' });
+  const problem = ratifiedProblem(store, art as unknown as Rec);
+  if (problem) return res.status(403).json({ error: problem });
   try { const addrs = await lookup(t.url.hostname, { all: true }); if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) return res.status(403).json({ error: 'That host resolves to a non-public address.' }); } catch { return res.status(502).json({ error: 'Could not resolve that host.' }); }
   const body = JSON.stringify(payloadFor(art));
   const headers: Record<string, string> = { 'content-type': 'application/json', 'user-agent': 'infinite-ai-ops' };
@@ -155,10 +177,13 @@ app.post('/api/integrations/send', wrap(async (req, res) => {
 // ---- models: the hub is the only door to a model provider (docs/MODEL_HUB.md). Gateway, copilot, recommendations, setup. ----
 app.use('/api', modelRoutes(hub));
 
+// ---- autonomy: standing orders, runs by request, and the budgets. Agents only ever draft; people sign (docs/AUTONOMY.md). ----
+app.use('/api', autonomyRoutes(autonomy));
+
 // ---- ledger: the server authors every entry (seq, hash, time), so the chain cannot fork or be forged ----
 app.post('/api/ledger', wrap(async (req, res) => {
   try {
-    const out = await appendLedger(store, req.body?.input, req.body?.knownSeq, actorOf(res));
+    const out = await appendLedger(store, req.body?.input, req.body?.knownSeq, actorOf(res), undefined, { client: true });
     res.json(out);
   } catch (e) {
     if (e instanceof Rejected) return res.status(e.status).json({ error: e.message });
@@ -202,8 +227,12 @@ async function start() {
     app.use(express.static(dist));
     app.get('*', (_q, res) => res.sendFile(path.join(dist, 'index.html')));
   }
+  if (autonomy.enabled) {
+    // Scheduled orders are checked every minute. A failed check is logged and tried again next minute.
+    setInterval(() => void autonomy.tick().catch((e: Error) => console.error('autonomy tick failed:', e.message)), 60_000).unref();
+  }
   app.listen(PORT, HOST, () => {
-    console.log(`Infinite-AI Ops Platform on http://${HOST}:${PORT}  (repo: ${REPO}; auth: ${auth.mode})`);
+    console.log(`Infinite-AI Ops Platform on http://${HOST}:${PORT}  (repo: ${REPO}; auth: ${auth.mode}; autonomy: ${autonomy.enabled ? 'on' : 'off'})`);
     if (auth.mode === 'open') console.warn('WARNING: no users configured (OPS_USERS). Open dev mode: identity is self-declared and publishing is disabled.');
   });
 }

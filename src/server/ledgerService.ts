@@ -21,15 +21,18 @@ const strip = (r: Rec): LedgerEntry => {
  * interleave), whoever the caller is. `knownSeq` is the newest entry the client has; everything it missed is returned
  * so a second writer catches up instead of forking.
  */
-export function appendLedger(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString()): Promise<LedgerResult> {
-  const run = (tails.get(store) ?? Promise.resolve()).then(() => write(store, input, knownSeq, actor, now));
+export function appendLedger(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString(), opts: { client?: boolean } = {}): Promise<LedgerResult> {
+  const run = (tails.get(store) ?? Promise.resolve()).then(() => write(store, input, knownSeq, actor, now, opts));
   tails.set(store, run.catch(() => undefined));
   return run;
 }
 
 const tails = new WeakMap<object, Promise<unknown>>();
 
-async function write(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString()): Promise<LedgerResult> {
+/** Actions only the server writes. Budgets and test results are counted from them, so a client must not be able to add them. */
+export const SERVER_ONLY_ACTIONS = /^(model|autonomy)\./;
+
+async function write(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString(), opts: { client?: boolean } = {}): Promise<LedgerResult> {
   const bad = (m: string, status = 400): never => {
     throw new Rejected(status, m);
   };
@@ -39,6 +42,7 @@ async function write(store: LedgerStore, input: unknown, knownSeq: unknown, acto
   const detail = i.detail ?? {};
   if (typeof detail !== 'object' || detail === null || Array.isArray(detail) || JSON.stringify(detail).length > MAX_DETAIL_BYTES) bad('detail must be a small object');
   const action = i.action as string;
+  if (opts.client && SERVER_ONLY_ACTIONS.test(action)) bad('this action is written by the server only', 403);
   const who = i.actor as string;
   const subject = i.subject as string;
 
@@ -48,6 +52,8 @@ async function write(store: LedgerStore, input: unknown, knownSeq: unknown, acto
   const art = store.list('artefact_versions').filter((r) => r.id === subject).at(-1);
   if (/^hitl\.(approved|rejected)$/.test(action) && (art?.status !== action.slice(5).toUpperCase() || art.approvedBy !== who)) bad('no recorded decision matches this ledger entry', 409);
   if (action === 'artefact.submit' && art?.status !== 'IN_REVIEW') bad('artefact is not in review', 409);
+  if (/^artefact\.(countersigned|ratified)$/.test(action) && ((art?.status !== 'RATIFIED' && art?.status !== 'INGESTED') || art?.countersignedBy !== who)) bad('no recorded countersignature matches this ledger entry', 409);
+  if (action === 'artefact.ingested' && art?.status !== 'INGESTED') bad('artefact is not ingested', 409);
   // Erasure acts are only ledgered when the warehouse holds the matching state, by the same person.
   const er = store.list('erasure_requests').filter((r) => r.id === subject).at(-1);
   if (action === 'erasure.requested' && (er?.status !== 'REQUESTED' || er.requestedBy !== who)) bad('no recorded erasure request matches this ledger entry', 409);

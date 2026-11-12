@@ -24,7 +24,7 @@ export type FileKind = 'markdown' | 'text' | 'csv' | 'json' | 'html' | 'docx' | 
 export interface DocRecord {
   id: string;
   title: string;
-  origin: 'created' | 'uploaded' | 'template' | 'saved';
+  origin: 'created' | 'uploaded' | 'template' | 'saved' | 'ratified';
   name?: string;
   mime?: string;
   size?: number;
