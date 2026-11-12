@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DocumentItem } from '../types';
-import { INITIAL_WAREHOUSE_DOCUMENTS } from '../data/warehouseData';
+import { INITIAL_WAREHOUSE_DOCUMENTS } from '../../src/data/warehouseData';
 import { 
   BookOpen, 
   CheckCircle2, 

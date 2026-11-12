@@ -17,7 +17,7 @@ import {
   LAWS11, 
   INTELS, 
   COURSES 
-} from '../data/educationEcosystemData';
+} from '../../src/data/educationEcosystemData';
 import {
   ExternalLink,
   ChevronRight,
