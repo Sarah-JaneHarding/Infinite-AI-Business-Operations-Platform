@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, symlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -80,7 +80,9 @@ const T_SARAH = 's'.repeat(24);
 const T_DAN = 'd'.repeat(24);
 async function boot(port: number, env: Record<string, string>) {
   const cwd = mkdtempSync(join(tmpdir(), 'ops-sec-'));
-  symlinkSync(join(ROOT, 'dist'), join(cwd, 'dist'));
+  // The test serves its own tiny page, so it does not depend on a build having been run first.
+  mkdirSync(join(cwd, 'dist'));
+  writeFileSync(join(cwd, 'dist', 'index.html'), '<!doctype html><title>test</title>');
   const p = spawn(process.execPath, [join(ROOT, 'node_modules/tsx/dist/cli.mjs'), join(ROOT, 'server.ts')], { cwd, env: { PATH: process.env.PATH ?? '', NODE_ENV: 'production', HOST: '127.0.0.1', PORT: String(port), ...env }, stdio: 'ignore' });
   procs.push(p);
   const base = `http://127.0.0.1:${port}`;
