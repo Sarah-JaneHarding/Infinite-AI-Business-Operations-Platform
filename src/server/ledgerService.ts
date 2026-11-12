@@ -48,6 +48,8 @@ async function write(store: LedgerStore, input: unknown, knownSeq: unknown, acto
   const art = store.list('artefact_versions').filter((r) => r.id === subject).at(-1);
   if (/^hitl\.(approved|rejected)$/.test(action) && (art?.status !== action.slice(5).toUpperCase() || art.approvedBy !== who)) bad('no recorded decision matches this ledger entry', 409);
   if (action === 'artefact.submit' && art?.status !== 'IN_REVIEW') bad('artefact is not in review', 409);
+  if (/^artefact\.(countersigned|ratified)$/.test(action) && ((art?.status !== 'RATIFIED' && art?.status !== 'INGESTED') || art?.countersignedBy !== who)) bad('no recorded countersignature matches this ledger entry', 409);
+  if (action === 'artefact.ingested' && art?.status !== 'INGESTED') bad('artefact is not ingested', 409);
   // Erasure acts are only ledgered when the warehouse holds the matching state, by the same person.
   const er = store.list('erasure_requests').filter((r) => r.id === subject).at(-1);
   if (action === 'erasure.requested' && (er?.status !== 'REQUESTED' || er.requestedBy !== who)) bad('no recorded erasure request matches this ledger entry', 409);

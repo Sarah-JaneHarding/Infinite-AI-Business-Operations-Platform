@@ -101,7 +101,12 @@ describe('server: the approval gate cannot be forged', () => {
 
     const wh = (await call(base, '/api/warehouse', { token: T_DAN })).json as Record<string, { artefactId?: string; approver?: string }[]>;
     expect(wh['approvals']?.some((a) => a.artefactId === art.id && a.approver === 'dan')).toBe(true);
-    // With the approval recorded, publish passes the gate and stops only at the writes switch.
+    // Approval alone no longer opens the gate: it has to be ratified (countersigned by a different person) first.
+    const early = await call(base, '/api/connector/publish', { token: T_DAN, body: { artefactId: art.id } });
+    expect(early.status).toBe(403);
+    expect(early.json?.error).toMatch(/ratified artefact/i);
+    await (await mk(T_SARAH)).countersign(art.id, human('sarah'), 'second signature', sec);
+    // Once ratified, publish passes the gate and stops only at the writes switch.
     const pub = await call(base, '/api/connector/publish', { token: T_DAN, body: { artefactId: art.id } });
     expect(pub.status).toBe(403);
     expect(pub.json?.error).toMatch(/writes are disabled/i);
@@ -407,4 +412,52 @@ describe('server: model hub configuration fails closed', () => {
     expect(r?.code).toBe(1);
     expect(r?.err).toMatch(msg);
   }, 20_000);
+});
+
+describe('server: the board (approve → countersign → ratify → ingest)', () => {
+  const withToken = (token: string): typeof fetch => (u, i) => fetch(u, { ...i, headers: { ...(i?.headers as Record<string, string>), 'x-ops-token': token } });
+  const mk = (token: string) => new Platform({ adapter: new ServerAdapter(`${base}/api/warehouse`, withToken(token)), sequencer: serverSequencer(`${base}/api/ledger`, withToken(token)) }).init();
+  const agent = AGENTS.find((a) => !a.secondApprover)!;
+  const inputs = Object.fromEntries(agent.inputs.map((i) => [i.key, i.kind === 'number' ? '5' : i.kind === 'select' ? i.options![0] : 'Pilot school onboarding process']));
+  const post = (token: string, collection: string, body: Record<string, unknown>) => call(base, `/api/warehouse/${collection}`, { token, body });
+
+  it('needs two different humans; every shortcut over the raw API is refused; the ratified document is exact and immutable', async () => {
+    const sarah = await mk(T_SARAH);
+    const a = await sarah.runAgent(agent, inputs, human('sarah'));
+    await sarah.submitForReview(a.id, human('sarah'));
+    await sarah.flush();
+    const dan = await mk(T_DAN);
+    await dan.decide(a.id, human('dan'), 'APPROVED', 'looks right', agent);
+    await dan.flush();
+    const cur = dan.artefact(a.id)!;
+
+    const ratify = (signer: string, token: string, o: Record<string, unknown> = {}) => post(token, 'artefact_versions', { ...cur, status: 'RATIFIED', countersignedBy: signer, ratifiedAt: new Date().toISOString(), ...o });
+    expect((await ratify('dan', T_DAN)).status).toBe(403); // the approver cannot countersign
+    expect((await ratify('sarah', T_DAN)).status).toBe(403); // signing as someone else
+    expect((await ratify('auto:digest', T_DAN)).status).toBe(403); // an autonomous actor can never sign
+    expect((await ratify('sarah', T_SARAH, { docHash: 'f'.repeat(64) })).status).toBe(400); // changed content
+    expect((await post(T_SARAH, 'artefact_versions', { ...cur, status: 'INGESTED', countersignedBy: 'sarah', ingestedAt: 'x' })).status).toBe(409); // cannot skip ratification
+    expect((await post(T_SARAH, 'countersignatures', { id: 'sig_forged', artefactId: a.id, version: 1, docHash: cur.docHash, signer: 'sarah' })).status).toBe(409); // a signature with nothing ratified
+    expect((await post(T_SARAH, 'documents', { id: `rat_${a.id}_v1`, origin: 'ratified', title: 'x', doc: cur.doc, by: 'sarah', ratifiedFrom: { artefactId: a.id, docHash: cur.docHash } })).status).toBe(409); // a library document before ratification
+
+    const done = await (await mk(T_SARAH)).countersign(a.id, human('sarah'), 'Checked the sources', agent);
+    expect(done).toMatchObject({ status: 'INGESTED', approvedBy: 'dan', countersignedBy: 'sarah' });
+
+    // it is final, and the library copy cannot be rewritten
+    expect((await post(T_SARAH, 'artefact_versions', { ...done, status: 'DRAFT', version: done.version + 1, approvedBy: undefined, countersignedBy: undefined })).status).toBe(409);
+    expect((await post(T_SARAH, 'documents', { id: `rat_${a.id}_v1`, origin: 'saved', deleted: true })).status).toBe(409);
+    expect((await post(T_SARAH, 'documents', { id: `rat_${a.id}_v1`, origin: 'ratified', title: 'rewritten', doc: { ...cur.doc, title: 'rewritten' }, by: 'sarah', ratifiedFrom: { artefactId: a.id, docHash: cur.docHash } })).status).toBe(409);
+
+    // a fresh session sees all of it, and the chain is intact
+    const fresh = await mk(T_DAN);
+    expect(fresh.artefact(a.id)).toMatchObject({ status: 'INGESTED' });
+    expect(fresh.warehouse.list('documents').some((d) => d['id'] === `rat_${a.id}_v1` && d['origin'] === 'ratified')).toBe(true);
+    expect(fresh.brain.all.some((f) => f.topic === `ratified.${agent.id}`)).toBe(true);
+    expect(await fresh.ledger.verify()).toBeNull();
+    const acts = fresh.ledger.all.filter((e) => e.subject === a.id).map((e) => `${e.action}:${e.actor}`);
+    expect(acts).toEqual(expect.arrayContaining(['hitl.approved:dan', 'artefact.countersigned:sarah', 'artefact.ratified:sarah', 'artefact.ingested:sarah']));
+    // a revision starts a new artefact that must go through the board again
+    const rev = await fresh.revise(a.id, human('dan'));
+    expect(rev).toMatchObject({ status: 'DRAFT', revisionOf: a.id, requestedBy: 'dan' });
+  }, 60_000);
 });

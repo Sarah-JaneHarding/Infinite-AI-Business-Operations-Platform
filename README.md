@@ -15,6 +15,10 @@ npm run lint             # strict TypeScript
 npm run audit:ecosystem -- /path/to/infinite-ai-ecosystem   # refresh src/generated/ecosystem-snapshot.json
 ```
 
+### Review board
+
+Output is a draft until a reviewer approves it, a different person countersigns it, and it is ratified and ingested. See `docs/REVIEW_BOARD.md`.
+
 ### AI models
 
 Connect and configure models in the **Model Hub** (sidebar). Setup, rules and troubleshooting: `docs/MODEL_HUB.md`. Every model

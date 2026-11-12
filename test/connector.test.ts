@@ -71,12 +71,14 @@ describe('webhook', () => {
 });
 
 describe('ProposalPublisher', () => {
-  const art = (over: Partial<Artefact>) => ({ id: 'a', title: 'T', agentId: 'X', version: 1, status: 'APPROVED', approvedBy: 'sarah', ...over }) as Artefact;
-  it('refuses unapproved, disabled, or tokenless; opens an issue only when all hold', async () => {
+  const art = (over: Partial<Artefact>) => ({ id: 'a', title: 'T', agentId: 'X', version: 1, status: 'RATIFIED', approvedBy: 'dan', countersignedBy: 'sarah', ...over }) as Artefact;
+  it('refuses unratified, disabled, or tokenless; opens an issue only when all hold', async () => {
     const p = proposalFromArtefact(art({}), 'Do it');
     expect(p.body).toContain('Definition of Done');
     const fetchOk = (async () => new Response(JSON.stringify({ html_url: 'https://x/1' }), { status: 201 })) as unknown as typeof fetch;
-    await expect(new ProposalPublisher('o/r', 't', true, fetchOk).openIssue(art({ status: 'DRAFT' }), p)).rejects.toBeInstanceOf(PublishRefused);
+    for (const o of [{ status: 'DRAFT' }, { status: 'IN_REVIEW' }, { status: 'APPROVED', countersignedBy: undefined }, { countersignedBy: undefined }, { countersignedBy: 'dan' }] as Partial<Artefact>[]) {
+      await expect(new ProposalPublisher('o/r', 't', true, fetchOk).openIssue(art(o), p)).rejects.toBeInstanceOf(PublishRefused); // approved alone is not enough, and the two signers must differ
+    }
     await expect(new ProposalPublisher('o/r', 't', false, fetchOk).openIssue(art({}), p)).rejects.toThrow(/disabled/);
     await expect(new ProposalPublisher('o/r', undefined, true, fetchOk).openIssue(art({}), p)).rejects.toThrow(/token/);
     expect((await new ProposalPublisher('o/r', 't', true, fetchOk).openIssue(art({}), p)).url).toBe('https://x/1');

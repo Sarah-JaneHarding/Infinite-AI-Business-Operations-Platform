@@ -11,6 +11,7 @@ import { authenticate, parseAuth } from './src/server/auth';
 import { Rejected, validateAppend } from './src/server/validate';
 import { RateLimiter } from './src/server/rate';
 import { appendLedger } from './src/server/ledgerService';
+import { ratifiedProblem } from './src/server/finality';
 import type { Artefact } from './src/core/platform';
 import type { Rec } from './src/core/warehouse';
 import { ModelHub } from './src/server/models/hub';
@@ -119,8 +120,8 @@ app.post('/api/connector/publish', wrap(async (req, res) => {
     const id = String(req.body?.artefactId ?? '');
     const art = store.list('artefact_versions').filter((r) => r.id === id).at(-1) as unknown as Artefact | undefined;
     if (!art) return res.status(404).json({ error: 'unknown artefact' });
-    // The decision must also exist in the approvals record, made by the person named on the artefact.
-    if (!store.list('approvals').some((r) => r.artefactId === id && r.decision === 'APPROVED' && r.approver === art.approvedBy)) return res.status(403).json({ error: 'No recorded human approval for this artefact.' });
+    const problem = ratifiedProblem(store, art as unknown as Rec);
+    if (problem) return res.status(403).json({ error: problem });
     const summary = String(req.body?.summary ?? '').slice(0, 4000);
     const out = await publisher.openIssue(art, proposalFromArtefact(art, summary));
     store.append('connector_events', { id: `pub_${Date.now()}`, kind: 'issue_opened', summary: out.url, by: actor, at: new Date().toISOString() });
@@ -142,7 +143,8 @@ app.post('/api/integrations/send', wrap(async (req, res) => {
   const id = String(req.body?.artefactId ?? '');
   const art = store.list('artefact_versions').filter((r) => r.id === id).at(-1) as unknown as Artefact | undefined;
   if (!art) return res.status(404).json({ error: 'unknown artefact' });
-  if (art.status !== 'APPROVED' || !store.list('approvals').some((r) => r.artefactId === id && r.decision === 'APPROVED' && r.approver === art.approvedBy)) return res.status(403).json({ error: 'Only an approved artefact with a recorded human approval can be sent.' });
+  const problem = ratifiedProblem(store, art as unknown as Rec);
+  if (problem) return res.status(403).json({ error: problem });
   try { const addrs = await lookup(t.url.hostname, { all: true }); if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) return res.status(403).json({ error: 'That host resolves to a non-public address.' }); } catch { return res.status(502).json({ error: 'Could not resolve that host.' }); }
   const body = JSON.stringify(payloadFor(art));
   const headers: Record<string, string> = { 'content-type': 'application/json', 'user-agent': 'infinite-ai-ops' };

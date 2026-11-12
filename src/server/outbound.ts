@@ -1,5 +1,5 @@
 /**
- * Outbound integration: send an APPROVED artefact to a host the operator has explicitly allowed.
+ * Outbound integration: send a ratified artefact to a host the operator has explicitly allowed.
  * Off unless OPS_OUTBOUND_ALLOWLIST names at least one host. Only https, only exact host matches, never an IP or an internal name,
  * and the resolved address is checked again before connecting (see isPrivateIp).
  */

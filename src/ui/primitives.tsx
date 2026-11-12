@@ -19,7 +19,7 @@ export const Card = ({ title, right, children, className = '' }: { title?: React
   </section>
 );
 export const Badge = ({ tone = '', children }: { tone?: string; children: ReactNode }) => <span className={`badge ${tone}`}>{children}</span>;
-export const statusTone = (s: string) => ({ DRAFT: 'draft', IN_REVIEW: 'review', APPROVED: 'ok', REJECTED: 'bad' }[s] ?? '');
+export const statusTone = (s: string) => ({ DRAFT: 'draft', IN_REVIEW: 'review', APPROVED: 'info', RATIFIED: 'ok', INGESTED: 'ok', REJECTED: 'bad' }[s] ?? '');
 
 export function download(name: string, data: string | Uint8Array, mime: string) {
   const blob = new Blob([data as BlobPart], { type: mime });

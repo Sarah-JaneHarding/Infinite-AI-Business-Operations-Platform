@@ -25,7 +25,17 @@ export interface Artefact {
   at: string;
   approvedBy?: string;
   note?: string;
+  /** sha-256 of the document: every signature is bound to it. */
+  docHash?: string;
+  countersignedBy?: string;
+  ratifiedAt?: string;
+  ingestedAt?: string;
+  /** Set on a revision: the ratified artefact it was copied from. */
+  revisionOf?: string;
 }
+
+/** Autonomous actors are named `auto:<order>`. They can draft and submit, and can never approve, countersign or ratify. */
+export const isAutonomous = (id: string) => id.startsWith('auto:');
 
 /** A stored request without the warehouse's own bookkeeping (hash, storedAt) and its timestamp, ready to become the next version. */
 const erasureFields = (r: ErasureRequest): Omit<ErasureRequest, 'at'> => ({ id: r.id, subjectHash: r.subjectHash, category: r.category, note: r.note, status: r.status, requestedBy: r.requestedBy, decidedBy: r.decidedBy, decisionNote: r.decisionNote, version: r.version });
@@ -289,6 +299,7 @@ export class Platform {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error('Unknown artefact.');
     if (editor.kind !== 'human') throw new Error('Only a human can edit an artefact.');
+    if (cur.status === 'RATIFIED' || cur.status === 'INGESTED') throw new RunRefused('hitl', 'A ratified artefact is final. Start a revision instead.');
     const clean = JSON.parse(JSON.stringify(doc)) as Doc;
     const next: Artefact = { ...cur, id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: 'DRAFT', approvedBy: undefined, at: new Date().toISOString() };
     // learner identifiers can never be saved via an edit either
@@ -317,7 +328,7 @@ export class Platform {
   async decide(artefactId: string, approver: Actor, decision: 'APPROVED' | 'REJECTED', note: string, agent?: AgentContract) {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error('Unknown artefact.');
-    if (approver.kind !== 'human') throw new RunRefused('hitl', 'Only a named human can approve or reject.');
+    if (approver.kind !== 'human' || isAutonomous(approver.id)) throw new RunRefused('hitl', 'Only a named human can approve or reject.');
     if (cur.status !== 'IN_REVIEW') throw new RunRefused('hitl', 'Artefact must be submitted for review first.');
     if (agent?.secondApprover && approver.id === cur.requestedBy) throw new RunRefused('hitl', 'This agent requires a second person to approve.');
     if (decision === 'REJECTED' && !note.trim()) throw new RunRefused('hitl', 'A rejection needs a reason.');
@@ -326,6 +337,67 @@ export class Platform {
     await this.warehouse.put('approvals', { id: newId('apr'), artefactId, decision, approver: approver.id, note, at: next.at });
     await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'hitl.' + decision.toLowerCase(), subject: artefactId, detail: { note } });
     return next;
+  }
+
+  /**
+   * Second signature. A different human from the approver countersigns the exact content that was approved; that
+   * ratifies it, and then (unless the agent's contract says it is not relevant) it is ingested.
+   */
+  async countersign(artefactId: string, signer: Actor, note: string, agent?: AgentContract): Promise<Artefact> {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error('Unknown artefact.');
+    if (signer.kind !== 'human' || isAutonomous(signer.id)) throw new RunRefused('hitl', 'Only a named human can countersign.');
+    if (cur.status !== 'APPROVED') throw new RunRefused('hitl', 'Only an approved artefact can be countersigned.');
+    if (signer.id === cur.approvedBy) throw new RunRefused('hitl', 'A different person from the approver must countersign.');
+    const n = (note ?? '').trim();
+    if (n.length > 300) throw new RunRefused('hitl', 'Keep the countersignature note to 300 characters.');
+    const docHash = cur.docHash ?? (await sha256Hex(canonical(cur.doc)));
+    const at = new Date().toISOString();
+    const next: Artefact = { ...cur, id: artefactId, docHash, status: 'RATIFIED', countersignedBy: signer.id, ratifiedAt: at, at };
+    await this.warehouse.put('artefact_versions', { ...next, editedBy: signer.id });
+    await this.warehouse.put('countersignatures', { id: newId('sig'), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.countersigned', subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy } });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.ratified', subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id } });
+    if (agent?.ingestion === 'none') return next;
+    return this.ingest(artefactId, signer);
+  }
+
+  /** Ratified output goes into the document library (exact content) and the Brain (an episode). Safe to repeat if it failed part-way. */
+  async ingest(artefactId: string, by: Actor): Promise<Artefact> {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error('Unknown artefact.');
+    if (by.kind !== 'human' || isAutonomous(by.id)) throw new RunRefused('hitl', 'Only a named human can ingest.');
+    if (cur.status === 'INGESTED') return cur;
+    if (cur.status !== 'RATIFIED') throw new RunRefused('hitl', 'Only a ratified artefact can be ingested.');
+    const docHash = cur.docHash ?? (await sha256Hex(canonical(cur.doc)));
+    const at = new Date().toISOString();
+    const docId = `rat_${artefactId}_v${cur.version}`;
+    if (!this.warehouse.list('documents', (r) => r['id'] === docId).length) {
+      await this.warehouse.put('documents', { id: docId, title: cur.title, origin: 'ratified', doc: cur.doc, scan: { scanned: true, notes: ['Ratified artefact: approved and countersigned.'] }, dept: cur.dept, by: by.id, at, ratifiedFrom: { artefactId, version: cur.version, docHash, agentId: cur.agentId, approvedBy: cur.approvedBy, countersignedBy: cur.countersignedBy } });
+    }
+    const src = `artefact:${artefactId}@${docHash.slice(0, 12)}`;
+    if (!this.brain.all.some((f) => f.provenance.sources.includes(src))) {
+      const d = deidentify(`Ratified: ${cur.title} (version ${cur.version}), approved by ${cur.approvedBy} and countersigned by ${cur.countersignedBy}.`, [src], this.knownNames);
+      await this.brain.remember({ tier: 'L2', topic: `ratified.${cur.agentId}`, text: d.text, provenance: d.provenance, by: by.id });
+    }
+    const next: Artefact = { ...cur, id: artefactId, docHash, status: 'INGESTED', ingestedAt: at, at };
+    await this.warehouse.put('artefact_versions', { ...next, editedBy: by.id });
+    await this.ledger.append({ orgId: this.orgId, actor: by.id, action: 'artefact.ingested', subject: artefactId, detail: { docId, docHash } });
+    return next;
+  }
+
+  /** A ratified artefact is final. Changing it means a new artefact, copied as a draft, that goes through the whole board again. */
+  async revise(artefactId: string, by: Actor): Promise<Artefact> {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error('Unknown artefact.');
+    if (by.kind !== 'human' || isAutonomous(by.id)) throw new RunRefused('hitl', 'Only a named human can start a revision.');
+    if (cur.status !== 'RATIFIED' && cur.status !== 'INGESTED') throw new RunRefused('hitl', 'Only a ratified artefact needs a revision; a draft can be edited directly.');
+    const doc = JSON.parse(JSON.stringify(cur.doc)) as Doc;
+    doc.meta = { ...doc.meta, status: 'DRAFT', revisionOf: artefactId };
+    const art: Artefact = { id: newId('art'), orgId: cur.orgId, agentId: cur.agentId, dept: cur.dept, title: cur.title, status: 'DRAFT', version: 1, requestedBy: by.id, formats: cur.formats, doc, flags: [], engine: cur.engine, at: new Date().toISOString(), revisionOf: artefactId };
+    await this.saveVersion(art, by.id);
+    await this.ledger.append({ orgId: this.orgId, actor: by.id, action: 'artefact.revise', subject: art.id, detail: { of: artefactId } });
+    return this.artefact(art.id)!;
   }
 
   /** Learning engine: proposals only. A human must ratify before it enters the Brain (L3/L4). */

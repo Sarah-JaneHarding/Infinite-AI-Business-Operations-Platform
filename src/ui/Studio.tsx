@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Download, Eye, FilePlus2, Pencil, Save, Send, XCircle, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Download, Eye, FilePlus2, Pencil, PenLine, Save, Send, XCircle, UploadCloud } from 'lucide-react';
 import { useOps } from './store';
 import { apiFetch } from '../core/api';
 import { Badge, Card, statusTone } from './primitives';
@@ -46,7 +46,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
   };
   const hist = p!.history(a.id);
   const ledger = p!.ledger.all.filter((e) => e.subject === a.id);
-  const canPublish = a.agentId === 'OPS-PROD-01' && a.status === 'APPROVED';
+  const canPublish = a.agentId === 'OPS-PROD-01' && (a.status === 'RATIFIED' || a.status === 'INGESTED');
   const preview = useMemo(() => toHtml(a.doc), [a.doc]);
 
   return (
@@ -92,6 +92,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
             <button className="btn" disabled={a.status !== 'DRAFT'} onClick={() => act(() => p!.submitForReview(a.id, actor), 'Submitted for review.')}><Send size={14} /> Submit for review</button>
             <button className="btn ok" disabled={a.status !== 'IN_REVIEW'} onClick={() => act(() => p!.decide(a.id, actor, 'APPROVED', note, agent), 'Approved.')}><CheckCircle2 size={14} /> Approve</button>
             <button className="btn danger" disabled={a.status !== 'IN_REVIEW'} onClick={() => act(() => p!.decide(a.id, actor, 'REJECTED', note, agent), 'Rejected.')}><XCircle size={14} /> Reject</button>
+            <button className="btn primary" disabled={a.status !== 'APPROVED' || a.approvedBy === actor.id} title={a.status === 'APPROVED' && a.approvedBy === actor.id ? 'A different person from the approver must countersign' : ''} onClick={() => act(() => p!.countersign(a.id, actor, note, agent), 'Countersigned and ratified.')}><PenLine size={14} /> Countersign and ratify</button>
           </div>
           {msg && <div role="status" className="rounded-lg border p-2 text-sm" style={{ borderColor: msg.tone === 'ok' ? 'var(--emerald)' : 'var(--rose)' }}>{msg.text}</div>}
         </div>

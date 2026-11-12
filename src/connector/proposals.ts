@@ -14,7 +14,7 @@ export const ECOSYSTEM_RULES_CHECKLIST = [
 
 export function proposalFromArtefact(a: Artefact, summary: string): IssueProposal {
   const body = [
-    `> Drafted by the Infinite-AI Ops Platform (${a.agentId}) and approved by a named human (${a.approvedBy ?? 'n/a'}). AI drafts. The human decides.`,
+    `> Drafted by the Infinite-AI Ops Platform (${a.agentId}) and approved by ${a.approvedBy ?? 'n/a'} and countersigned by ${a.countersignedBy ?? 'n/a'}. AI drafts. The human decides.`,
     '',
     summary,
     '',
@@ -30,14 +30,14 @@ export class PublishRefused extends Error {}
 
 /**
  * The ONLY write path to the ecosystem repo, and it can only open an ISSUE.
- * It refuses unless the artefact is APPROVED by a human and writes are explicitly enabled.
+ * It refuses unless the artefact is ratified (approved by one human and countersigned by a different one) and writes are explicitly enabled.
  * It never pushes commits, never touches branches, never reads secrets.
  */
 export class ProposalPublisher {
   constructor(private repo: string, private token: string | undefined, private writesEnabled: boolean, private f: Fetch = fetch, private api = 'https://api.github.com') {}
 
   async openIssue(a: Artefact, p: IssueProposal): Promise<{ url: string }> {
-    if (a.status !== 'APPROVED' || !a.approvedBy) throw new PublishRefused('Only a human-APPROVED artefact can be published.');
+    if ((a.status !== 'RATIFIED' && a.status !== 'INGESTED') || !a.approvedBy || !a.countersignedBy || a.approvedBy === a.countersignedBy) throw new PublishRefused('Only a ratified artefact (approved and countersigned by two different people) can be published.');
     if (!this.writesEnabled) throw new PublishRefused('Ecosystem writes are disabled (OPS_ALLOW_ECOSYSTEM_WRITES is not "true"). Download the proposal instead.');
     if (!this.token) throw new PublishRefused('No GitHub token is configured on the server.');
     const r = await this.f(`${this.api}/repos/${this.repo}/issues`, { method: 'POST', headers: { authorization: `Bearer ${this.token}`, accept: 'application/vnd.github+json', 'content-type': 'application/json', 'user-agent': 'infinite-ai-ops' }, body: JSON.stringify(p) });

@@ -33,7 +33,11 @@ export type BrainTier = 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
 
 export type ArtefactFormat = 'md' | 'html' | 'pdf' | 'csv' | 'json' | 'docx' | 'xlsx';
 
-export type Status = 'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED';
+/**
+ * Draft → in review → approved (a reviewer) → ratified (a different person countersigns) → ingested (library + Brain).
+ * Signatures are bound to the exact content, so any edit returns the artefact to DRAFT. RATIFIED and INGESTED are final.
+ */
+export type Status = 'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'RATIFIED' | 'INGESTED' | 'REJECTED';
 
 export interface Provenance {
   /** Set only by deidentify(); the gateway refuses anything else. */

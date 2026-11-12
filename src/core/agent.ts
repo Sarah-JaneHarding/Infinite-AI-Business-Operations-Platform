@@ -37,6 +37,8 @@ export interface AgentContract {
   inputs: InputField[];
   requiresApproval: true; // literal: there is no agent that skips the human
   secondApprover?: boolean; // approver must differ from requester
+  /** Where a ratified artefact goes: the document library and a Brain episode (default), or nowhere when ingesting it would not be relevant. */
+  ingestion?: 'library' | 'none';
   budget: { maxPromptChars: number };
   evalRef: string;
   /** Pure function: builds the structured document from real facts + human input. */
