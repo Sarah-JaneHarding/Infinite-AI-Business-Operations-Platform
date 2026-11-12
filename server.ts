@@ -22,19 +22,17 @@ import { agentById } from './src/departments';
 const env = process.env;
 const REPO = env.ECOSYSTEM_REPO ?? 'Sarah-JaneHarding/infinite-ai-ecosystem';
 const PORT = Number(env.PORT ?? 3000);
-const HOST = env.HOST ?? '0.0.0.0';
+const HOST = env.HOST || '127.0.0.1'; // an empty HOST= counts as unset
 
-// In container / dev environments without explicit credentials, enable open dev mode so the server boots cleanly
-if (!env.OPS_USERS && !env.OPS_API_TOKEN && !env.OPS_OPEN_DEV) {
-  env.OPS_OPEN_DEV = 'true';
-}
-
+// Fail closed. A missing or malformed auth config stops the server; it never falls back to open mode on its own.
+// Open dev mode (no authentication, self-declared identity, publishing disabled) is only allowed on a loopback HOST
+// or when OPS_OPEN_DEV=true is set explicitly.
 let auth: ReturnType<typeof parseAuth>;
 try {
-  auth = parseAuth(env);
+  auth = parseAuth({ ...env, HOST });
 } catch (err) {
-  console.warn(`WARNING: Auth configuration notice (${(err as Error).message}). Starting in open dev mode.`);
-  auth = { mode: 'open' };
+  console.error(`FATAL: ${(err as Error).message}`);
+  process.exit(1);
 }
 
 const store = new FileStore();

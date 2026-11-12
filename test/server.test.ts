@@ -208,3 +208,41 @@ describe('server: erasure requests', () => {
     expect((await call(base, '/api/warehouse/erasure_requests', { token: T_DAN, body: { ...r, id: 'er_after', requestedBy: 'dan' } })).status).toBe(409); // already erased
   }, 30_000);
 });
+
+describe('server: fails closed on bad auth configuration', () => {
+  /** Starts server.ts and resolves with its exit code and stderr, or null if it is still running after the wait. */
+  const tryBoot = (env: Record<string, string>) => new Promise<{ code: number | null; err: string } | null>((resolve) => {
+    const p = spawn(process.execPath, [join(ROOT, 'node_modules/tsx/dist/cli.mjs'), join(ROOT, 'server.ts')], {
+      cwd: mkdtempSync(join(tmpdir(), 'ops-e2e-')),
+      env: { PATH: process.env.PATH ?? '', NODE_ENV: 'production', ...env },
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    let err = '';
+    p.stderr?.on('data', (d) => (err += String(d)));
+    const t = setTimeout(() => { p.kill(); resolve(null); }, 5000);
+    p.on('exit', (code) => { clearTimeout(t); resolve({ code, err }); });
+  });
+
+  it('exits instead of starting open when a user token is malformed (it used to fall back to open mode)', async () => {
+    const r = await tryBoot({ HOST: '127.0.0.1', PORT: '3421', OPS_USERS: 'sarah:tooshort' });
+    expect(r?.code).toBe(1);
+    expect(r?.err).toMatch(/FATAL.*20 characters/);
+  }, 15_000);
+
+  it('exits when no users are configured and the host is not loopback, unless open dev mode is explicit', async () => {
+    const r = await tryBoot({ HOST: '0.0.0.0', PORT: '3422' });
+    expect(r?.code).toBe(1);
+    expect(r?.err).toMatch(/FATAL.*OPS_USERS/);
+  }, 15_000);
+
+  it('still starts on loopback with no users, with valid users, and with explicit open dev mode', async () => {
+    for (const [port, e] of [['3423', { HOST: '127.0.0.1' }], ['3424', { HOST: '0.0.0.0', OPS_USERS: `sarah:${'s'.repeat(24)}` }], ['3425', { HOST: '0.0.0.0', OPS_OPEN_DEV: 'true' }]] as const) {
+      expect(await tryBoot({ PORT: port, ...e })).toBeNull(); // still running when the wait ended
+    }
+  }, 40_000);
+
+  it('treats HOST unset or empty as loopback (so it starts open, but only on loopback)', async () => {
+    expect(await tryBoot({ PORT: '3426' })).toBeNull();
+    expect(await tryBoot({ PORT: '3427', HOST: '' })).toBeNull();
+  }, 30_000);
+});
