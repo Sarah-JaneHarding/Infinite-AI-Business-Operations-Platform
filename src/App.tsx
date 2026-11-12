@@ -3,6 +3,7 @@ import {
   BookOpen, 
   BrainCircuit, 
   Database, 
+  Eraser, 
   DollarSign, 
   FileText, 
   Gauge, 
@@ -21,6 +22,7 @@ import { OpsProvider, useOps, type View } from './ui/store';
 import { Icon } from './ui/primitives';
 import { DocumentStudio } from './ui/DocumentStudio';
 import { AICopilot } from './ui/AICopilot';
+import { ErasureView } from './ui/Erasure';
 import { CloudAndFinance } from '../legacy/components/CloudAndFinance';
 import { EducationEcosystemWebsite } from '../legacy/components/EducationEcosystemWebsite';
 import { onNavigate } from './ui/nav';
@@ -28,10 +30,11 @@ import { BrainView, ConnectorView, Dept, GuardrailLab, LedgerView, Overview, War
 import { DEPARTMENTS } from './departments';
 
 function Shell() {
-  const { view, go, p, mode, actor, setActor, llm, setLlm, health } = useOps();
+  const { view, go, p, mode, actor, setActor, llm, setLlm, health, authNeeded, authError, signIn, syncError } = useOps();
   const [navOpen, setNavOpen] = useState(false);
   const [deptsOpen, setDeptsOpen] = useState(false);
   const [name, setName] = useState('');
+  const [token, setTokenInput] = useState('');
 
   const item = (v: View, label: string, icon: React.ReactNode, on: boolean, badge?: string) => (
     <button key={label} className={`flex items-center justify-between w-full ${on ? 'on font-bold' : ''}`} onClick={() => { go(v); setNavOpen(false); }} aria-current={on ? 'page' : undefined}>
@@ -40,8 +43,17 @@ function Shell() {
     </button>
   );
 
+  if (authNeeded) return (
+    <div className="card mx-auto mt-10 max-w-md space-y-3 p-5">
+      <h1 className="text-xl font-bold">Sign in</h1>
+      <p className="text-sm" style={{ color: 'var(--muted)' }}>This server requires your access token. Approvals are recorded against the person the token belongs to.</p>
+      <input className="input" type="password" autoComplete="off" placeholder="Access token" value={token} onChange={(e) => setTokenInput(e.target.value)} aria-label="Access token" />
+      {authError && <p className="text-xs" style={{ color: 'var(--muted)' }}>{authError}</p>}
+      <button className="btn primary" disabled={token.trim().length < 20} onClick={() => signIn(token)}>Sign in</button>
+    </div>
+  );
   if (!p) return <div className="p-8">Starting the platform…</div>;
-  const needName = !actor.name || actor.name === 'Operator';
+  const needName = health?.auth !== 'users' && (!actor.name || actor.name === 'Operator');
 
   return (
     <div className="flex min-h-full">
@@ -98,6 +110,7 @@ function Shell() {
             {item({ name: 'showcase' }, 'Ecosystem Showcase', <Globe size={16} className="text-cyan-300" />, view.name === 'showcase')}
             {item({ name: 'guardrails' }, 'Guardrail Lab', <ShieldAlert size={16} className="text-purple-400" />, view.name === 'guardrails')}
             {item({ name: 'connector' }, 'GitHub Connector', <GitBranch size={16} className="text-sky-400" />, view.name === 'connector')}
+            {item({ name: 'erasure' }, 'Erasure Requests', <Eraser size={16} className="text-rose-300" />, view.name === 'erasure')}
             {item({ name: 'copilot' }, 'Operations Copilot & Tools', <Sparkles size={16} className="text-violet-400" />, view.name === 'copilot')}
           </div>
         </div>
@@ -130,6 +143,7 @@ function Shell() {
           {!needName && <span className="text-xs">Signed in as <b>{actor.name}</b> · {actor.roles[0]}</span>}
         </header>
 
+        {syncError && <div role="alert" className="border-b px-4 py-2 text-sm" style={{ background: '#fdecec', borderColor: 'var(--line)', color: '#9b1c1c' }}>The server did not accept a record, so this view may be ahead of what is saved: {syncError}. Reload to see what is stored.</div>}
         <main className="mx-auto max-w-[1440px] p-4">
           {needName ? (
             <div className="card mx-auto mt-10 max-w-md space-y-3 p-5">
@@ -148,6 +162,7 @@ function Shell() {
             : view.name === 'cost' ? <CloudAndFinance />
             : view.name === 'showcase' ? <EducationEcosystemWebsite onSwitchToOps={() => go({ name: 'overview' })} />
             : view.name === 'connector' ? <ConnectorView />
+            : view.name === 'erasure' ? <ErasureView />
             : <GuardrailLab />}
         </main>
       </div>

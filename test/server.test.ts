@@ -169,3 +169,42 @@ describe('server: input handling', () => {
     expect((await call(base, '/api/gateway/complete', { body: { prompt: 'hello', provenance: prov } })).status).toBe(401);
   });
 });
+
+describe('server: erasure requests', () => {
+  const withToken = (token: string): typeof fetch => (u, i) => fetch(u, { ...i, headers: { ...(i?.headers as Record<string, string>), 'x-ops-token': token } });
+  const mk = (token: string) => new Platform({ adapter: new ServerAdapter(`${base}/api/warehouse`, withToken(token)), sequencer: serverSequencer(`${base}/api/ledger`, withToken(token)) }).init();
+  const REF = 'E2E-SUBJECT-77';
+
+  it('needs a second person, rejects every shortcut over the raw API, and the erasure then holds for everyone', async () => {
+    const sarah = await mk(T_SARAH);
+    const r = await sarah.requestErasure(REF, 'data_subject_request', 'e2e', human('sarah'));
+    await sarah.flush();
+    const hash = r.subjectHash;
+
+    // shortcuts over the raw API
+    expect((await call(base, '/api/warehouse/tombstones', { token: T_SARAH, body: { id: 'ts_x', subjectHash: hash, by: 'sarah' } })).status).toBe(403); // no approved request yet
+    const selfApprove = { ...r, status: 'APPROVED', decidedBy: 'sarah', version: 2 };
+    expect((await call(base, '/api/warehouse/erasure_requests', { token: T_SARAH, body: selfApprove })).status).toBe(403); // self-approval
+    expect((await call(base, '/api/warehouse/erasure_requests', { token: T_SARAH, body: { ...selfApprove, decidedBy: 'dan' } })).status).toBe(403); // signing as dan
+    expect((await call(base, '/api/warehouse/erasure_requests', { token: T_SARAH, body: { ...r, id: 'er_dup' } })).status).toBe(409); // duplicate open request
+    expect((await call(base, '/api/ledger', { token: T_SARAH, body: { input: { orgId: 'infinite-ai', actor: 'sarah', action: 'erasure.approved', subject: r.id }, knownSeq: 0 } })).status).toBe(409);
+
+    // the legitimate path: a different person, who knows the reference
+    const dan = await mk(T_DAN);
+    await expect(dan.decideErasure(r.id, human('dan'), 'APPROVED', 'no', 'WRONG')).rejects.toThrow(/does not match/);
+    expect((await dan.decideErasure(r.id, human('dan'), 'APPROVED', 'checked', REF)).status).toBe('EXECUTED');
+    await dan.flush();
+
+    // a brand-new session (a different person, a fresh page load) sees it and is blocked
+    const fresh = await mk(T_SARAH);
+    expect(fresh.erasureRequests().find((x) => x.id === r.id)).toMatchObject({ status: 'EXECUTED', decidedBy: 'dan' });
+    await expect(fresh.runAgent(AGENTS[0]!, {}, human('sarah'), { subjectId: REF })).rejects.toMatchObject({ kind: 'tombstone' });
+    expect(await fresh.ledger.verify()).toBeNull();
+    expect(fresh.ledger.all.filter((e) => e.action.startsWith('erasure.') || e.action === 'subject.tombstone').map((e) => `${e.action}:${e.actor}`)).toEqual(['erasure.requested:sarah', 'erasure.approved:dan', 'subject.tombstone:dan']);
+
+    // and the reference itself is nowhere in what the server stored
+    const wh = JSON.stringify((await call(base, '/api/warehouse', { token: T_DAN })).json);
+    expect(wh).not.toContain(REF);
+    expect((await call(base, '/api/warehouse/erasure_requests', { token: T_DAN, body: { ...r, id: 'er_after', requestedBy: 'dan' } })).status).toBe(409); // already erased
+  }, 30_000);
+});

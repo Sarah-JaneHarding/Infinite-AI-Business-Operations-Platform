@@ -1,9 +1,10 @@
 import { DEPARTMENTS, agentById } from '../departments';
 import type { Rec } from '../core/warehouse';
+import { ERASURE_CATEGORIES } from '../core/erasure';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
-const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'tombstones'];
+const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'tombstones', 'erasure_requests'];
 /** Document library, builder definitions, chat history and integration settings (no secrets are ever stored here). */
 const LIBRARY = ['documents', 'document_chunks', 'custom_defs', 'chat_log', 'integration_settings'];
 /** Collections behind widgets made in the widget builder. */
@@ -49,7 +50,8 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
     case 'artefact_versions': artefact(rec, ctx); break;
     case 'approvals': approval(rec, ctx); break;
     case 'brain': brain(rec, ctx); break;
-    case 'tombstones': if (!isHash(rec.subjectHash)) bad('tombstone needs a subjectHash (sha-256 hex)'); break;
+    case 'erasure_requests': erasure(rec, ctx); break;
+    case 'tombstones': tombstone(rec, ctx); break;
   }
   return rec;
 }
@@ -103,4 +105,49 @@ function brain(rec: Rec, ctx: AppendCtx) {
     if (!from || from.status !== 'proposed') bad('L3/L4 facts are ratified only by a human ratifying a proposed fact', 403);
     if (ctx.actor && rec.by !== ctx.actor) bad('ratifier is not you', 403);
   }
+}
+
+/** Newest version of each request. */
+const latestRequests = (store: ReadStore) => {
+  const m = new Map<unknown, Rec>();
+  for (const r of store.list('erasure_requests')) m.set(r.id, r);
+  return [...m.values()];
+};
+
+function erasure(rec: Rec, ctx: AppendCtx) {
+  if (!isHash(rec.subjectHash)) bad('erasure request needs a subjectHash (sha-256 hex)');
+  if (!(ERASURE_CATEGORIES as readonly unknown[]).includes(rec.category)) bad('bad erasure category');
+  if (typeof rec.note !== 'string' || rec.note.length > 200) bad('note must be text of at most 200 characters');
+  if (typeof rec.requestedBy !== 'string' || !rec.requestedBy) bad('requestedBy is required');
+  const hasTombstone = (h: unknown) => ctx.store.list('tombstones').some((t) => t.subjectHash === h);
+  const cur = latestById(ctx.store.list('erasure_requests'), rec.id);
+
+  if (!cur) {
+    if (rec.status !== 'REQUESTED' || rec.version !== 1 || rec.decidedBy !== undefined) bad('a new erasure request starts as REQUESTED v1');
+    if (ctx.actor && rec.requestedBy !== ctx.actor) bad('requestedBy is not you', 403);
+    if (hasTombstone(rec.subjectHash)) bad('that subject has already been erased', 409);
+    if (latestRequests(ctx.store).some((r) => r.subjectHash === rec.subjectHash && (r.status === 'REQUESTED' || r.status === 'APPROVED'))) bad('there is already an open request for that subject', 409);
+    return;
+  }
+  if (rec.subjectHash !== cur.subjectHash || rec.requestedBy !== cur.requestedBy || rec.category !== cur.category) bad('subject, requester and category cannot change');
+  if (rec.version !== Number(cur.version) + 1) bad('a change is a new version');
+  if (cur.status === 'REQUESTED' && (rec.status === 'APPROVED' || rec.status === 'REJECTED')) {
+    const by = rec.decidedBy;
+    if (typeof by !== 'string' || !by) bad('a decision needs decidedBy');
+    if (ctx.actor && by !== ctx.actor) bad('decidedBy is not you', 403);
+    if (by === cur.requestedBy) bad('a second person must decide an erasure request', 403);
+    if (rec.status === 'REJECTED' && !String(rec.decisionNote ?? '').trim()) bad('a rejection needs a reason');
+  } else if (cur.status === 'APPROVED' && rec.status === 'EXECUTED') {
+    if (!hasTombstone(cur.subjectHash)) bad('the erasure has not been applied: no tombstone is recorded', 409);
+    if (rec.decidedBy !== cur.decidedBy) bad('decidedBy cannot change');
+  } else {
+    bad(`cannot go from ${String(cur.status)} to ${String(rec.status)}`, 409);
+  }
+}
+
+/** A tombstone exists only because a second person approved an erasure request for that very subject. */
+function tombstone(rec: Rec, ctx: AppendCtx) {
+  if (!isHash(rec.subjectHash)) bad('tombstone needs a subjectHash (sha-256 hex)');
+  if (!latestRequests(ctx.store).some((r) => r.subjectHash === rec.subjectHash && r.status === 'APPROVED')) bad('a tombstone needs an approved erasure request', 403);
+  if (ctx.actor && rec.by !== ctx.actor) bad('by is not you', 403);
 }
