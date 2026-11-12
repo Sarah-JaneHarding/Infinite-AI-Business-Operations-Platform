@@ -1,7 +1,9 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { canonical } from '../src/core/crypto';
 import { authenticate, parseAuth } from '../src/server/auth';
 import { RateLimiter } from '../src/server/rate';
 import { FileStore } from '../src/server/fileAdapter';
@@ -67,7 +69,9 @@ const store = (rows: Record<string, Rec[]> = {}): ReadStore => ({ list: (c) => r
 const reject = async (p: Promise<unknown>) => (await p.then(() => null, (e: unknown) => e)) as Rejected | null;
 const sec = AGENTS.find((a) => a.id === 'OPS-SEC-01')!;
 const second = AGENTS.find((a) => a.secondApprover)!;
-const art = (over: Record<string, unknown> = {}): Rec => ({ id: 'art_1', orgId: 'infinite-ai', agentId: sec.id, status: 'DRAFT', version: 1, requestedBy: 'sarah', docHash: 'h1', ...over }) as Rec;
+/** The server checks that docHash is the hash of the document, so test records carry a real document and its real hash. */
+const withDoc = (title: string) => { const doc = { title, blocks: [], meta: {} }; return { doc, docHash: createHash('sha256').update(canonical(doc)).digest('hex') }; };
+const art = (over: Record<string, unknown> = {}): Rec => ({ id: 'art_1', orgId: 'infinite-ai', agentId: sec.id, status: 'DRAFT', version: 1, requestedBy: 'sarah', ...withDoc('one'), ...over }) as Rec;
 
 describe('validateAppend: approval gate', () => {
   it('rejects a forged APPROVED artefact that never went through review', async () => {
@@ -79,7 +83,7 @@ describe('validateAppend: approval gate', () => {
     const draft = [art()];
     const review = [art(), art({ status: 'IN_REVIEW' })];
     expect((await reject(validateAppend('artefact_versions', art({ status: 'APPROVED', approvedBy: 'dan' }), { actor: 'dan', store: store({ artefact_versions: draft }) })))?.status).toBe(409);
-    expect((await reject(validateAppend('artefact_versions', art({ status: 'APPROVED', approvedBy: 'dan', docHash: 'swapped' }), { actor: 'dan', store: store({ artefact_versions: review }) })))?.message).toMatch(/cannot change the document/);
+    expect((await reject(validateAppend('artefact_versions', art({ status: 'APPROVED', approvedBy: 'dan', ...withDoc('swapped') }), { actor: 'dan', store: store({ artefact_versions: review }) })))?.message).toMatch(/cannot change the document/);
     expect((await reject(validateAppend('artefact_versions', art({ status: 'APPROVED', approvedBy: 'dan' }), { actor: 'sarah', store: store({ artefact_versions: review }) })))?.status).toBe(403);
     expect((await reject(validateAppend('artefact_versions', art({ status: 'REJECTED', approvedBy: 'dan', note: ' ' }), { actor: 'dan', store: store({ artefact_versions: review }) })))?.message).toMatch(/reason/);
   });

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { 
   BookOpen, 
   BrainCircuit, 
+  Bot, 
   ClipboardCheck, 
   Cpu, 
   Database, 
@@ -27,6 +28,7 @@ import { AICopilot } from './ui/AICopilot';
 import { ErasureView } from './ui/Erasure';
 import { ModelHub } from './ui/ModelHub';
 import { Board } from './ui/Board';
+import { Autonomy } from './ui/Autonomy';
 import { CloudAndFinance } from '../legacy/components/CloudAndFinance';
 import { EducationEcosystemWebsite } from '../legacy/components/EducationEcosystemWebsite';
 import { onNavigate } from './ui/nav';
@@ -114,6 +116,7 @@ function Shell() {
             {item({ name: 'showcase' }, 'Ecosystem Showcase', <Globe size={16} className="text-cyan-300" />, view.name === 'showcase')}
             {item({ name: 'guardrails' }, 'Guardrail Lab', <ShieldAlert size={16} className="text-purple-400" />, view.name === 'guardrails')}
             {item({ name: 'connector' }, 'GitHub Connector', <GitBranch size={16} className="text-sky-400" />, view.name === 'connector')}
+            {item({ name: 'autonomy' }, 'Autonomous Agents', <Bot size={16} className="text-cyan-300" />, view.name === 'autonomy')}
             {item({ name: 'board' }, 'Review Board', <ClipboardCheck size={16} className="text-amber-300" />, view.name === 'board')}
             {item({ name: 'models' }, 'Model Hub', <Cpu size={16} className="text-violet-300" />, view.name === 'models')}
             {item({ name: 'erasure' }, 'Erasure Requests', <Eraser size={16} className="text-rose-300" />, view.name === 'erasure')}
@@ -171,6 +174,7 @@ function Shell() {
             : view.name === 'erasure' ? <ErasureView />
             : view.name === 'models' ? <ModelHub />
             : view.name === 'board' ? <Board />
+            : view.name === 'autonomy' ? <Autonomy />
             : <GuardrailLab />}
         </main>
       </div>

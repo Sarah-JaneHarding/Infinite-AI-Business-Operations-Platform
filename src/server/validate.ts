@@ -2,6 +2,8 @@ import { canonical, sha256Hex } from '../core/crypto';
 import { DEPARTMENTS, agentById } from '../departments';
 import type { Rec } from '../core/warehouse';
 import { ERASURE_CATEGORIES } from '../core/erasure';
+import { failedChecks, runAcceptance } from '../core/acceptance';
+import type { Doc } from '../core/types';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
@@ -48,7 +50,7 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
   if (ctx.store.list(collection).length >= MAX_RECORDS) bad('collection is full', 507);
 
   switch (collection) {
-    case 'artefact_versions': artefact(rec, ctx); break;
+    case 'artefact_versions': await artefact(rec, ctx); break;
     case 'approvals': approval(rec, ctx); break;
     case 'countersignatures': countersignature(rec, ctx); break;
     case 'documents': await document(rec, ctx); break;
@@ -59,7 +61,9 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
   return rec;
 }
 
-function artefact(rec: Rec, ctx: AppendCtx) {
+async function artefact(rec: Rec, ctx: AppendCtx) {
+  // Every signature is bound to docHash, so the server never takes it on trust: it must be the hash of the document sent with it.
+  if (typeof rec.doc !== 'object' || rec.doc === null || typeof rec.docHash !== 'string' || (await sha256Hex(canonical(rec.doc))) !== rec.docHash) bad('docHash does not match the document');
   const status = rec.status;
   if (status !== 'DRAFT' && status !== 'IN_REVIEW' && status !== 'APPROVED' && status !== 'RATIFIED' && status !== 'INGESTED' && status !== 'REJECTED') bad('bad artefact status');
   const customIds = new Set(ctx.store.list('custom_defs').filter((d) => d.kind === 'agent' && !d.deleted).map((d) => d.id));
@@ -71,6 +75,15 @@ function artefact(rec: Rec, ctx: AppendCtx) {
   if (!cur) {
     if (status !== 'DRAFT' || rec.version !== 1) bad('a new artefact starts as DRAFT v1');
     if (ctx.actor && rec.requestedBy !== ctx.actor) bad('requestedBy is not you', 403);
+    if (String(rec.requestedBy).startsWith('auto:')) {
+      // An autonomous draft can only be created by the autonomy runner, for an ACTIVE standing order, by the agent it names.
+      const orderId = String(rec.requestedBy).slice(5);
+      const order = latestById(ctx.store.list('standing_orders'), orderId);
+      if (ctx.actor !== rec.requestedBy) bad('only the autonomy runner can create an autonomous draft', 403);
+      if (!order || order.status !== 'ACTIVE') return bad('there is no active standing order for this autonomous draft', 403);
+      if (order.agentId !== rec.agentId) bad('the draft is from a different agent than its standing order', 403);
+      if ((rec.doc as Doc | undefined)?.meta?.order !== orderId) bad('the draft does not name its standing order');
+    }
     if (rec.revisionOf !== undefined) {
       const of = latestById(ctx.store.list('artefact_versions'), rec.revisionOf);
       if (of?.status !== 'RATIFIED' && of?.status !== 'INGESTED') bad('only a ratified artefact can be revised', 409);
@@ -85,6 +98,11 @@ function artefact(rec: Rec, ctx: AppendCtx) {
     if (rec.version !== Number(cur.version) + 1) bad('an edit is a new version');
   } else if (cur.status === 'DRAFT' && status === 'IN_REVIEW') {
     if (!sameDoc) bad('submitting for review cannot change the document');
+    if (String(rec.requestedBy).startsWith('auto:')) {
+      // Strictly tested: the server runs the acceptance suite itself rather than trusting whoever submits.
+      const acc = runAcceptance({ doc: rec.doc as Doc, agentId: String(rec.agentId), flags: Array.isArray(rec.flags) ? rec.flags.map(String) : [], requestedBy: String(rec.requestedBy) }, agentById(String(rec.agentId)));
+      if (!acc.passed) bad(`it did not pass the acceptance suite: ${failedChecks(acc).map((c) => `${c.id} ${c.detail}`).join('; ')}`, 422);
+    }
   } else if (cur.status === 'IN_REVIEW' && (status === 'APPROVED' || status === 'REJECTED')) {
     if (!sameDoc) bad('a decision cannot change the document');
     const approver = rec.approvedBy;

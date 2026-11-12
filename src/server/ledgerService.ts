@@ -21,15 +21,18 @@ const strip = (r: Rec): LedgerEntry => {
  * interleave), whoever the caller is. `knownSeq` is the newest entry the client has; everything it missed is returned
  * so a second writer catches up instead of forking.
  */
-export function appendLedger(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString()): Promise<LedgerResult> {
-  const run = (tails.get(store) ?? Promise.resolve()).then(() => write(store, input, knownSeq, actor, now));
+export function appendLedger(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString(), opts: { client?: boolean } = {}): Promise<LedgerResult> {
+  const run = (tails.get(store) ?? Promise.resolve()).then(() => write(store, input, knownSeq, actor, now, opts));
   tails.set(store, run.catch(() => undefined));
   return run;
 }
 
 const tails = new WeakMap<object, Promise<unknown>>();
 
-async function write(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString()): Promise<LedgerResult> {
+/** Actions only the server writes. Budgets and test results are counted from them, so a client must not be able to add them. */
+export const SERVER_ONLY_ACTIONS = /^(model|autonomy)\./;
+
+async function write(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString(), opts: { client?: boolean } = {}): Promise<LedgerResult> {
   const bad = (m: string, status = 400): never => {
     throw new Rejected(status, m);
   };
@@ -39,6 +42,7 @@ async function write(store: LedgerStore, input: unknown, knownSeq: unknown, acto
   const detail = i.detail ?? {};
   if (typeof detail !== 'object' || detail === null || Array.isArray(detail) || JSON.stringify(detail).length > MAX_DETAIL_BYTES) bad('detail must be a small object');
   const action = i.action as string;
+  if (opts.client && SERVER_ONLY_ACTIONS.test(action)) bad('this action is written by the server only', 403);
   const who = i.actor as string;
   const subject = i.subject as string;
 

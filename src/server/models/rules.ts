@@ -31,7 +31,7 @@ export const LIMITS = {
 } as const;
 
 /** Collections a tool may never read for a model, whatever the configuration says. */
-export const NEVER_MODEL_READABLE: ReadonlySet<string> = new Set(['ledger', 'tombstones', 'erasure_requests', 'integration_settings', 'chat_log', 'connector_events', 'approvals', 'brain', 'model_attestations', 'custom_defs']);
+export const NEVER_MODEL_READABLE: ReadonlySet<string> = new Set(['ledger', 'tombstones', 'erasure_requests', 'integration_settings', 'chat_log', 'connector_events', 'approvals', 'brain', 'model_attestations', 'custom_defs', 'standing_orders', 'draft_checks']);
 
 export class ModelRefused extends Error {
   constructor(public readonly rule: RuleId, message: string, public readonly status = 422) {

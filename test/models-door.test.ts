@@ -32,7 +32,8 @@ describe('M10: one door to the model providers', () => {
     for (const f of browser) expect(read(f), f).not.toMatch(/ANTHROPIC|GEMINI|api\.anthropic|googleapis|x-api-key/);
   });
 
-  it('no route outside the model routes calls the hub to run a model', () => {
-    expect(only(/\bhub\.(complete|copilot|recommend|selfTest)\(/, ['src/server/modelRoutes.ts'])).toEqual([]);
+  it('only the model routes and the autonomy runner (through its model engine) ask the hub to run a model', () => {
+    // Both go through the hub, so every rule applies; nothing else may.
+    expect(only(/\bhub\.(complete|copilot|recommend|selfTest)\(/, ['src/server/modelRoutes.ts', 'src/server/autonomy/runner.ts'])).toEqual([]);
   });
 });

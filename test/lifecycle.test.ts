@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { canonical } from '../src/core/crypto';
 import { Platform, RunRefused, type Artefact } from '../src/core/platform';
 import { MemoryAdapter, Warehouse, type Rec } from '../src/core/warehouse';
 import { AGENTS } from '../src/departments';
@@ -147,9 +149,13 @@ describe('Warehouse: a failed save leaves no phantom record', () => {
 
 // ---------------------------------------------------------------------- the server's rules
 type Row = Record<string, unknown>;
-const H = 'a'.repeat(64);
+const hashOf = (d: unknown) => createHash('sha256').update(canonical(d)).digest('hex');
+const DOC = { title: 'one', blocks: [], meta: {} };
+const DOC2 = { title: 'two', blocks: [], meta: {} };
+const H = hashOf(DOC);
+const H2 = hashOf(DOC2);
 const store = (rows: Record<string, Row[]> = {}): ReadStore & LedgerStore => ({ list: (c) => (rows[c] ?? []) as unknown as Rec[], append: (c, r) => void (rows[c] ??= []).push(r as Row) });
-const art = (o: Row = {}): Rec => ({ id: 'art_1', orgId: 'infinite-ai', agentId: plain.id, status: 'DRAFT', version: 1, requestedBy: 'sarah', docHash: H, ...o }) as Rec;
+const art = (o: Row = {}): Rec => ({ id: 'art_1', orgId: 'infinite-ai', agentId: plain.id, status: 'DRAFT', version: 1, requestedBy: 'sarah', doc: DOC, docHash: H, ...o }) as Rec;
 const chain = (...states: Row[]): Rec[] => states.map((s) => art(s));
 const rej = async (p: Promise<unknown>) => (await p.then(() => null, (e: unknown) => e)) as Rejected | null;
 const V = (rows: Record<string, Row[]>, rec: Rec, actor: string | null, c = 'artefact_versions') => validateAppend(c, rec, { actor, store: store(rows) });
@@ -166,7 +172,7 @@ describe('the server enforces the board', () => {
     expect((await rej(V(approvedRows, ratify({ countersignedBy: 'dan' }), 'dan')))?.status).toBe(403);
     expect((await rej(V(approvedRows, ratify(), 'sarah')))?.status).toBe(403); // countersignedBy is not the caller
     expect((await rej(V(approvedRows, ratify({ countersignedBy: 'auto:digest' }), 'auto:digest')))?.status).toBe(403);
-    expect((await rej(V(approvedRows, ratify({ docHash: 'b'.repeat(64) }), 'eve')))?.message).toMatch(/cannot change the document/);
+    expect((await rej(V(approvedRows, ratify({ doc: DOC2, docHash: H2 }), 'eve')))?.message).toMatch(/cannot change the document/);
     expect((await rej(V(approvedRows, ratify({ version: 2 }), 'eve')))?.message).toMatch(/cannot change the document/);
     expect((await rej(V(approvedRows, ratify({ approvedBy: 'sarah' }), 'eve')))?.message).toMatch(/approvedBy cannot change/);
     expect((await rej(V(approvedRows, ratify({ ratifiedAt: undefined }), 'eve')))?.status).toBe(400);
@@ -189,7 +195,7 @@ describe('the server enforces the board', () => {
     expect((await rej(V({ artefact_versions: ratified, documents: [{ ...libDoc, ratifiedFrom: { docHash: 'c'.repeat(64) } }] }, ingest(), 'eve')))?.status).toBe(409);
     await expect(V({ artefact_versions: ratified, documents: [libDoc] }, ingest(), 'eve')).resolves.toBeDefined();
     expect((await rej(V({ artefact_versions: ratified, documents: [libDoc] }, ingest({ countersignedBy: 'sarah' }), 'eve')))?.message).toMatch(/signers cannot change/);
-    expect((await rej(V({ artefact_versions: ratified, documents: [libDoc] }, ingest({ docHash: 'd'.repeat(64) }), 'eve')))?.message).toMatch(/cannot change the document/);
+    expect((await rej(V({ artefact_versions: ratified, documents: [libDoc] }, ingest({ doc: DOC2, docHash: H2 }), 'eve')))?.message).toMatch(/cannot change the document/);
   });
 
   it('a ratified or ingested artefact cannot be edited back to a draft, and a revision must come from a ratified artefact', async () => {
@@ -209,8 +215,7 @@ describe('the server enforces the board', () => {
     expect((await rej(V({ artefact_versions: chain({}) as unknown as Row[] }, sig, 'eve', 'countersignatures')))?.status).toBe(409);
 
     const doc = { title: 't', blocks: [], meta: {} };
-    const hashOf = async (d: unknown) => (await import('../src/core/crypto')).sha256Hex((await import('../src/core/crypto')).canonical(d));
-    const real = (await hashOf(doc));
+    const real = hashOf(doc);
     const rows = { artefact_versions: chain({}, { status: 'IN_REVIEW' }, { status: 'APPROVED', approvedBy: 'dan', doc, docHash: real }, { status: 'RATIFIED', approvedBy: 'dan', countersignedBy: 'eve', ratifiedAt: 't', doc, docHash: real }) as unknown as Row[] };
     const ld = (o: Row = {}) => ({ id: 'rat_art_1_v1', origin: 'ratified', title: 't', doc, by: 'eve', ratifiedFrom: { artefactId: 'art_1', docHash: real }, ...o }) as Rec;
     await expect(V(rows, ld(), 'eve', 'documents')).resolves.toBeDefined();

@@ -196,7 +196,7 @@ export class Platform {
     if ((await sha256Hex(normalizeSubject(subjectRef))) !== req.subjectHash) throw new RunRefused('erasure', 'That reference does not match this request.');
   }
 
-  async runAgent(agent: AgentContract, rawInput: Record<string, string>, requester: Actor, opts: { subjectId?: string } = {}): Promise<Artefact> {
+  async runAgent(agent: AgentContract, rawInput: Record<string, string>, requester: Actor, opts: { subjectId?: string; meta?: Record<string, string> } = {}): Promise<Artefact> {
     const log = (action: string, subject: string, detail: Record<string, unknown> = {}) => this.ledger.append({ orgId: this.orgId, actor: requester.id, action, subject, detail });
 
     // 1. gates: tombstone → purpose → lawful basis
@@ -266,7 +266,7 @@ export class Platform {
       rows: b.rows?.map((r) => r.map((c) => (typeof c === 'string' ? guard(c) : c))),
       pairs: b.pairs?.map(([k, v]) => [k, guard(v)] as [string, string]),
     }));
-    doc = { ...doc, title: guard(doc.title), blocks: blocks.map((b) => JSON.parse(JSON.stringify(b))), meta: { ...doc.meta, agent: agent.id, version: agent.version, framework: agent.framework, engine: engineName, status: 'DRAFT', purpose: agent.purpose } };
+    doc = { ...doc, title: guard(doc.title), blocks: blocks.map((b) => JSON.parse(JSON.stringify(b))), meta: { ...doc.meta, ...opts.meta, agent: agent.id, version: agent.version, framework: agent.framework, engine: engineName, status: 'DRAFT', purpose: agent.purpose } };
 
     // 7. artefact DRAFT → warehouse, ledger
     const art: Artefact = { id: newId('art'), orgId: this.orgId, agentId: agent.id, dept: agent.dept, title: doc.title, status: 'DRAFT', version: 1, requestedBy: requester.id, formats: agent.formats, doc, flags: [...new Set(flags)], engine: engineName, at: new Date().toISOString() };
