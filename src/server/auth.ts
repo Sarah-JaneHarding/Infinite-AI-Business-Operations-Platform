@@ -30,7 +30,7 @@ export function parseAuth(env: AuthEnv): Auth {
   }
   if (env.OPS_API_TOKEN) add('operator', env.OPS_API_TOKEN); // legacy single shared secret
   if (users.length) return { mode: 'users', users };
-  if (env.OPS_OPEN_DEV === 'true' || LOOPBACK.has(env.HOST ?? '127.0.0.1')) return { mode: 'open' };
+  if (env.OPS_OPEN_DEV === 'true' || LOOPBACK.has(env.HOST || '127.0.0.1')) return { mode: 'open' };
   throw new Error('No users configured (OPS_USERS) and HOST is not loopback. Set OPS_USERS, or OPS_OPEN_DEV=true for a throwaway local container.');
 }
 

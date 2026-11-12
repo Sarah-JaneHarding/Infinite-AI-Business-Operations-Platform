@@ -139,7 +139,7 @@ export function AgentRunner({ agent }: { agent: AgentContract }) {
                 <Sparkles size={17} className="text-violet-700" />
                 <span className="font-bold text-slate-900">AI Suggestions & Recommendations</span>
                 <span className="mono rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-800">
-                  {recs?.generatedWith === 'gemini-3.8-flash' ? 'gemini-3.8-flash' : 'operations engine'}
+                  {recs?.generatedWith && recs.generatedWith !== 'deterministic-fallback' ? recs.generatedWith : 'operations engine'} · AI DRAFT
                 </span>
               </div>
               <div className="flex items-center gap-2">

@@ -39,7 +39,7 @@ export function remoteEngine(url = '/api/gateway/complete', fetchImpl: typeof fe
   return {
     name: 'claude-via-server',
     async complete(req) {
-      const r = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ system: req.system, prompt: req.prompt, provenance: req.provenance }) });
+      const r = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ system: req.system, prompt: req.prompt, provenance: req.provenance, purpose: req.purpose }) });
       if (!r.ok) throw new Error(`gateway upstream ${r.status}`);
       const j = (await r.json()) as { text?: string };
       if (!j.text) throw new Error('gateway upstream returned no text');

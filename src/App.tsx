@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { 
   BookOpen, 
   BrainCircuit, 
+  Cpu, 
   Database, 
   Eraser, 
   DollarSign, 
@@ -23,6 +24,7 @@ import { Icon } from './ui/primitives';
 import { DocumentStudio } from './ui/DocumentStudio';
 import { AICopilot } from './ui/AICopilot';
 import { ErasureView } from './ui/Erasure';
+import { ModelHub } from './ui/ModelHub';
 import { CloudAndFinance } from '../legacy/components/CloudAndFinance';
 import { EducationEcosystemWebsite } from '../legacy/components/EducationEcosystemWebsite';
 import { onNavigate } from './ui/nav';
@@ -110,6 +112,7 @@ function Shell() {
             {item({ name: 'showcase' }, 'Ecosystem Showcase', <Globe size={16} className="text-cyan-300" />, view.name === 'showcase')}
             {item({ name: 'guardrails' }, 'Guardrail Lab', <ShieldAlert size={16} className="text-purple-400" />, view.name === 'guardrails')}
             {item({ name: 'connector' }, 'GitHub Connector', <GitBranch size={16} className="text-sky-400" />, view.name === 'connector')}
+            {item({ name: 'models' }, 'Model Hub', <Cpu size={16} className="text-violet-300" />, view.name === 'models')}
             {item({ name: 'erasure' }, 'Erasure Requests', <Eraser size={16} className="text-rose-300" />, view.name === 'erasure')}
             {item({ name: 'copilot' }, 'Operations Copilot & Tools', <Sparkles size={16} className="text-violet-400" />, view.name === 'copilot')}
           </div>
@@ -163,6 +166,7 @@ function Shell() {
             : view.name === 'showcase' ? <EducationEcosystemWebsite onSwitchToOps={() => go({ name: 'overview' })} />
             : view.name === 'connector' ? <ConnectorView />
             : view.name === 'erasure' ? <ErasureView />
+            : view.name === 'models' ? <ModelHub />
             : <GuardrailLab />}
         </main>
       </div>

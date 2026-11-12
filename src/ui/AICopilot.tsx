@@ -13,6 +13,8 @@ interface Message {
   role: 'user' | 'model';
   text: string;
   toolInvocations?: ToolInvocation[];
+  /** `provider:model` or `local`: who drafted it. Every model answer is a draft. */
+  source?: string;
   timestamp: string;
 }
 
@@ -81,6 +83,7 @@ Try asking a question or click one of the quick prompts below!`,
         role: 'model',
         text: data.text,
         toolInvocations: data.toolInvocations,
+        source: data.provider ? `${data.provider}${data.model ? `:${data.model}` : ''}` : undefined,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, botMsg]);
@@ -256,7 +259,7 @@ Try asking a question or click one of the quick prompts below!`,
                         m.role === 'user' ? 'text-violet-200' : 'text-slate-600'
                       }`}
                     >
-                      {m.timestamp}
+                      {m.role === 'model' && m.source ? `AI DRAFT · ${m.source} · ` : ''}{m.timestamp}
                     </div>
                   </div>
                 </div>

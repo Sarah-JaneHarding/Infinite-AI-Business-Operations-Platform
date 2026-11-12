@@ -15,6 +15,12 @@ npm run lint             # strict TypeScript
 npm run audit:ecosystem -- /path/to/infinite-ai-ecosystem   # refresh src/generated/ecosystem-snapshot.json
 ```
 
+### AI models
+
+Connect and configure models in the **Model Hub** (sidebar). Setup, rules and troubleshooting: `docs/MODEL_HUB.md`. Every model
+call passes the same non-bypassable rules, is audited, and returns a draft; a provider can't be used until a named person
+attests it.
+
 ### Docker
 
 ```bash
