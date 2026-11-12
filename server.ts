@@ -16,6 +16,8 @@ import { detectPii } from './src/core/guardrails/pii';
 import { detectInjection } from './src/core/guardrails/injection';
 import type { Artefact } from './src/core/platform';
 import type { Rec } from './src/core/warehouse';
+import { GeminiOperationsService, GEMINI_OPERATIONS_TOOLS } from './src/server/geminiService';
+import { agentById } from './src/departments';
 
 const env = process.env;
 const REPO = env.ECOSYSTEM_REPO ?? 'Sarah-JaneHarding/infinite-ai-ecosystem';
@@ -38,6 +40,7 @@ try {
 const store = new FileStore();
 const reader = new GithubReader(REPO, env.GITHUB_TOKEN);
 const publisher = new ProposalPublisher(REPO, env.GITHUB_TOKEN, env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true');
+const geminiService = new GeminiOperationsService(env.GEMINI_API_KEY);
 
 const app = express();
 app.disable('x-powered-by');
@@ -57,7 +60,17 @@ const serial = <T>(fn: () => Promise<T>): Promise<T> => {
 };
 
 // ---- public: health (liveness probe, booleans only) ----
-app.get('/api/health', (_q, res) => res.json({ ok: true, repo: REPO, auth: auth.mode, githubToken: Boolean(env.GITHUB_TOKEN), llm: Boolean(env.ANTHROPIC_API_KEY), ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true', webhook: Boolean(env.GITHUB_WEBHOOK_SECRET), outbound: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST).length > 0 }));
+app.get('/api/health', (_q, res) => res.json({
+  ok: true,
+  repo: REPO,
+  auth: auth.mode,
+  githubToken: Boolean(env.GITHUB_TOKEN),
+  llm: Boolean(env.ANTHROPIC_API_KEY || geminiService.isAvailable()),
+  gemini: geminiService.isAvailable(),
+  ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true',
+  webhook: Boolean(env.GITHUB_WEBHOOK_SECRET),
+  outbound: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST).length > 0
+}));
 
 // ---- webhook first: it needs the RAW body for the HMAC, and is authenticated by that signature ----
 const events: EcoEvent[] = [];
@@ -143,18 +156,60 @@ app.post('/api/integrations/send', wrap(async (req, res) => {
 const limiter = new RateLimiter(20, 60_000);
 app.post('/api/gateway/complete', wrap(async (req, res) => {
   const { system = '', prompt = '', provenance } = req.body ?? {};
-  if (!env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  if (!env.ANTHROPIC_API_KEY && !geminiService.isAvailable()) return res.status(503).json({ error: 'No LLM configured (ANTHROPIC_API_KEY or GEMINI_API_KEY)' });
   if (typeof system !== 'string' || typeof prompt !== 'string' || !prompt || system.length + prompt.length > 20_000) return res.status(400).json({ error: 'system and prompt must be strings (prompt required, 20k characters in total at most)' });
   // Provenance first, as in the in-browser gateway: an unstamped payload is refused even if the detector finds nothing.
   if (provenance?.deidentified !== true || !Array.isArray(provenance.sources) || !provenance.sources.length) return res.status(422).json({ error: 'refused: payload is not stamped de-identified with sources' });
   if (!limiter.allow(actorOf(res) ?? 'open')) return res.status(429).json({ error: 'rate limit: try again in a minute' });
   if (detectPii(`${system}\n${prompt}`).length || detectInjection(prompt).length) return res.status(422).json({ error: 'refused: personal data or injection pattern' });
   try {
-    const text = await completeWithClaude({ apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL ?? 'claude-sonnet-5-5', system, prompt });
+    if (env.ANTHROPIC_API_KEY) {
+      const text = await completeWithClaude({ apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL ?? 'claude-sonnet-5-5', system, prompt });
+      return res.json({ text });
+    }
+    // Fall back to Gemini 3.8 Flash
+    const { text } = await geminiService.runCopilot(`${system ? `System: ${system}\n\n` : ''}${prompt}`, [], store);
     res.json({ text });
   } catch (e) {
     res.status(e instanceof ClaudeError ? 502 : 500).json({ error: (e as Error).message });
   }
+}));
+
+// ---- ai: generative capabilities, tools, and agent recommendations ----
+app.get('/api/ai/tools', (_q, res) => {
+  res.json({
+    model: 'gemini-3.8-flash',
+    geminiActive: geminiService.isAvailable(),
+    tools: GEMINI_OPERATIONS_TOOLS
+  });
+});
+
+app.post('/api/ai/agent-recommendations', wrap(async (req, res) => {
+  const { agentId, currentValues = {} } = req.body ?? {};
+  if (typeof agentId !== 'string' || !agentId) {
+    return res.status(400).json({ error: 'agentId is required' });
+  }
+  const agent = agentById(agentId);
+  if (!agent) {
+    return res.status(404).json({ error: `Agent ${agentId} not found` });
+  }
+  const result = await geminiService.getAgentRecommendations(agent, currentValues, store);
+  res.json(result);
+}));
+
+app.post('/api/ai/copilot', wrap(async (req, res) => {
+  const { message = '', history = [] } = req.body ?? {};
+  if (typeof message !== 'string' || !message.trim()) {
+    return res.status(400).json({ error: 'message string is required' });
+  }
+  if (!limiter.allow(actorOf(res) ?? 'open')) {
+    return res.status(429).json({ error: 'rate limit: try again in a minute' });
+  }
+  if (detectPii(message).length || detectInjection(message).length) {
+    return res.status(422).json({ error: 'refused: personal data or prompt injection detected' });
+  }
+  const result = await geminiService.runCopilot(message, history, store);
+  res.json(result);
 }));
 
 // ---- ledger: the server authors every entry (seq, hash, time), so the chain cannot fork or be forged ----

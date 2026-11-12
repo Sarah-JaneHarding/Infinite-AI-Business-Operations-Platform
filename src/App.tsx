@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { BrainCircuit, Database, FileText, Gauge, GitBranch, ListChecks, Menu, ScrollText, ShieldAlert } from 'lucide-react';
+import { BrainCircuit, Database, FileText, Gauge, GitBranch, ListChecks, Menu, ScrollText, ShieldAlert, Sparkles } from 'lucide-react';
 import { OpsProvider, useOps, type View } from './ui/store';
 import { Icon } from './ui/primitives';
 import { Studio } from './ui/Studio';
 import { Library } from './ui/Library';
 import { Builders } from './ui/Builders';
 import { Integrations } from './ui/Integrations';
+import { AICopilot } from './ui/AICopilot';
 import { onNavigate } from './ui/nav';
 import { BrainView, ConnectorView, Dept, GuardrailLab, LedgerView, Overview, WarehouseView } from './ui/Views';
 import { DEPARTMENTS } from './departments';
@@ -38,6 +39,7 @@ function Shell() {
         {DEPARTMENTS.map((d) => item({ name: 'dept', id: d.id }, d.name, <Icon name={d.icon} />, view.name === 'dept' && view.id === d.id))}
         <div className="mono mx-2 mb-1 mt-3 text-[10px] uppercase tracking-wider" style={{ color: '#8f89c4' }}>Core</div>
         {item({ name: 'studio' }, 'Studio', <FileText size={16} />, view.name === 'studio')}
+        {item({ name: 'copilot' }, 'Operations Copilot & Tools', <Sparkles size={16} />, view.name === 'copilot')}
         {item({ name: 'brain' }, 'Infinite Brain', <BrainCircuit size={16} />, view.name === 'brain')}
         {item({ name: 'warehouse' }, 'Data warehouse', <Database size={16} />, view.name === 'warehouse')}
         {item({ name: 'ledger' }, 'Audit ledger', <ScrollText size={16} />, view.name === 'ledger')}
@@ -62,6 +64,7 @@ function Shell() {
             </div>
           ) : view.name === 'overview' ? <Overview />
             : view.name === 'dept' ? <Dept id={view.id} />
+            : view.name === 'copilot' ? <AICopilot />
             : view.name === 'studio' ? (
               <div className="space-y-4">
                 <div role="tablist" className="flex flex-wrap gap-1">{SUBS.map((s) => <button key={s.id} role="tab" aria-selected={sub === s.id} className={`btn ${sub === s.id ? 'primary' : ''}`} onClick={() => setSub(s.id)}>{s.label}</button>)}</div>
