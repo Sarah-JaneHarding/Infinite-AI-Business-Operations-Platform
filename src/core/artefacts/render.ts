@@ -1,4 +1,6 @@
 import type { ArtefactFormat, Block, Doc } from '../types';
+import { BRAND, addressOneLine, contactLine } from '../../brand';
+import { LOGO_PNG_BASE64 } from '../../brandLogo';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const cell = (c: string | number) => String(c);
@@ -52,9 +54,10 @@ table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.92rem}th{back
 .callout{border-left:5px solid var(--cyan);background:var(--ci);padding:10px 14px;margin:1rem 0}.callout.warn{border-color:var(--amber);background:var(--cw)}.callout.ok{border-color:var(--emerald);background:var(--co)}
 dl{display:grid;grid-template-columns:minmax(150px,36%) 1fr;gap:4px 16px}dt{font-weight:600}dd{margin:0}.chk{list-style:none;padding-left:0}
 .meta{font:12px 'Space Mono',monospace;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;border-top:1px solid var(--rule);margin-top:2rem;padding-top:.6rem}
+.brandbar{display:flex;align-items:center;gap:12px;margin-bottom:1.4rem}.brandbar img{width:48px;height:48px;border-radius:8px}.brandbar b{font:700 1.05rem 'Space Grotesk',Inter,sans-serif;letter-spacing:.04em;display:block}.brandbar small{font:700 10.5px 'Space Mono',monospace;letter-spacing:.16em;color:var(--link)}.brandfoot{margin-top:1.4rem;padding-top:.7rem;border-top:3px solid var(--violet);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px}.brandfoot b{letter-spacing:.14em;color:var(--link)}
 .draft{display:inline-block;background:#f5a524;color:#14112b;font:700 11px 'Space Mono',monospace;padding:2px 8px;border-radius:99px;letter-spacing:.06em}
 @media print{:root{--ink:#14112b;--cream:#fff}body{background:#fff;color:#14112b;padding:0}}
-</style></head><body><span class="draft">AI DRAFT · THE HUMAN DECIDES</span><h1>${esc(d.title)}</h1>${d.subtitle ? `<p><i>${esc(d.subtitle)}</i></p>` : ''}${d.blocks.map(blockHtml).join('\n')}<div class="meta">${meta}</div></body></html>`;
+</style></head><body><div class="brandbar"><img alt="${esc(BRAND.name)}" src="data:image/png;base64,${LOGO_PNG_BASE64}"><div><b>${esc(BRAND.name.toUpperCase())}</b><small>${esc(BRAND.tagline)}</small></div></div><span class="draft">AI DRAFT · THE HUMAN DECIDES</span><h1>${esc(d.title)}</h1>${d.subtitle ? `<p><i>${esc(d.subtitle)}</i></p>` : ''}${d.blocks.map(blockHtml).join('\n')}<div class="meta">${meta}</div><div class="brandfoot"><b>${esc(BRAND.tagline)}</b><span>${esc(addressOneLine)} · ${esc(contactLine)}</span></div></body></html>`;
 }
 
 function csvEscape(v: string | number): string {
@@ -78,7 +81,10 @@ export function toJson(d: Doc): string {
 
 export async function toDocx(d: Doc): Promise<Uint8Array> {
   const docx = await import('docx');
-  const { Document, Packer, Paragraph, HeadingLevel, TextRun, Table, TableRow, TableCell, WidthType } = docx;
+  const { Document, Packer, Paragraph, HeadingLevel, TextRun, Table, TableRow, TableCell, WidthType, Header, Footer, ImageRun, AlignmentType } = docx;
+  const logo = typeof Buffer === 'undefined' ? Uint8Array.from(atob(LOGO_PNG_BASE64), (c) => c.charCodeAt(0)) : Buffer.from(LOGO_PNG_BASE64, 'base64');
+  const header = new Header({ children: [new Paragraph({ children: [new ImageRun({ type: 'png', data: logo, transformation: { width: 40, height: 40 } }), new TextRun({ text: `  ${BRAND.name.toUpperCase()}`, bold: true, size: 26 }), new TextRun({ text: `   ${BRAND.tagline}`, size: 15, color: '4F34D2', bold: true })] })] });
+  const footer = new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${BRAND.tagline}  ·  ${addressOneLine}  ·  ${contactLine}`, size: 14, color: '44506F' })] })] });
   const H = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4];
   const children: (InstanceType<typeof Paragraph> | InstanceType<typeof Table>)[] = [new Paragraph({ text: d.title, heading: HeadingLevel.TITLE })];
   if (d.subtitle) children.push(new Paragraph({ children: [new TextRun({ text: d.subtitle, italics: true })] }));
@@ -98,7 +104,7 @@ export async function toDocx(d: Doc): Promise<Uint8Array> {
     }
   }
   children.push(new Paragraph({ children: [new TextRun({ text: Object.entries(d.meta).map(([k, v]) => `${k}: ${v}`).join(' · '), size: 16, color: '555077' })] }));
-  const file = new Document({ creator: 'Infinite-AI Ops Platform', title: d.title, sections: [{ children }] });
+  const file = new Document({ creator: 'Infinite-AI Ops Platform', title: d.title, sections: [{ headers: { default: header }, footers: { default: footer }, children }] });
   // Browsers have no Buffer; Node (tests, server) does.
   if (typeof Buffer === 'undefined') return new Uint8Array(await (await Packer.toBlob(file)).arrayBuffer());
   return new Uint8Array(await Packer.toBuffer(file));

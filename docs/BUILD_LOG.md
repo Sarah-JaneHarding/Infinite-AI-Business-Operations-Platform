@@ -54,3 +54,9 @@ telemetry, which conflicts with the no-invented-metrics rule. It remains in git 
 - `npm run seed:library` saves each document into the warehouse as a `documents` record (origin `template`) with its editable .docx or .xlsx as `document_chunks`. It skips ids already stored, so a second run writes nothing and a person's edit is never overwritten.
 - Same rules as the quick templates: every blank is "[Fill in: …]", no rand amounts or personal data in document text, every document that carries legal weight names its reviewer. The safeguarding outline invents no reporting steps.
 - Not done: PDF originals (print the HTML); the seed is a script, not run on server start (OPQ-025).
+
+## 2026-11-13: brand alignment
+- `src/brand.ts` is the single brand source. Logo, tagline, address, phone and email now appear in the app sidebar, favicon and share tags, every library HTML and Word document (header and footer), and a new Brand Kit screen.
+- `public/brand-kit/` holds guidelines (HTML, PDF), editable letterhead (docx, PDF), email signatures with install guide, and design tokens. The full asset kit (social banners for LinkedIn, Facebook, YouTube, X, Instagram, slides, web, print, icons) is shipped as a separate zip.
+- `test/brand.test.ts` checks exact values, every library document, the docx footer, assets and kit files.
+- Limits: founder photo is 360 px; CMYK values are approximate; registration and VAT numbers pending.

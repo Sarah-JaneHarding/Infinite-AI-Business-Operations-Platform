@@ -17,8 +17,8 @@
         {
           "ext": "html",
           "path": "legal/lib-msa.html",
-          "sha256": "25c422ab92773fd882bac9a9f66303e73359f87b327ce4900c6366b04ae0359b",
-          "bytes": 6497
+          "sha256": "55007d5bc596c9bd2142a6bd389e02c8bab126396deb902e01755f7d4ffa9fa7",
+          "bytes": 15374
         },
         {
           "ext": "md",
@@ -35,8 +35,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-msa.docx",
-          "sha256": "149e48bf7623ce78ce7ab2049037fb49a27a3cba2dbf10c37e7ec7cefadf1261",
-          "bytes": 12033
+          "sha256": "238215785854ac1513bbc4b809016a9c774f88b0ed4ecd55da8e175da5fb53f2",
+          "bytes": 20420
         }
       ]
     },
@@ -54,8 +54,8 @@
         {
           "ext": "html",
           "path": "sales/lib-order-form.html",
-          "sha256": "f5d2e9751a3e36618943b7540ab76b731642327c7f92a6daf09817ebcccf5238",
-          "bytes": 4398
+          "sha256": "9016868bea35044c4a17588940694903253b49a0ae1a7c02bc8ec00e02a7745d",
+          "bytes": 13275
         },
         {
           "ext": "md",
@@ -72,8 +72,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-order-form.docx",
-          "sha256": "e6fcc814c27aee7725f057b472a5d83e9fa5ddfb725a8c041f04c4d72d209c1a",
-          "bytes": 10945
+          "sha256": "ad8373996858ea4a27d9b51c8052de1db867ad43d7aa7722d6da56cd8416ea22",
+          "bytes": 19338
         }
       ]
     },
@@ -92,8 +92,8 @@
         {
           "ext": "html",
           "path": "legal/lib-dpa.html",
-          "sha256": "574f5520e9d7bdfa028a89499e1084de785b12169cf839de758980b9db595ae3",
-          "bytes": 5830
+          "sha256": "367a8dd304f9d382abbf764a267068c91a80c3e15e4503fe76ea779c2944459d",
+          "bytes": 14707
         },
         {
           "ext": "md",
@@ -110,8 +110,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-dpa.docx",
-          "sha256": "2106bcf0b2931e6754882e15908bb81c348c7e0a6deb7c9a17c3975031afd4e7",
-          "bytes": 11555
+          "sha256": "79b8e30430a27073b137976de2f6a032fc0b9116469eef5500dc7f0c9202c376",
+          "bytes": 19946
         }
       ]
     },
@@ -129,8 +129,8 @@
         {
           "ext": "html",
           "path": "support/lib-sla.html",
-          "sha256": "269fa1fe50fa5506ac82dc3b23b5eaa3d88b9a15842e7c38e2973ba5cc73b54d",
-          "bytes": 4322
+          "sha256": "76d214f20bab96fa06ca11aa2d5a6eef7b8322b0e9f990d57d263ea00f44d1ef",
+          "bytes": 13199
         },
         {
           "ext": "md",
@@ -147,8 +147,8 @@
         {
           "ext": "docx",
           "path": "support/lib-sla.docx",
-          "sha256": "badf775eadd86aa7412b38b5d4f83f56bcb1fdf0b0411e32cff1657dd1753d79",
-          "bytes": 10985
+          "sha256": "907a0c0ca7c1447987df6c782756ff68bbe704dbfa954a056d46b38fe8fcab94",
+          "bytes": 19374
         }
       ]
     },
@@ -167,8 +167,8 @@
         {
           "ext": "html",
           "path": "sales/lib-pilot-agreement.html",
-          "sha256": "ed6ea6121c4f32687bc2a553702a53152e8106591140b88034143c290ed36176",
-          "bytes": 4103
+          "sha256": "bbc7f9dd1a227b6d27d2b5b6b48a6f29cc52bde454e4cdb54ace73da1546d2ec",
+          "bytes": 12980
         },
         {
           "ext": "md",
@@ -185,8 +185,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-pilot-agreement.docx",
-          "sha256": "28e15bdf5fb0fb1e010ddb9123e6226a1b8c48f562b663fa447def265dd7cc2c",
-          "bytes": 10912
+          "sha256": "582bd709951d9da57059c8c55f3777b0c76dd54ac6257b4bb4dc4549b9a2af9c",
+          "bytes": 19305
         }
       ]
     },
@@ -204,8 +204,8 @@
         {
           "ext": "html",
           "path": "legal/lib-aup.html",
-          "sha256": "c9ec84178cdb0f9584e91b1e62ae47003e5c8351508cd3d43400ba266c86b0ef",
-          "bytes": 3708
+          "sha256": "00f76bb349970aec035d5f00bb428760ca6414b789c890db7a2b92cb55b00040",
+          "bytes": 12585
         },
         {
           "ext": "md",
@@ -222,8 +222,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-aup.docx",
-          "sha256": "8fee35d83f6cfc986d30d959962d699f3c77dfa608d1d691b888d286e229e668",
-          "bytes": 10726
+          "sha256": "e5238743fd908135bca85771ab022af783a2eea518f3dea25c310197d8843224",
+          "bytes": 19116
         }
       ]
     },
@@ -243,8 +243,8 @@
         {
           "ext": "html",
           "path": "legal/lib-terms-of-use.html",
-          "sha256": "538a06e87b95e6d4faa82dd83361cc4a79de993ebd754a5b5de796c549eef822",
-          "bytes": 3645
+          "sha256": "839e38739eafc72d59ffe1c080d1c8ae9dce3d80295acae11ac6ded0bada4c49",
+          "bytes": 12522
         },
         {
           "ext": "md",
@@ -261,8 +261,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-terms-of-use.docx",
-          "sha256": "28235e8421ff6e4fc33d3016c25887aeaa6edfe37f9f55bc86ee0a283f22eaf1",
-          "bytes": 10655
+          "sha256": "dd36036de0cffcebc5a7904c69a92ceed19cbc61a4930bcda5f9e2234c9286a8",
+          "bytes": 19049
         }
       ]
     },
@@ -280,8 +280,8 @@
         {
           "ext": "html",
           "path": "legal/lib-nda.html",
-          "sha256": "57156521aa172fe493618b5080d7316d222edc67f5c1d39428e5df5df994a56f",
-          "bytes": 3719
+          "sha256": "92790dd26a2f1de7e88c3f8dd66e0e29323820088ab100139a0f08e99d05dc02",
+          "bytes": 12596
         },
         {
           "ext": "md",
@@ -298,8 +298,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-nda.docx",
-          "sha256": "a01dd97eaf239f5538d408a306bd571682d782d743fedf162f9fbb042b630e64",
-          "bytes": 10709
+          "sha256": "12141088532ff8e25c721fdf35970bacb6d096293573a14e43a9623fbda11bf6",
+          "bytes": 19101
         }
       ]
     },
@@ -318,8 +318,8 @@
         {
           "ext": "html",
           "path": "sales/lib-partner-agreement.html",
-          "sha256": "29a6b3a2acf8689d526fd435ec488f02e2773f091177a61c40cb3205895a3d84",
-          "bytes": 3842
+          "sha256": "18a449823c503794d0bcf8f25ca82accf5d6ca8f96dfa3826ddecd6b497906b0",
+          "bytes": 12719
         },
         {
           "ext": "md",
@@ -336,8 +336,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-partner-agreement.docx",
-          "sha256": "68d9ddf228821bfb157deaa579fb5c0a4afd8d43caddbbab71f22ba3d9a33da6",
-          "bytes": 10816
+          "sha256": "1f1e82be5d85e93bdcdb5262bace8a1f3fe3bf15922664c35d52738ad6d55eab",
+          "bytes": 19207
         }
       ]
     },
@@ -353,8 +353,8 @@
         {
           "ext": "html",
           "path": "legal/lib-variation.html",
-          "sha256": "6a9a4c047f05b8d5ab491822255bbf0b2fa7487e25b0715647e094c4d5d64564",
-          "bytes": 3411
+          "sha256": "221ecec0f82b19f3ecbb792ee9e19a5baeab509e876d26cd51e57722ec4bcb71",
+          "bytes": 12288
         },
         {
           "ext": "md",
@@ -371,8 +371,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-variation.docx",
-          "sha256": "f02c6056eb45f4b0ba2847e1a4058de6eba162386f3c8e2bf2667b7d52788aae",
-          "bytes": 10521
+          "sha256": "9e030a8ca7fa3899db372ef1b8c9039cb4bbe03d8f0ea356e36de737738b47cc",
+          "bytes": 18909
         }
       ]
     },
@@ -388,8 +388,8 @@
         {
           "ext": "html",
           "path": "success/lib-cancellation-notice.html",
-          "sha256": "24ad880041c34ddf6a5e4effc02cadbc23dab4217c56545194a965e7f6304f02",
-          "bytes": 3261
+          "sha256": "9683726293dc74681334166c26d7738ca8dfe14f29fa33ff2092512b5bb6cf56",
+          "bytes": 12138
         },
         {
           "ext": "md",
@@ -406,8 +406,8 @@
         {
           "ext": "docx",
           "path": "success/lib-cancellation-notice.docx",
-          "sha256": "51c75568a7e7bdd3c104df7b9555891cb0e3b0aaf0da7597ed1753c3b0ffbffd",
-          "bytes": 10470
+          "sha256": "cca97eb9bc6645526884539edfa1a5668dacb84a1440b4867af6960ec43a4313",
+          "bytes": 18866
         }
       ]
     },
@@ -425,8 +425,8 @@
         {
           "ext": "html",
           "path": "legal/lib-data-return-erasure.html",
-          "sha256": "b15cd0c4e4260b65740f7fedec5b37d960adc42de0a295b2faec1b3998c3c676",
-          "bytes": 4031
+          "sha256": "0f2c96800919350aa9f0601647e770a82c9a3f264812d069721ef2e1f5748eba",
+          "bytes": 12908
         },
         {
           "ext": "md",
@@ -443,8 +443,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-data-return-erasure.docx",
-          "sha256": "b4ac15f37cc8a18f965cb4bf8ca3e0bf698b0afcb7009c74fd21d6121aacc8b7",
-          "bytes": 10782
+          "sha256": "722448077c85781b350a22de7b9e579264af9467c6dbb04aa0bfca45fa8b0163",
+          "bytes": 19173
         }
       ]
     },
@@ -462,8 +462,8 @@
         {
           "ext": "html",
           "path": "legal/lib-privacy-notice.html",
-          "sha256": "ef0b87b41c647b7b29bf0f8bd537b1f1e5a1e78eaa9a37a725478ecab95e7bbe",
-          "bytes": 4216
+          "sha256": "dc2f2517b9a8bcf8e3ef2a637b62d096a8e67075329c98bd669515119c064e1a",
+          "bytes": 13093
         },
         {
           "ext": "md",
@@ -480,8 +480,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-privacy-notice.docx",
-          "sha256": "3bc5a8d8cc0ea15ba8749b0d349c27af19b18accece118fd631425fb8810f3d2",
-          "bytes": 11000
+          "sha256": "d156981ffa562718a2393f95a1d5704ed28590e69be6bb70686cadd649e342ea",
+          "bytes": 19393
         }
       ]
     },
@@ -500,8 +500,8 @@
         {
           "ext": "html",
           "path": "success/lib-parent-info-letter.html",
-          "sha256": "d3cb55cc0a2db3af3b5ed35d31c3da0a02752fa67ab9464113c700448d99af88",
-          "bytes": 4129
+          "sha256": "5f4dc1d1423c7b0a4bbef6571b405c7c255d61163fb5ac305f520a465f10a048",
+          "bytes": 13006
         },
         {
           "ext": "md",
@@ -518,8 +518,8 @@
         {
           "ext": "docx",
           "path": "success/lib-parent-info-letter.docx",
-          "sha256": "4078f891a0c7d507c58ead25229e8dd3216acd4d2763e4d4973adf6d505af2e2",
-          "bytes": 10970
+          "sha256": "cfd1cf49b895c733965ffb51301548faa56e188a0e26c884e2a9049266149d1f",
+          "bytes": 19362
         }
       ]
     },
@@ -537,8 +537,8 @@
         {
           "ext": "html",
           "path": "legal/lib-consent-withdrawal.html",
-          "sha256": "5af0e0c0918b03f09688d19462568c025a60b4cd54d32814672bde056da6c45d",
-          "bytes": 3365
+          "sha256": "d1a7057e166427b25e19bfe8788eed980f13c40d247b77e8a3976a0d76f18b15",
+          "bytes": 12242
         },
         {
           "ext": "md",
@@ -555,8 +555,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-consent-withdrawal.docx",
-          "sha256": "2c3a35f253598b9b6b7eb7a6fdbed7ae25e5826f493134a3ca7cd68e1164dad5",
-          "bytes": 10549
+          "sha256": "2f87f8eb63b96156cad25f577e3c4c12f46d2b897f84d57127c1e42522d18eec",
+          "bytes": 18940
         }
       ]
     },
@@ -575,8 +575,8 @@
         {
           "ext": "html",
           "path": "legal/lib-dsr-form.html",
-          "sha256": "2a1b6b82654f2a373eb3af2df93630411220d4f844ba0d1fa8337d3bcb426ba2",
-          "bytes": 3593
+          "sha256": "25913d09e3b7a4ff4e40d744ec6555631e6b9868938ebeca99f09359d4e31adc",
+          "bytes": 12470
         },
         {
           "ext": "md",
@@ -593,8 +593,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-dsr-form.docx",
-          "sha256": "f430386450b078d2e665d9f8976264aaa557b90576624a2b8e67bcae4de9ff3e",
-          "bytes": 10669
+          "sha256": "5fd044df125a098ed1f864fc6f8945889b3813a853b19ee7dea8f415055a8119",
+          "bytes": 19058
         }
       ]
     },
@@ -612,8 +612,8 @@
         {
           "ext": "html",
           "path": "legal/lib-dsr-sop.html",
-          "sha256": "603d59d968e4e8558f5dad01c8c616f836fb4eaa2de0ab7035350cbf920d0a3a",
-          "bytes": 4106
+          "sha256": "8e454d708384420d5e578d37f82435d773e0f61788c776d5fb3a24040bfce289",
+          "bytes": 12983
         },
         {
           "ext": "md",
@@ -630,8 +630,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-dsr-sop.docx",
-          "sha256": "3eaf872317608306887cde82778e1dfbc23070a521278be2b2a54b41d9e3a3ae",
-          "bytes": 10922
+          "sha256": "87632a902a7ce6cc7ad51b86891a921b88a279e801a4cfe2c2b8e7a3ba7e0e26",
+          "bytes": 19314
         }
       ]
     },
@@ -649,8 +649,8 @@
         {
           "ext": "html",
           "path": "security/lib-breach-sop.html",
-          "sha256": "39544960e521dc5e9acd1662b21580e50770c5e5b63fe3f2377cd2adcd8ffa23",
-          "bytes": 4239
+          "sha256": "f346610a98c309ecf908de48b54de8ee5a2891d3a935adb3d5c75db78a827fd6",
+          "bytes": 13116
         },
         {
           "ext": "md",
@@ -667,8 +667,8 @@
         {
           "ext": "docx",
           "path": "security/lib-breach-sop.docx",
-          "sha256": "2b4b9361fb99947ff39ece1e3bf881c5709893592d39309b84fbad4b8d13ea73",
-          "bytes": 11052
+          "sha256": "0f393e3958c5929d0bcdb96ac7132f0c2ec18e09875b3b668a15289b0a4c0965",
+          "bytes": 19444
         }
       ]
     },
@@ -686,8 +686,8 @@
         {
           "ext": "html",
           "path": "security/lib-breach-notice-school.html",
-          "sha256": "a809b37f829b3fe409840a271532938ba898c662754dcc325b6612537cc9c2f3",
-          "bytes": 3525
+          "sha256": "0998b639d0fefef77aabb9bcd89a28bc1c21ce8e2129bd2aeb935a5a233ed783",
+          "bytes": 12402
         },
         {
           "ext": "md",
@@ -704,8 +704,8 @@
         {
           "ext": "docx",
           "path": "security/lib-breach-notice-school.docx",
-          "sha256": "d4dfdf227bd79cd194f94f2e65bddb8cc132bb452223c8fb6a05444a2a4272df",
-          "bytes": 10619
+          "sha256": "1d8a3fd6b86ae21ae202f2361e1710264c7241671915ae3bf1d0760adfefc6b6",
+          "bytes": 19008
         }
       ]
     },
@@ -723,8 +723,8 @@
         {
           "ext": "html",
           "path": "legal/lib-breach-notice-regulator.html",
-          "sha256": "bbff299a4159121929804428b9b5defac3d3bd1910e39a01e03988d6763c992c",
-          "bytes": 3510
+          "sha256": "7c9974153c4c2ed8a9310ff9b4f542a2b42df67b453889041894f72218576f05",
+          "bytes": 12387
         },
         {
           "ext": "md",
@@ -741,8 +741,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-breach-notice-regulator.docx",
-          "sha256": "f623e5c597761fc2096f08da50c4dd6ba1727b8cafee8272620085d1bccea70e",
-          "bytes": 10619
+          "sha256": "8d0e31d24c2416ca84a840e30f28dd2ee434ebf4228253eed5652586f1525a29",
+          "bytes": 19007
         }
       ]
     },
@@ -760,8 +760,8 @@
         {
           "ext": "html",
           "path": "legal/lib-breach-notice-subjects.html",
-          "sha256": "ffae1e5a23b8550b28d9f07eedf37a6fb0c1add9855b03a8c1eccf8f3128d0f9",
-          "bytes": 3178
+          "sha256": "e6af0625ed6f9eee0b0bd47dc9047f7c1adb5a711b58a0fa37218be2aef2b07c",
+          "bytes": 12055
         },
         {
           "ext": "md",
@@ -778,8 +778,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-breach-notice-subjects.docx",
-          "sha256": "b249112e6a3c84d6aaed1f18c1434d527a439a72a167ff9c7fa571e2b5326849",
-          "bytes": 10442
+          "sha256": "f019172240afb4d780a205004be810ed550f9b0c13be7084f651bee652e197e1",
+          "bytes": 18835
         }
       ]
     },
@@ -797,8 +797,8 @@
         {
           "ext": "html",
           "path": "legal/lib-info-officer-appointment.html",
-          "sha256": "b139fcb6790af16fe5fc88f03931a8d39f43107b0e6a3c91b2f9d4cf06e299f5",
-          "bytes": 3374
+          "sha256": "ec45b71d1df248ae1b368490107f35dd802b9e67ffc2de8c4efd14041969e91a",
+          "bytes": 12251
         },
         {
           "ext": "md",
@@ -815,8 +815,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-info-officer-appointment.docx",
-          "sha256": "c3af1f6ba71c2e4e96ea149cbd2e47087951cd4bde730fddbb66f850da55fecf",
-          "bytes": 10486
+          "sha256": "f469608ef5894572721d7e05a94f4d81c426f1a53843e81aba03dd2a342a8385",
+          "bytes": 18879
         }
       ]
     },
@@ -834,8 +834,8 @@
         {
           "ext": "html",
           "path": "legal/lib-paia-manual.html",
-          "sha256": "12adf96115aea99cc1f953a1fa58abc4fc6f2b04eb8f189a44a09ce1c3333613",
-          "bytes": 3697
+          "sha256": "6e474fcbb1d6860a06b81a5e1c6e596df9813cf2dac1b845c3725a0798c1d2ea",
+          "bytes": 12574
         },
         {
           "ext": "md",
@@ -852,8 +852,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-paia-manual.docx",
-          "sha256": "5db2af0f328547852006a7174db7cb7480d807e1b1f7292afa5fb4ef604c4149",
-          "bytes": 10673
+          "sha256": "74191eb19b256e39c15f634387a4f36f278bd7ba9480f59610686fd90b347323",
+          "bytes": 19066
         }
       ]
     },
@@ -871,8 +871,8 @@
         {
           "ext": "html",
           "path": "legal/lib-dpia.html",
-          "sha256": "287add4e860326f8e43110dd44b75acc892684397f2499d947ed7f1b5dc78a25",
-          "bytes": 3618
+          "sha256": "579a8372a67100fe372e86627c589fa0dc66ca7000a7fedb6fd32a19fa735917",
+          "bytes": 12495
         },
         {
           "ext": "md",
@@ -889,8 +889,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-dpia.docx",
-          "sha256": "f24ff8fcc77a3fb328b83eac6c591df0e0642767851a877d692946143cf93e68",
-          "bytes": 10658
+          "sha256": "691eaa3bfd9c053325d2dfabdb9d2f78ebd78e4c87a4b334babb0573ca843ac3",
+          "bytes": 19049
         }
       ]
     },
@@ -908,8 +908,8 @@
         {
           "ext": "html",
           "path": "legal/lib-popia-checklist.html",
-          "sha256": "0a910f7a1e300467a00f5b97e57ac9697dc3f89cda14d6bc1d9c260090b0f135",
-          "bytes": 3591
+          "sha256": "b192248654afd2ad964e50139b6d160fb804c8bb1446bd700925ca836ef51166",
+          "bytes": 12468
         },
         {
           "ext": "md",
@@ -926,8 +926,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-popia-checklist.docx",
-          "sha256": "071297ee5d90445aeaa24edd0e6ea553081fdd4ef751d43a23f6a87008ff7466",
-          "bytes": 10584
+          "sha256": "c4d9df6e60a00ef8547f9a1dfcf365f3e06c70669725d0ea12e775631e6a0d83",
+          "bytes": 18980
         }
       ]
     },
@@ -945,8 +945,8 @@
         {
           "ext": "html",
           "path": "legal/lib-retention-policy.html",
-          "sha256": "5dca821d0ff1537e0a340c73997505f6a05f7417054781b5476447d13511c369",
-          "bytes": 4224
+          "sha256": "d1f3a08c666d307d47207802fed404fd84807f940969cbc3fc828687ffeeb9b7",
+          "bytes": 13101
         },
         {
           "ext": "md",
@@ -963,8 +963,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-retention-policy.docx",
-          "sha256": "9d948ac1e976430e3397d52398f7b283dca65b32e86c92c043e0fb30d802272f",
-          "bytes": 10700
+          "sha256": "e2048e5cb4d238f4666319eeb90b5733c14f3aaac3cd47fe4801f8bcc41a26c9",
+          "bytes": 19090
         }
       ]
     },
@@ -982,8 +982,8 @@
         {
           "ext": "html",
           "path": "security/lib-ai-use-policy.html",
-          "sha256": "9536f5529626d9740a364552dc2025c5e3c7871335b99319575bba131ed85b1c",
-          "bytes": 3588
+          "sha256": "1a6d4fb21d70dac451ea979aebba89ff2f82d3c8bec37f46de3efcb992bbe720",
+          "bytes": 12465
         },
         {
           "ext": "md",
@@ -1000,8 +1000,8 @@
         {
           "ext": "docx",
           "path": "security/lib-ai-use-policy.docx",
-          "sha256": "40779e44eaf62ce0abb48e229994f602f0bccc8817e840b6bdfbb8ffc361e412",
-          "bytes": 10612
+          "sha256": "1f2afa23e4d4ae7c79f4a21ba6a610782c38d788c2805783b729f3dec2f074ad",
+          "bytes": 19008
         }
       ]
     },
@@ -1019,8 +1019,8 @@
         {
           "ext": "html",
           "path": "legal/lib-learner-data-policy.html",
-          "sha256": "5ef0875c14fc35e67cdeba4d5a67077c70b9ea941d61e53f6e762ad449cbb572",
-          "bytes": 3139
+          "sha256": "3233bedeeb0c66ce0220bc69adbec32f505fded69cf0251ddf6e5941007b08cc",
+          "bytes": 12016
         },
         {
           "ext": "md",
@@ -1037,8 +1037,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-learner-data-policy.docx",
-          "sha256": "32156eafde850b14c7b1c6dbac9f1bb00f6c6fd2f6d58dd354379de2fcfca7e7",
-          "bytes": 10400
+          "sha256": "b1fc0ec60d485433e8ee04af609d101734cb9ffa7cdae21f5c0a21e196e5572b",
+          "bytes": 18796
         }
       ]
     },
@@ -1056,8 +1056,8 @@
         {
           "ext": "html",
           "path": "support/lib-complaints-policy.html",
-          "sha256": "1f36c8ea7183e2b7d790c508dc73c109cc6297a7b75361371e5288601c793957",
-          "bytes": 3442
+          "sha256": "0b7c911f5b720feee04d0c927ed43cebaeb336c88bff1dfdae6dd93f8ba041ee",
+          "bytes": 12319
         },
         {
           "ext": "md",
@@ -1074,8 +1074,8 @@
         {
           "ext": "docx",
           "path": "support/lib-complaints-policy.docx",
-          "sha256": "48a372aff66f8bd5d07a2c6ad4cdafd42b4b0455bb91434009fc9744301ae2e2",
-          "bytes": 10605
+          "sha256": "dcdd62e435885f39d9aabb6cb4a3eae574bbcca2520d1c3485c4eb0b2df619be",
+          "bytes": 18993
         }
       ]
     },
@@ -1093,8 +1093,8 @@
         {
           "ext": "html",
           "path": "support/lib-safeguarding-sop.html",
-          "sha256": "b7a3b56f61494935e13051453456e2793ec9397fde1869df6696761ad31f66d0",
-          "bytes": 3682
+          "sha256": "9ca681ba9eef8eaa19669c2e3584e89a129d4e8bf32c841d62278c103036b49a",
+          "bytes": 12559
         },
         {
           "ext": "md",
@@ -1111,8 +1111,8 @@
         {
           "ext": "docx",
           "path": "support/lib-safeguarding-sop.docx",
-          "sha256": "230faf222e89b48960ad578fdbf1a599d831ae34a49f7119013b254881b454d9",
-          "bytes": 10689
+          "sha256": "5b47303df280644ab4620dc0611bae7f995e5aa766c52ae36870b44dea4fecf2",
+          "bytes": 19079
         }
       ]
     },
@@ -1130,8 +1130,8 @@
         {
           "ext": "html",
           "path": "legal/lib-coi-declaration.html",
-          "sha256": "b45b0a0e79a8a8f57c0c1b608738b820d525b892b26cb8c861fb5ea26a4c9bdd",
-          "bytes": 3103
+          "sha256": "a28858addb515ea3dfe9a5d9c7ed6a6e09a07e9bb6dddb0711e0516965ab0426",
+          "bytes": 11980
         },
         {
           "ext": "md",
@@ -1148,8 +1148,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-coi-declaration.docx",
-          "sha256": "f2bc8446b700146666b32607daf8db0c91add944c87adcb473cf90d5bbc5c33b",
-          "bytes": 10453
+          "sha256": "067a5ee537ba626dc3cd922a6a1894b6f85882309da74d47fe0dd658f2ac2837",
+          "bytes": 18844
         }
       ]
     },
@@ -1165,8 +1165,8 @@
         {
           "ext": "html",
           "path": "executive/lib-delegation-matrix.html",
-          "sha256": "b9dfb4821c05955028e7dec0f350bec9aa6dbcb4bf27c0bd74d7b14f9c050f7a",
-          "bytes": 3355
+          "sha256": "4f53e2e58e5a9e7c5e2f31d497218c113a08b27a9ad48be7f01ef813f9e5b2fe",
+          "bytes": 12232
         },
         {
           "ext": "md",
@@ -1183,8 +1183,8 @@
         {
           "ext": "docx",
           "path": "executive/lib-delegation-matrix.docx",
-          "sha256": "7a1cebeda94d1feaaf380e7a1254cc2183cc72e3343777ff0327f6f18d7bfae6",
-          "bytes": 10504
+          "sha256": "468e83d11c68b1b53bdf2c4c8f2da3391c39b0a1d80f4efd919ae0132869dba0",
+          "bytes": 18897
         }
       ]
     },
@@ -1202,8 +1202,8 @@
         {
           "ext": "html",
           "path": "executive/lib-board-resolution.html",
-          "sha256": "336c0d72eb2bbe5a7796a38509f134fc142d4a80609173f2ba9224a7159ad264",
-          "bytes": 3241
+          "sha256": "9919fd46a62add42376dd62e2eaf655cc4e18964864543fc3450172d7035f2ad",
+          "bytes": 12118
         },
         {
           "ext": "md",
@@ -1220,8 +1220,8 @@
         {
           "ext": "docx",
           "path": "executive/lib-board-resolution.docx",
-          "sha256": "7140170cbd89356eb09a2a2bb2afa57ded4f9d0404012a0de630568b184297f7",
-          "bytes": 10499
+          "sha256": "f1a8d79dcb024c9f8d94e24d43286daf846b8f8d68ab535744927a7da42eead4",
+          "bytes": 18891
         }
       ]
     },
@@ -1237,8 +1237,8 @@
         {
           "ext": "html",
           "path": "sales/lib-pricing-calculator.html",
-          "sha256": "420963225be0e881eddc6dce9cf718203ae2ad6f021bf86c5221f04cd22ad110",
-          "bytes": 3080
+          "sha256": "47157507d76c45c2cd6d92f7abafb11c3c4a6ffc799c4a7a29e723322eceae70",
+          "bytes": 11957
         },
         {
           "ext": "md",
@@ -1255,14 +1255,14 @@
         {
           "ext": "docx",
           "path": "sales/lib-pricing-calculator.docx",
-          "sha256": "c674673448f3c0abd26dbd7f5a97318ac5718297fd71585d419d8730861a430f",
-          "bytes": 10430
+          "sha256": "64f792b554dc01e3b8cbf1ab0c02250c02aacaf8c5ec141e417a640abc1757ad",
+          "bytes": 18825
         },
         {
           "ext": "xlsx",
           "path": "sales/lib-pricing-calculator.xlsx",
-          "sha256": "c5b6275841348e1089907588fa72447745e0d0cf6cf9606f662ed2c3b81e7260",
-          "bytes": 8582
+          "sha256": "24fdc6d5e4f3aa53f47510bd0b086ec3d934aa52fe56e54cffcb92c4da92c485",
+          "bytes": 8581
         }
       ]
     },
@@ -1280,8 +1280,8 @@
         {
           "ext": "html",
           "path": "finance/lib-tax-invoice.html",
-          "sha256": "bf0b8e48865eabc4b820851bbdda38d54c69570e7461c2420c82d22bd7889334",
-          "bytes": 4170
+          "sha256": "a7fab6f02582645fa41283cf245955887565e80d57f9a434a8a339840c1e065e",
+          "bytes": 13047
         },
         {
           "ext": "md",
@@ -1298,8 +1298,8 @@
         {
           "ext": "docx",
           "path": "finance/lib-tax-invoice.docx",
-          "sha256": "0c6ffeff11582be04142a518fe5f67cf7a4e60a1e07557600272c1270452b447",
-          "bytes": 10861
+          "sha256": "544df559dfec3a1bb17c4dc4c1715f87827116370304c96f15105bc42aa06235",
+          "bytes": 19253
         }
       ]
     },
@@ -1317,8 +1317,8 @@
         {
           "ext": "html",
           "path": "finance/lib-credit-note.html",
-          "sha256": "b724fe54bbb776b5d6efedf06bb6a588573878b0e4e7e58c1a3ca85aee394671",
-          "bytes": 3354
+          "sha256": "2275ee413f73a9efda4913838e63e6f82b7309cf82a3bab86e8d279dcce53f42",
+          "bytes": 12231
         },
         {
           "ext": "md",
@@ -1335,8 +1335,8 @@
         {
           "ext": "docx",
           "path": "finance/lib-credit-note.docx",
-          "sha256": "4624dc13f2974647612ef110482074f220217a37c04387f26ec37131bb568ddc",
-          "bytes": 10521
+          "sha256": "cda6ee7c479931149ec2cb6633756083ba3cd9455bd3f23dd97f7b5c1235cdcd",
+          "bytes": 18908
         }
       ]
     },
@@ -1352,8 +1352,8 @@
         {
           "ext": "html",
           "path": "finance/lib-statement-of-account.html",
-          "sha256": "22a6e7a4b7afc5c8f48534db7c8e30c1fdd8f05eabc96411bd53e866dcbe04e2",
-          "bytes": 3323
+          "sha256": "fb4cdf3324cbc7b67f841404164fefae4d8a6eeea7faec12a36fbbdceae2b3cf",
+          "bytes": 12200
         },
         {
           "ext": "md",
@@ -1370,8 +1370,8 @@
         {
           "ext": "docx",
           "path": "finance/lib-statement-of-account.docx",
-          "sha256": "83f9ab561ffdb02d549fb829dafb0177438ef12ca121860336f18967a6ffac43",
-          "bytes": 10368
+          "sha256": "638cd0c7939ae3d8069100a46260f5421dea9c6668ab93afd93aaef76c8f4d6e",
+          "bytes": 18761
         }
       ]
     },
@@ -1387,8 +1387,8 @@
         {
           "ext": "html",
           "path": "finance/lib-expense-claim.html",
-          "sha256": "7fc3425ce234c4e5597d48563d3c1e1dd77c46223e685375f2409c9f95c072c6",
-          "bytes": 3261
+          "sha256": "c79a54ab63b7b9d8a2acf31c08d20c0814a75853eac801b84c6ad21db2b6cf3c",
+          "bytes": 12138
         },
         {
           "ext": "md",
@@ -1405,14 +1405,14 @@
         {
           "ext": "docx",
           "path": "finance/lib-expense-claim.docx",
-          "sha256": "fc8c23d12cd5a7d956482367de8ebe524e8f441095ad35e5163c79a16adec853",
-          "bytes": 10375
+          "sha256": "bb1aee258a05fd2886562f873ba5c622f48ca2f129d4ee18da885e7e5ffbad42",
+          "bytes": 18767
         },
         {
           "ext": "xlsx",
           "path": "finance/lib-expense-claim.xlsx",
-          "sha256": "7f2cf60eddfdd14f5e6c62c4f420b2ca31b37c47fca58dc0d1bb6c527cf37517",
-          "bytes": 8771
+          "sha256": "4e491b0503ab104c1a4e7bf6f701bd42e0d133508708e682b4a437d2361bb817",
+          "bytes": 8772
         }
       ]
     },
@@ -1428,8 +1428,8 @@
         {
           "ext": "html",
           "path": "procurement/lib-purchase-order.html",
-          "sha256": "d86eaad34275b9a7c7e9709646d3a4aa87e0ef6f0ea2f2a1a412183426f97f71",
-          "bytes": 3064
+          "sha256": "97a762d148eabca53bf1692e2541bf1145b6151952b7b3db040a815d2cbda3ee",
+          "bytes": 11941
         },
         {
           "ext": "md",
@@ -1446,8 +1446,8 @@
         {
           "ext": "docx",
           "path": "procurement/lib-purchase-order.docx",
-          "sha256": "496cd3e592bd1f3e752eb7cff9157ce5aea86aa217b463d8f0f2aed03da4ee8f",
-          "bytes": 10320
+          "sha256": "a93c39ff1c74da3da9db8b2f4d546020f68bb526df759c5400fd8a52e1c7c85b",
+          "bytes": 18712
         }
       ]
     },
@@ -1463,8 +1463,8 @@
         {
           "ext": "html",
           "path": "finance/lib-payment-requisition.html",
-          "sha256": "7072e6445879283966fb7eb7027151c5e07cb38bfc0dbaca9d094ee657376370",
-          "bytes": 3030
+          "sha256": "275575cd130f02b2b348fa44bc2a87b3310b15731d2c44ec1d6ccae74b779a96",
+          "bytes": 11907
         },
         {
           "ext": "md",
@@ -1481,8 +1481,8 @@
         {
           "ext": "docx",
           "path": "finance/lib-payment-requisition.docx",
-          "sha256": "81b2dbae4462d8fb22ffc3df3c44a6837fa9d3300bebab63098e32ae34edd4af",
-          "bytes": 10255
+          "sha256": "06868d7c9aa57a832f103d7547176b461723a4561e09bc2e1ca1f72f4950060f",
+          "bytes": 18643
         }
       ]
     },
@@ -1500,8 +1500,8 @@
         {
           "ext": "html",
           "path": "procurement/lib-supplier-onboarding.html",
-          "sha256": "f1310bffc64f7155c8c74e7b86aacca839c04e81ee1e879712e3250f296893ff",
-          "bytes": 3375
+          "sha256": "40ee1b251b810b8fa09f017b5ca438d901081dd4ac55c16b218dbaac487b692b",
+          "bytes": 12252
         },
         {
           "ext": "md",
@@ -1518,8 +1518,8 @@
         {
           "ext": "docx",
           "path": "procurement/lib-supplier-onboarding.docx",
-          "sha256": "a1b9ecd5beb69e8b32cf932460cb299961bbeaa6952f898388a40982bc6b8e0c",
-          "bytes": 10593
+          "sha256": "a2cca31661baa5f1f40f49a8f4d2337bfd218fe9ee659a152d4b0da17a831e50",
+          "bytes": 18985
         }
       ]
     },
@@ -1535,8 +1535,8 @@
         {
           "ext": "html",
           "path": "finance/lib-month-end-sop.html",
-          "sha256": "8786c7462533e0069f49cb9547009dcf4f48b3a94661d9f523bd23cd0ff423fc",
-          "bytes": 3159
+          "sha256": "e32597ce06e3180e3f306c0f656ada4f051b23a9fe51455f157585596e649318",
+          "bytes": 12036
         },
         {
           "ext": "md",
@@ -1553,8 +1553,8 @@
         {
           "ext": "docx",
           "path": "finance/lib-month-end-sop.docx",
-          "sha256": "86e26001602767aec4aee70592a60878448d2ed2610357415f9472594a682f01",
-          "bytes": 10332
+          "sha256": "79981d0f1a503170c33ab7b1e0ce7907eef55e032462ee10e07eefa0302b7f73",
+          "bytes": 18727
         }
       ]
     },
@@ -1570,8 +1570,8 @@
         {
           "ext": "html",
           "path": "finance/lib-collections-sop.html",
-          "sha256": "317af789d0dc6d1a8d82990c48ed8a58e1ac75ea0d60168479d63281928526b2",
-          "bytes": 3187
+          "sha256": "d94a9b8b1e2627658d1765c0cbf6542d6f3a3b667127ff5bd1d6649f61c167f1",
+          "bytes": 12064
         },
         {
           "ext": "md",
@@ -1588,8 +1588,8 @@
         {
           "ext": "docx",
           "path": "finance/lib-collections-sop.docx",
-          "sha256": "1328fad0e23ec6dae56c0fbc4465d088ffadb2e70fc0188e7205bf9d2c6cbcea",
-          "bytes": 10442
+          "sha256": "5f81081b5df39d7a1d8bc2e61c64c77776735964b506e50c8e9a4016ba19fc86",
+          "bytes": 18833
         }
       ]
     },
@@ -1607,8 +1607,8 @@
         {
           "ext": "html",
           "path": "finance/lib-vat-registration-checklist.html",
-          "sha256": "8cbbe60ae9684cfd1faed0dfb9ecb5a620abd72351e0d43b6b371f3303e7ff19",
-          "bytes": 3226
+          "sha256": "9840a9af1e067af8e44c61b756e44ab6d2dd1b0722bddf956198d13b0e3fbd30",
+          "bytes": 12103
         },
         {
           "ext": "md",
@@ -1625,8 +1625,8 @@
         {
           "ext": "docx",
           "path": "finance/lib-vat-registration-checklist.docx",
-          "sha256": "48f9fb4a347c114171ced961b7cead596bed2d2efe3058bd7e49f17cc3d7a859",
-          "bytes": 10404
+          "sha256": "d47f0d6a754c302423a02fedaeeab386a9198519b9fdbeaf37595790426cb3f7",
+          "bytes": 18798
         }
       ]
     },
@@ -1642,8 +1642,8 @@
         {
           "ext": "html",
           "path": "finance/lib-budget-workbook.html",
-          "sha256": "8819c463308a1d48c8b38618158d33d5ca74380b7d0fad5db99380f73113dfa1",
-          "bytes": 2604
+          "sha256": "abbc5b92c732325ccb9d35e694bdfcd4485312f47efbf144b6afbd3d5e822573",
+          "bytes": 11481
         },
         {
           "ext": "md",
@@ -1660,14 +1660,14 @@
         {
           "ext": "docx",
           "path": "finance/lib-budget-workbook.docx",
-          "sha256": "11e8480ed02a400bdcab7c51c46a5549710685a10139f15e0deb222aa298dd01",
-          "bytes": 10163
+          "sha256": "cdea14b0bca56ae634d26e8363f37d26dab1672fb192f2eb21239533e49c7b95",
+          "bytes": 18560
         },
         {
           "ext": "xlsx",
           "path": "finance/lib-budget-workbook.xlsx",
-          "sha256": "9d345f0e0a1fc7ce3755d93df541e4d6357e7986d226f2ebac689a46b996d398",
-          "bytes": 9560
+          "sha256": "b20918971b4cdfc99300823d3a75b7e5afaea553df6ec6658cdb06d2d5ed3004",
+          "bytes": 9563
         }
       ]
     },
@@ -1683,8 +1683,8 @@
         {
           "ext": "html",
           "path": "finance/lib-cashflow-13w.html",
-          "sha256": "3b5d62a5a1fc87fc55b8541bf87abaf7a9f27536fed97800c0663ed2b4c74f84",
-          "bytes": 2513
+          "sha256": "aec37692bbcf64beae31519ac379977e8fda5555de8d36c352592ca72e00cd78",
+          "bytes": 11390
         },
         {
           "ext": "md",
@@ -1701,14 +1701,14 @@
         {
           "ext": "docx",
           "path": "finance/lib-cashflow-13w.docx",
-          "sha256": "22711e7419a3aaf73b5f259a1fd9cbeabfea8aec08ca3acc7ce56aad08e12874",
-          "bytes": 10094
+          "sha256": "f2a3ef05074169efc056b2a1233164dac9037161bf85a6b0e8e38af0ab95413b",
+          "bytes": 18486
         },
         {
           "ext": "xlsx",
           "path": "finance/lib-cashflow-13w.xlsx",
-          "sha256": "05d846d45e85e8a76586401ed31971de22a9b397b640623db924461598ca369a",
-          "bytes": 8247
+          "sha256": "52bd29a5f7bb5371761f64a0cc1d92cef431464a8c7b157961a04ccddc9dc579",
+          "bytes": 8249
         }
       ]
     },
@@ -1724,8 +1724,8 @@
         {
           "ext": "html",
           "path": "finance/lib-debtors-ageing.html",
-          "sha256": "77e2d6060ad8f1cbb2c454277af1315061530c7cbbf8aa24d8bf69704e21eaf6",
-          "bytes": 2511
+          "sha256": "4278f60e115b4e625ef7481570d772acfa89bb433f65fa79d3246c58adfbf57f",
+          "bytes": 11388
         },
         {
           "ext": "md",
@@ -1742,14 +1742,14 @@
         {
           "ext": "docx",
           "path": "finance/lib-debtors-ageing.docx",
-          "sha256": "75d1697376980703ccabda61feb6a48797cf20fe6a2705edc63bf0b383668880",
-          "bytes": 10085
+          "sha256": "c7b32a32d03ab86e41dd17782d75727c4653232cce04ec9e2124c58987c93cbb",
+          "bytes": 18479
         },
         {
           "ext": "xlsx",
           "path": "finance/lib-debtors-ageing.xlsx",
-          "sha256": "57677f329d33b33dd7aac1bff60a071dd4ff25764af4f4dc25904e773322e5ab",
-          "bytes": 13275
+          "sha256": "99f74fcdd206cf42d41bd9db6923a850c6aa1ec4e5def8d1e57e541407d684b2",
+          "bytes": 13279
         }
       ]
     },
@@ -1765,8 +1765,8 @@
         {
           "ext": "html",
           "path": "finance/lib-invoice-register.html",
-          "sha256": "15e93ff14015dcf36664343ba04ed12f5b73e7481f6ac49175c7fcea7c2dafce",
-          "bytes": 2519
+          "sha256": "eb6c7d33087c21ada61dab102f7073a8006eba1ac4042396f0a0be8e5ccec5ca",
+          "bytes": 11396
         },
         {
           "ext": "md",
@@ -1783,14 +1783,14 @@
         {
           "ext": "docx",
           "path": "finance/lib-invoice-register.docx",
-          "sha256": "7734d32b0ce2dbbfc21c3c5f03942fa1a49e400868621c848469fbc47ea62d80",
-          "bytes": 10085
+          "sha256": "9c1a0411569296d41e08daeda1e35f7a1dd5155fe7406b31739fd33cd8c68add",
+          "bytes": 18479
         },
         {
           "ext": "xlsx",
           "path": "finance/lib-invoice-register.xlsx",
-          "sha256": "52ed7046c008d67f255a67cefb27d95fa6c7c94936bd64ad61f2a4fa8b72ee10",
-          "bytes": 9796
+          "sha256": "b5f5c6cbbb2e278640db663fea86f8f451f3b1634e9194cdaed7979141ab9d44",
+          "bytes": 9799
         }
       ]
     },
@@ -1806,8 +1806,8 @@
         {
           "ext": "html",
           "path": "finance/lib-expense-register.html",
-          "sha256": "6661bb3d4c22229ca751a23b746dad0db08c9f836aa4a317fc776cdeff21cb9d",
-          "bytes": 2519
+          "sha256": "333570a8bde6a110364b42730259fecf5dab49a0b2e201eabf22939e6cc70d95",
+          "bytes": 11396
         },
         {
           "ext": "md",
@@ -1824,14 +1824,14 @@
         {
           "ext": "docx",
           "path": "finance/lib-expense-register.docx",
-          "sha256": "35b9c879e2075d9c0c352f2e5f36e5cc3c1661370bcb6c58e5c8d391f7b67bbb",
-          "bytes": 10087
+          "sha256": "71df4548adf4549eaa092e96fa3c63bda50f6b1e23a65e0fdf1f0ad15c7b1136",
+          "bytes": 18483
         },
         {
           "ext": "xlsx",
           "path": "finance/lib-expense-register.xlsx",
-          "sha256": "95704d415c0d59b4cda85e8f1f0efbba226beb9f4ff1788dd441b27c8f517d07",
-          "bytes": 9817
+          "sha256": "73118a7d2b2288b3943c379a8995192a0d5a4ae0399c5ce38957e659784421fe",
+          "bytes": 9818
         }
       ]
     },
@@ -1849,8 +1849,8 @@
         {
           "ext": "html",
           "path": "finance/lib-vat-workings.html",
-          "sha256": "e85d4a383711424a2cf2a8d2d1e5f7da7f24d8d8c508215d6e670dbb6410568b",
-          "bytes": 2784
+          "sha256": "23fbcaab42c36aa035bb84e8bf5e0d9037f2d57508b417155c3db033c05505f0",
+          "bytes": 11661
         },
         {
           "ext": "md",
@@ -1867,13 +1867,13 @@
         {
           "ext": "docx",
           "path": "finance/lib-vat-workings.docx",
-          "sha256": "395582535fab50230942e9406cac6ab4cc63e61358b02a2a7f335e7f4f2d7b4b",
-          "bytes": 10248
+          "sha256": "5322216136030ab783f6cc7e5222313f1180f23b620bfd6c712d5ac9d20b3393",
+          "bytes": 18639
         },
         {
           "ext": "xlsx",
           "path": "finance/lib-vat-workings.xlsx",
-          "sha256": "58c589db40d7611ac90c02f9389eded7a82b3a66da3d378456cc3569ef364547",
+          "sha256": "1e79aa33071e640d3952b98829534f70441ba79265ff14da42e49c5ab4f1b578",
           "bytes": 7826
         }
       ]
@@ -1890,8 +1890,8 @@
         {
           "ext": "html",
           "path": "finance/lib-asset-register.html",
-          "sha256": "4dd9f1677b558b26d204a5232076c107f546ba10b372642d28bff52772e514e5",
-          "bytes": 2511
+          "sha256": "aa48847969b67145d2ccbc68444c999f948e55e4e791d690272bed7767d89193",
+          "bytes": 11388
         },
         {
           "ext": "md",
@@ -1908,14 +1908,14 @@
         {
           "ext": "docx",
           "path": "finance/lib-asset-register.docx",
-          "sha256": "77bda339c36114639c77472125cade40d958a7a4ae991999a835dd66580ab575",
-          "bytes": 10082
+          "sha256": "c83fe90e9ec76ace72a408706ff5d4eb5657784c8aea3e92eedf9b5a82e0c146",
+          "bytes": 18479
         },
         {
           "ext": "xlsx",
           "path": "finance/lib-asset-register.xlsx",
-          "sha256": "83cf58cb4ce4779e8be4d8e8f9f377c96d27a5ec71f5b92c11eee719688317f8",
-          "bytes": 8737
+          "sha256": "96974ff97d4230fb591eb8e9a96c41ad452dbfdb09ad9f3d16c7c2a808195943",
+          "bytes": 8738
         }
       ]
     },
@@ -1931,8 +1931,8 @@
         {
           "ext": "html",
           "path": "sales/lib-sales-playbook.html",
-          "sha256": "d6b567112f794078a31508beb5ac8867c3027dc97185f9fff92127f62cf0a329",
-          "bytes": 3787
+          "sha256": "3782814578c0afca724ddf78002a671befdc7a98725c0a3d99d5cb24864462ca",
+          "bytes": 12664
         },
         {
           "ext": "md",
@@ -1949,8 +1949,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-sales-playbook.docx",
-          "sha256": "6ba65b2301e35eaa8d76237bf8411e94343218e5958dd41e4397908cfd83d3de",
-          "bytes": 10803
+          "sha256": "91bf021637a97e2ec5c8c92a1a54fcc83d8d39c8e9eb0feaf0170b6c4de76fc7",
+          "bytes": 19197
         }
       ]
     },
@@ -1966,8 +1966,8 @@
         {
           "ext": "html",
           "path": "sales/lib-discovery-guide.html",
-          "sha256": "6550d51393b6b2cd71eec89fd25d7f6409ebc2814db81c40c2e93b52c9fbdddb",
-          "bytes": 3109
+          "sha256": "5dc19b44c46ac6d8873d8ee99fac995e23dfa96afe34e01ae823d253133af858",
+          "bytes": 11986
         },
         {
           "ext": "md",
@@ -1984,8 +1984,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-discovery-guide.docx",
-          "sha256": "707f69e3da7cf6499c8100b7395db629ecfbe303b0e5f7eab3017e14989d02c3",
-          "bytes": 10448
+          "sha256": "18d5ee45c2b967eb8ff1c8602fe40829e67e7193a5a0f6740cf5857c01d50ec7",
+          "bytes": 18842
         }
       ]
     },
@@ -2001,8 +2001,8 @@
         {
           "ext": "html",
           "path": "sales/lib-demo-script.html",
-          "sha256": "df2dbe3f4064b750e41282f0fa1a531663304389470840f8c02f176ffad41a73",
-          "bytes": 2894
+          "sha256": "a41962fac75d46258d5e42f846cee1bae0db465328ef168ca0b024bd4550eeda",
+          "bytes": 11771
         },
         {
           "ext": "md",
@@ -2019,8 +2019,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-demo-script.docx",
-          "sha256": "d4eb1d2215036bb524c9f700efd191bd9a1e0f226e442e56da3cc61baced9254",
-          "bytes": 10287
+          "sha256": "8974f1741396dca1d11a1100999126e3964cef1ac67a0574223804e38a2b0abe",
+          "bytes": 18685
         }
       ]
     },
@@ -2036,8 +2036,8 @@
         {
           "ext": "html",
           "path": "sales/lib-lead-qualification.html",
-          "sha256": "40087c227e6d98089d47900f7a1dc0a6906e824cc3579bac8523c7cab79f9870",
-          "bytes": 3071
+          "sha256": "70a58570c7df302c23ab955accd39d8beb24cae1f8b131b4b3411b4b1584643c",
+          "bytes": 11948
         },
         {
           "ext": "md",
@@ -2054,8 +2054,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-lead-qualification.docx",
-          "sha256": "0c0f63678cb571aa2811c6cfd6382ac927810b116fa1759082315245ce64ce8d",
-          "bytes": 10404
+          "sha256": "373deae83497c8384c1134ec6ce81d70fa62666bf9de8bd18543ec7e1a0a1497",
+          "bytes": 18797
         }
       ]
     },
@@ -2071,8 +2071,8 @@
         {
           "ext": "html",
           "path": "sales/lib-proposal.html",
-          "sha256": "0d2797dee58fbc8e5c8e3a82f6d27749f7eff442bc651838940d070bf9f3abc2",
-          "bytes": 2965
+          "sha256": "d089071d93fd41b552498831701348a508314b61d0b9dc937e8b8cdbf22f90a5",
+          "bytes": 11842
         },
         {
           "ext": "md",
@@ -2089,8 +2089,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-proposal.docx",
-          "sha256": "d2f14b5cd512a1b39f979fd59bba993e4073ea1e5b94266c1a4354b190978c1b",
-          "bytes": 10316
+          "sha256": "657cfd59c3268d39a92a021c8d93ffe20c8577aa1e4266871668f170024f9114",
+          "bytes": 18711
         }
       ]
     },
@@ -2106,8 +2106,8 @@
         {
           "ext": "html",
           "path": "success/lib-school-onboarding-questionnaire.html",
-          "sha256": "0eb0750beef6e2a39970e0b8a59c0729f8691368faabe7a40b2e5b99b3fed2ed",
-          "bytes": 3245
+          "sha256": "0d10d1d8c6f500f4db4c504c196a49f6c6c60e0f61c1e058dfa72e489de16504",
+          "bytes": 12122
         },
         {
           "ext": "md",
@@ -2124,8 +2124,8 @@
         {
           "ext": "docx",
           "path": "success/lib-school-onboarding-questionnaire.docx",
-          "sha256": "eb758dcc03faa56f39d5183457382b5dae10276bbf1c733d9b2e3afaf45b81b5",
-          "bytes": 10517
+          "sha256": "fc0007350814fe18db9424fd0c116c26be2d391e70fd2038ed1c68fce94d791c",
+          "bytes": 18906
         }
       ]
     },
@@ -2141,8 +2141,8 @@
         {
           "ext": "html",
           "path": "marketing/lib-press-release.html",
-          "sha256": "0ae018090bcac9c808c65678176042be8ebc574a74e2e1d9d748903c7e4d855f",
-          "bytes": 3207
+          "sha256": "2f382ccd45a43f0a607e56b187dd55f898c6d91810c7d2cb0804ded63bfabbf6",
+          "bytes": 12084
         },
         {
           "ext": "md",
@@ -2159,8 +2159,8 @@
         {
           "ext": "docx",
           "path": "marketing/lib-press-release.docx",
-          "sha256": "ba371f766b3b0b27babdcfe5ace6de915b367cb07b07300c62d32883545f1c8c",
-          "bytes": 10502
+          "sha256": "8c51d652f148c4ec73854b818cbd8b875ab56a4f4588ecd0e6d1de09b5ad972e",
+          "bytes": 18895
         }
       ]
     },
@@ -2178,8 +2178,8 @@
         {
           "ext": "html",
           "path": "marketing/lib-social-media-policy.html",
-          "sha256": "765a3c214d6a92e7520809dbf6449a9251194c40a48d7c2b432342d3258eaed8",
-          "bytes": 3231
+          "sha256": "81164492b59226b19a2920636a055bc6ee921d2a6057d371a9967477e34cfd9f",
+          "bytes": 12108
         },
         {
           "ext": "md",
@@ -2196,8 +2196,8 @@
         {
           "ext": "docx",
           "path": "marketing/lib-social-media-policy.docx",
-          "sha256": "b69e9a9c95e308dcf196285d3841a69dce52c454945bf006151f007827fcda1b",
-          "bytes": 10480
+          "sha256": "64256ec2b4dc51b9a34954800e2de62075bc10e2bafc51880780a944d1dc5a5d",
+          "bytes": 18877
         }
       ]
     },
@@ -2215,8 +2215,8 @@
         {
           "ext": "html",
           "path": "marketing/lib-case-study.html",
-          "sha256": "aa1209d3b4672acea539d57df93f13755c642a82c1c626a349aee36c1fc3ebc7",
-          "bytes": 3200
+          "sha256": "979fe02cf93d2dc4ab55f85a15ea365da7a8eb209662cab4f17eeb78c441a79c",
+          "bytes": 12077
         },
         {
           "ext": "md",
@@ -2233,8 +2233,8 @@
         {
           "ext": "docx",
           "path": "marketing/lib-case-study.docx",
-          "sha256": "e4ec67b1da7c86ac6887f1153f3476d04087e3b944d28228b682f958705fe260",
-          "bytes": 10507
+          "sha256": "9e7f8cdc60fcf7c9345230724ec3daf52ca73c7f6d4c35d6d302d205306c6f18",
+          "bytes": 18896
         }
       ]
     },
@@ -2250,8 +2250,8 @@
         {
           "ext": "html",
           "path": "marketing/lib-event-checklist.html",
-          "sha256": "0e9985a828f2c3dbad93485c8b8eecbeef22ee996c2407d90e480b5059051294",
-          "bytes": 2800
+          "sha256": "ed23b3194a19a331baa2df8deb1e056899d6d25b0c5dfa4c5a84caef7babc813",
+          "bytes": 11677
         },
         {
           "ext": "md",
@@ -2268,8 +2268,8 @@
         {
           "ext": "docx",
           "path": "marketing/lib-event-checklist.docx",
-          "sha256": "3a63dc676dab5e6d921bfe59ca077cb95fcf0cc6947ba9116da26558da7e8fda",
-          "bytes": 10210
+          "sha256": "1e89af204624bfdca5892f5df26c0eeb48d0c3d48742cd53f6b2ebd212171671",
+          "bytes": 18604
         }
       ]
     },
@@ -2287,8 +2287,8 @@
         {
           "ext": "html",
           "path": "sales/lib-referral-terms.html",
-          "sha256": "d77a19f4bc96eeb2edf680ae0473e900392b44b602c126e89d59b33561356309",
-          "bytes": 3136
+          "sha256": "577f33fb75d10436421ef0b777516b66b560dd27a043cc1b098c2bcec10f3d71",
+          "bytes": 12013
         },
         {
           "ext": "md",
@@ -2305,8 +2305,8 @@
         {
           "ext": "docx",
           "path": "sales/lib-referral-terms.docx",
-          "sha256": "259e11f615bbcd6e02134dd9812990aa1730be84ff6f9e6e50d5fd1feda4ba32",
-          "bytes": 10420
+          "sha256": "a5d670dab517d719e64d1200271cd5a3133339a002675e61cb440d1617dfd2a1",
+          "bytes": 18814
         }
       ]
     },
@@ -2324,8 +2324,8 @@
         {
           "ext": "html",
           "path": "legal/lib-consent-case-study.html",
-          "sha256": "a7ef41fa795d33efd27e8dcf3fda49719f00ab16589ccdf5c8880f46c1db7038",
-          "bytes": 3166
+          "sha256": "3acc5361b7923c933cb8fe77f8bd0cdae9fcb30607369fdf086be7c47be39a93",
+          "bytes": 12043
         },
         {
           "ext": "md",
@@ -2342,8 +2342,8 @@
         {
           "ext": "docx",
           "path": "legal/lib-consent-case-study.docx",
-          "sha256": "76e5419b115e2670fc4ae8b882edfbd6f93d14c71640f5e95caf32f8afaecde8",
-          "bytes": 10493
+          "sha256": "6858edc6bc3c6d4e5db78f4335055c323f3ef545cb00e2068aef5a34f2adec90",
+          "bytes": 18886
         }
       ]
     },
@@ -2359,8 +2359,8 @@
         {
           "ext": "html",
           "path": "sales/lib-pipeline-tracker.html",
-          "sha256": "e2fac3bd112bdc0a69af859cda5320189e1f708b020a6c68bcc3608ef4eecca7",
-          "bytes": 2531
+          "sha256": "53a3c2246678796163cba36ca37c1605437dd8761b53c1421dbfb9cd570d4016",
+          "bytes": 11408
         },
         {
           "ext": "md",
@@ -2377,14 +2377,14 @@
         {
           "ext": "docx",
           "path": "sales/lib-pipeline-tracker.docx",
-          "sha256": "aaaeab6be3433b16f3b3ed6b0ae525eb5e17dd2dfa537523e9486a8c998ddd01",
-          "bytes": 10095
+          "sha256": "3955f246e9427b22796cb67154b8ace2ec5bce8309e7f418ea1b23b66005c66c",
+          "bytes": 18489
         },
         {
           "ext": "xlsx",
           "path": "sales/lib-pipeline-tracker.xlsx",
-          "sha256": "9099bd1774c119bccb21013b3fd9d18b922da8472afe5c2f3051ec0b020f2a12",
-          "bytes": 9380
+          "sha256": "9432cc3e691b67a13c6736bf885307f66fdd26ca0884e853a0673813c081271b",
+          "bytes": 9382
         }
       ]
     },
@@ -2400,8 +2400,8 @@
         {
           "ext": "html",
           "path": "marketing/lib-content-calendar.html",
-          "sha256": "73511a29243211d63fc7e2e222525f334242d0c23d0f6e46bdd152841476f194",
-          "bytes": 2519
+          "sha256": "c73159d373b0faf9c25e31100520f3f8796f5349e784e695d75e9318872b1c22",
+          "bytes": 11396
         },
         {
           "ext": "md",
@@ -2418,14 +2418,14 @@
         {
           "ext": "docx",
           "path": "marketing/lib-content-calendar.docx",
-          "sha256": "56b563b39b8b12466b4a05b4949e5c5aebe2013bf942cbe5557059c0faffcedd",
-          "bytes": 10086
+          "sha256": "009b2938f279a06bb240fd314a00b3ab5877a9324198335b419700b69fb6daa8",
+          "bytes": 18487
         },
         {
           "ext": "xlsx",
           "path": "marketing/lib-content-calendar.xlsx",
-          "sha256": "e826500ab7bce95986074e1937c8b769061cdc9e408989a5493b2b026138db0a",
-          "bytes": 8382
+          "sha256": "3c6ded3814944c33e56190b0122fbad74d5676d2a47a78b50fb4ff1eebce5db4",
+          "bytes": 8383
         }
       ]
     },
@@ -2441,8 +2441,8 @@
         {
           "ext": "html",
           "path": "marketing/lib-campaign-tracker.html",
-          "sha256": "b4adfcb106a48306b4356fcd38ca22d712f05c8fb7bec74d5bc55a2a664cd3ea",
-          "bytes": 2519
+          "sha256": "659ae241fa362e9af1147ed9456e5347116468af1be7c6432bf09b8dfabb8106",
+          "bytes": 11396
         },
         {
           "ext": "md",
@@ -2459,14 +2459,14 @@
         {
           "ext": "docx",
           "path": "marketing/lib-campaign-tracker.docx",
-          "sha256": "f8d4cb98d2c88c78a064c4a798475afc2a5b4f21805ecfd78111975b28d632d5",
-          "bytes": 10087
+          "sha256": "7e657d0e0c04c45da0f31cc6a976942a8c8056cdc8c8dc311fc888b098bfb540",
+          "bytes": 18484
         },
         {
           "ext": "xlsx",
           "path": "marketing/lib-campaign-tracker.xlsx",
-          "sha256": "d143f8689e05b054ade6d13bba007b69aa3edf75122e97570521ddd6912ddb65",
-          "bytes": 10503
+          "sha256": "b3019d4815007a79abe3d74d23a5b4053c50af15365737a872b87968dcffc97a",
+          "bytes": 10504
         }
       ]
     },
@@ -2482,8 +2482,8 @@
         {
           "ext": "html",
           "path": "success/lib-onboarding-plan.html",
-          "sha256": "71bf13b7474c41bf48cc6398ae664b63e8c98ee425454cb4bf94c25f2fd090ce",
-          "bytes": 3491
+          "sha256": "c3d6d7fd8b021cd946b1e14a2e3dd8a7141124443391faea5b2c408bf438d7a5",
+          "bytes": 12368
         },
         {
           "ext": "md",
@@ -2500,8 +2500,8 @@
         {
           "ext": "docx",
           "path": "success/lib-onboarding-plan.docx",
-          "sha256": "f09eb5ebd8726df0de017155a62fa7a2b506d2b7eb10b555164831f47f147a59",
-          "bytes": 10455
+          "sha256": "a12f6c6fcb66a2b859403b4e1bf09f999b6bf8d870d9c6ece567f9652e03ad84",
+          "bytes": 18848
         }
       ]
     },
@@ -2519,8 +2519,8 @@
         {
           "ext": "html",
           "path": "success/lib-data-import-request.html",
-          "sha256": "ef3fad0d36edbd072726ba07a1ef2413df87151d1757c209ad828ac2c431413d",
-          "bytes": 3267
+          "sha256": "d36c137847004e52a144960b66eed125fa51979f38659b5053965c704eb642db",
+          "bytes": 12144
         },
         {
           "ext": "md",
@@ -2537,8 +2537,8 @@
         {
           "ext": "docx",
           "path": "success/lib-data-import-request.docx",
-          "sha256": "df6116af0b61212aa42874e9bf5c1d27370a257b40d739da99dd10a63fbaf795",
-          "bytes": 10561
+          "sha256": "997730883269af3676bf13e05c0035e10d221c26c6f3ab496f92b53bac81119b",
+          "bytes": 18952
         }
       ]
     },
@@ -2554,8 +2554,8 @@
         {
           "ext": "html",
           "path": "success/lib-training-register.html",
-          "sha256": "b20a09dddf11ab6d4319281477feb8f52d9ed2e1b88b974aeceaee1fb0f5718d",
-          "bytes": 3099
+          "sha256": "82b603c30727bd9b56b59e3c00bf272f5c9739bcfbfc660a48fdfc40cb06a1f5",
+          "bytes": 11976
         },
         {
           "ext": "md",
@@ -2572,14 +2572,14 @@
         {
           "ext": "docx",
           "path": "success/lib-training-register.docx",
-          "sha256": "7a08ad2992807716f87dd7cdddba47e11222dd89fdfc369a0653acd00b09e789",
-          "bytes": 10362
+          "sha256": "38dc7ce48e182cc1e57305f55e834aa9c07609e2ca8348cc23e6a2b886f13f5b",
+          "bytes": 18756
         },
         {
           "ext": "xlsx",
           "path": "success/lib-training-register.xlsx",
-          "sha256": "92e0fc91b30fbf13cad1494edabd9024542710351a2089d383d8137e019a95be",
-          "bytes": 8259
+          "sha256": "46093c40b39c98dd1b0f9d256033590c32ced530c2477772f12891f9ecc71f49",
+          "bytes": 8260
         }
       ]
     },
@@ -2595,8 +2595,8 @@
         {
           "ext": "html",
           "path": "success/lib-go-live-checklist.html",
-          "sha256": "7ac049b005d04527e4c6792bd5c47c4f65cdff6770246f3f87c7ece7b8c8a1df",
-          "bytes": 2915
+          "sha256": "d9905a140de2e5961e0d08c03da16373b3649110fbdd68524b2bf9a2b8c4db57",
+          "bytes": 11792
         },
         {
           "ext": "md",
@@ -2613,8 +2613,8 @@
         {
           "ext": "docx",
           "path": "success/lib-go-live-checklist.docx",
-          "sha256": "8b9b6cad717539eae1cb16031ad3a8d45d1549a7a4932f6768e81816aebc86d6",
-          "bytes": 10258
+          "sha256": "1a26b603879f488f4ed3733c2689a46aaad368d20db231e904ecb53078c29ff4",
+          "bytes": 18649
         }
       ]
     },
@@ -2630,8 +2630,8 @@
         {
           "ext": "html",
           "path": "support/lib-ticket-triage-sop.html",
-          "sha256": "945a72bbdfae1ad308f8ed72bdd2244f8af9342e1bc008badacecc6c5b629b4c",
-          "bytes": 3050
+          "sha256": "a491e370503ada79fb3ec42acbc046be54000af14a89b5ece50b241ea37dbcf7",
+          "bytes": 11927
         },
         {
           "ext": "md",
@@ -2648,8 +2648,8 @@
         {
           "ext": "docx",
           "path": "support/lib-ticket-triage-sop.docx",
-          "sha256": "307f91db060a467a4ddc8acdbee8f8f47c5808800468d100993006f614bfbfdd",
-          "bytes": 10351
+          "sha256": "8890ff152535b1964c62998599ca45eb69ad285c36ad9c3ad2d8b8d75d6cc9ee",
+          "bytes": 18746
         }
       ]
     },
@@ -2665,8 +2665,8 @@
         {
           "ext": "html",
           "path": "support/lib-escalation-matrix.html",
-          "sha256": "5f3c92167088d083fa59a6feabfca061b8ed6242eff4776c541fc9cbcd9eefd8",
-          "bytes": 3152
+          "sha256": "361ab1605524acbac52f3b8901c69f9d1f5b7e3ebca7d611a3c3bce22dae71e5",
+          "bytes": 12029
         },
         {
           "ext": "md",
@@ -2683,8 +2683,8 @@
         {
           "ext": "docx",
           "path": "support/lib-escalation-matrix.docx",
-          "sha256": "9d65cec38736e3270baf58bc0f32efdd0fbc367fa9d0bfa675ecfb095d542898",
-          "bytes": 10398
+          "sha256": "8f4b5b6460fae8785ddbf6e91cb3a89d62691e97d3cfc9cebece0989c423b406",
+          "bytes": 18789
         }
       ]
     },
@@ -2700,8 +2700,8 @@
         {
           "ext": "html",
           "path": "support/lib-kb-article.html",
-          "sha256": "7af664baf84aeacaa5752508e5bb6ebb77739480de3985f6f98c0175da13d50d",
-          "bytes": 2938
+          "sha256": "f617401263abdc064d777975397eb87ed70d32aff759472520e76c0174afd762",
+          "bytes": 11815
         },
         {
           "ext": "md",
@@ -2718,8 +2718,8 @@
         {
           "ext": "docx",
           "path": "support/lib-kb-article.docx",
-          "sha256": "5d2945b7380c6730220dee5f10a5549a42b3fde5576f2885549733c848e91e55",
-          "bytes": 10363
+          "sha256": "80f7d32e72b81fb7ab3437208d2419cf362053da2892ffcda9e994a05572dcaa",
+          "bytes": 18756
         }
       ]
     },
@@ -2735,8 +2735,8 @@
         {
           "ext": "html",
           "path": "support/lib-sla-report.html",
-          "sha256": "958b02739aa23fed2c2bdcfe952b84a1d10a58f199193991420772faeba50a46",
-          "bytes": 2877
+          "sha256": "e6d5b9d278dc1c237a3015d88cc98e7155627a7692a20c9f2f5514ec4cb897b2",
+          "bytes": 11754
         },
         {
           "ext": "md",
@@ -2753,14 +2753,14 @@
         {
           "ext": "docx",
           "path": "support/lib-sla-report.docx",
-          "sha256": "ef60e99c91f9576e470757b348805b9908bd461be325b6d524e5e8aa91a70e10",
-          "bytes": 10329
+          "sha256": "944a1ffd68fb0a5a462e53a95ce560cea28ffcfbeea6363cb4719393666c800d",
+          "bytes": 18722
         },
         {
           "ext": "xlsx",
           "path": "support/lib-sla-report.xlsx",
-          "sha256": "4284a030f2d521033de4207d4512b81be5c809cf6e383e299bf0974f408c730f",
-          "bytes": 8839
+          "sha256": "4abf1ccd198b8a1ced9d5ca46b7dcd2bf3515cb1b5c1e9efea03d2ebd63744aa",
+          "bytes": 8840
         }
       ]
     },
@@ -2776,8 +2776,8 @@
         {
           "ext": "html",
           "path": "success/lib-nps-survey.html",
-          "sha256": "dfc75e54fe9dd11abba46b793d6fcf75d9f7596d7a00c2d0b6dc191e9980e5be",
-          "bytes": 2740
+          "sha256": "3dd28146c5cbfffda58cc4d415175c64aebd80362e22298903128bd137dd7711",
+          "bytes": 11617
         },
         {
           "ext": "md",
@@ -2794,8 +2794,8 @@
         {
           "ext": "docx",
           "path": "success/lib-nps-survey.docx",
-          "sha256": "1df43379fb805da5efbeaa1c7cb2bda73a3bb0684941d9e3ba4580096f811939",
-          "bytes": 10204
+          "sha256": "dcdfba4454c917485c95e1610a80660139f2c3e6c9636e5980b61d03a5ba83d5",
+          "bytes": 18600
         }
       ]
     },
@@ -2811,8 +2811,8 @@
         {
           "ext": "html",
           "path": "success/lib-health-scorecard.html",
-          "sha256": "4bbb48a0871b7e9c6f82bf954ac122056cb9db2dd7d166d76cd89a7297bcb4d2",
-          "bytes": 2537
+          "sha256": "2ab3fd47b62c3ed9b024c6599d0c1fc9d57273a464df61786b35dfb0e671e31e",
+          "bytes": 11414
         },
         {
           "ext": "md",
@@ -2829,14 +2829,14 @@
         {
           "ext": "docx",
           "path": "success/lib-health-scorecard.docx",
-          "sha256": "ca7bea0a0ae8b2899fd3d14402c9de21f8232015305d09510b4ad66372a46009",
-          "bytes": 10100
+          "sha256": "032518878d8e99bde1014a830fef9cc506beb1f92f28d56fe301e0e690830e04",
+          "bytes": 18496
         },
         {
           "ext": "xlsx",
           "path": "success/lib-health-scorecard.xlsx",
-          "sha256": "d6ecd5becae0a7440c512d30033b749a2cbec2b00ed15a7e1dc901113b611cc1",
-          "bytes": 9348
+          "sha256": "a59b1f8e1427568c4237c131acb23eb9e64a7505648b9c636196bcf62667f8d4",
+          "bytes": 9350
         }
       ]
     },
@@ -2852,8 +2852,8 @@
         {
           "ext": "html",
           "path": "success/lib-renewal-playbook.html",
-          "sha256": "59166538b5a4c6bbd63c03831f1deefadab53489b94ab58420bb0bf22abfe44d",
-          "bytes": 3144
+          "sha256": "229f5fe6029dea70f1de5198e64d08b3b04d8ce6e52d5c12f05981a376d96099",
+          "bytes": 12021
         },
         {
           "ext": "md",
@@ -2870,8 +2870,8 @@
         {
           "ext": "docx",
           "path": "success/lib-renewal-playbook.docx",
-          "sha256": "82086d74c34faf5e57a2b338b30fde4d9219c58c26a86a9327750199787aa52b",
-          "bytes": 10459
+          "sha256": "186120b80b8669d1d9997d52e916c346eddfe27a58546d217ae13f6f984c3f84",
+          "bytes": 18852
         }
       ]
     },
@@ -2887,8 +2887,8 @@
         {
           "ext": "html",
           "path": "success/lib-exit-interview.html",
-          "sha256": "aca8acc61a6d3fea8519ef08b666403162463883dcdac9df710c41dca1e1f349",
-          "bytes": 2900
+          "sha256": "b24c972b49ef6f7c4cfb6c3bfc6917f0b7eab81d7acdf412c65bb8e560a14ace",
+          "bytes": 11777
         },
         {
           "ext": "md",
@@ -2905,8 +2905,8 @@
         {
           "ext": "docx",
           "path": "success/lib-exit-interview.docx",
-          "sha256": "dca95ce62ce29200ba1b4788b838cb2e807390109c74717375ec2665860b1dbf",
-          "bytes": 10360
+          "sha256": "4173a3449242682a7875d68c9b8c6e9878fb032bb98a5ac863c5a273494bf3e5",
+          "bytes": 18753
         }
       ]
     },
@@ -2924,8 +2924,8 @@
         {
           "ext": "html",
           "path": "success/lib-offboarding-sop.html",
-          "sha256": "f9811e15ed70aa9e2a1275ef1692d9cdee8ea24fbf7cde5cbb655048614114ed",
-          "bytes": 3279
+          "sha256": "c455a79d78c0e7f1cc6529b25f113ac10f910ddd1c6b4630596ea1b7dcc174c3",
+          "bytes": 12156
         },
         {
           "ext": "md",
@@ -2942,8 +2942,8 @@
         {
           "ext": "docx",
           "path": "success/lib-offboarding-sop.docx",
-          "sha256": "5d9886aa64ce0c11ea67c42405056da7bdf6017e1a4dcd7a6126bfb1b381a1fd",
-          "bytes": 10482
+          "sha256": "6cf5f9fe09743da7eafa27412f16330dbc1c02aafd061968ed4f1ff0408fcc94",
+          "bytes": 18877
         }
       ]
     },
@@ -2959,8 +2959,8 @@
         {
           "ext": "html",
           "path": "support/lib-ticket-log.html",
-          "sha256": "bddb728644b364bfbc057164874f2a695ee893258541cbdf0d7f30e990faca3e",
-          "bytes": 2511
+          "sha256": "15ea8259c75ece94581995cc1d7a1d4f1e9c6d650cac5208d399365296528c46",
+          "bytes": 11388
         },
         {
           "ext": "md",
@@ -2977,14 +2977,14 @@
         {
           "ext": "docx",
           "path": "support/lib-ticket-log.docx",
-          "sha256": "46f5e8da8b85c3cea72d60412d9860937cb03f45705cf42c7dffde971867be8d",
-          "bytes": 10093
+          "sha256": "061e586f0b79e68d826fb9d070e9882a14469d77354c3cfcbc94fd83d2d7b4ae",
+          "bytes": 18487
         },
         {
           "ext": "xlsx",
           "path": "support/lib-ticket-log.xlsx",
-          "sha256": "bcf5cef4a91e77d4c06394f561dead22228f8dce0e03b28f3994f0f6cc6e6aa3",
-          "bytes": 8640
+          "sha256": "0fcb3f8d62d6b4a562fe335fc09670e9a2aac098561bab443ca79b1d53f63b68",
+          "bytes": 8644
         }
       ]
     },
@@ -3000,8 +3000,8 @@
         {
           "ext": "html",
           "path": "security/lib-security-questionnaire-response.html",
-          "sha256": "c450eb466318df33b4fa3acb33bc70abc218b040891be094a2bc91c1785640f0",
-          "bytes": 3632
+          "sha256": "9a8a34c570f594c89a70ed984707a3598f0f83baa5a69df263f97a828227d0e8",
+          "bytes": 12509
         },
         {
           "ext": "md",
@@ -3018,8 +3018,8 @@
         {
           "ext": "docx",
           "path": "security/lib-security-questionnaire-response.docx",
-          "sha256": "646eb0e08df3be1ffe88db7f397a68b3da5fb6786dfbc71cf0e911b9fb47daa1",
-          "bytes": 10687
+          "sha256": "23db285a4ad79b7f82fa65f3b8339dc9fc577b8867112af7b9af67d2180796cd",
+          "bytes": 19074
         }
       ]
     },
@@ -3038,8 +3038,8 @@
         {
           "ext": "html",
           "path": "people/lib-employment-contract.html",
-          "sha256": "ff6eaea061c6cc59a5248d142a91524946c3d70822161321cdbc92806977a5c6",
-          "bytes": 4026
+          "sha256": "614dc2a76ba0f6354f5295b36d6158550218f91740196838d2298f0c92f49cf2",
+          "bytes": 12903
         },
         {
           "ext": "md",
@@ -3056,8 +3056,8 @@
         {
           "ext": "docx",
           "path": "people/lib-employment-contract.docx",
-          "sha256": "6f376f6dbab063c01d252bc51871a1cab71637270e2e19bbd39238b444b8a738",
-          "bytes": 10845
+          "sha256": "1d11dd4f8c907f5078eb271686e8ff8480174d284feba6b836dc4303d1f7f38e",
+          "bytes": 19241
         }
       ]
     },
@@ -3075,8 +3075,8 @@
         {
           "ext": "html",
           "path": "people/lib-offer-letter.html",
-          "sha256": "718494906f5d679e208d7dbf5b72c24ee3750562c9abbc0990565cc403b1a7f3",
-          "bytes": 3232
+          "sha256": "c30b4553a3a62f0dfab239cf7f0864270f1aef5a8e47ca3bf2d15f51d638579b",
+          "bytes": 12109
         },
         {
           "ext": "md",
@@ -3093,8 +3093,8 @@
         {
           "ext": "docx",
           "path": "people/lib-offer-letter.docx",
-          "sha256": "0beed35190523818a1ea477f205f58f08291688bf9a458d5f57c9f1033911d5a",
-          "bytes": 10559
+          "sha256": "df4b46e3ba31fff988b05dfb1c2ffbb37672aa159b3d0e17f1a9871bcc102b9e",
+          "bytes": 18948
         }
       ]
     },
@@ -3113,8 +3113,8 @@
         {
           "ext": "html",
           "path": "people/lib-contractor-agreement.html",
-          "sha256": "7794765fb464441d11bbcb6a47f61487a61e2839d1398e526b4a8100c581f5c9",
-          "bytes": 3526
+          "sha256": "3b5db3dcc647503560683f4fc3435d9755ccc7b32d8219860b9058e50cfd6ceb",
+          "bytes": 12403
         },
         {
           "ext": "md",
@@ -3131,8 +3131,8 @@
         {
           "ext": "docx",
           "path": "people/lib-contractor-agreement.docx",
-          "sha256": "244f66b6a64d5b1d8401a3cb96d59625dd25d0718a80ef0c132678d168b1cbd9",
-          "bytes": 10618
+          "sha256": "11943e23df5c4de40ec8f0b5a694ae0a0c70a3e634b3e39488770adc02f4f9b0",
+          "bytes": 19009
         }
       ]
     },
@@ -3150,8 +3150,8 @@
         {
           "ext": "html",
           "path": "people/lib-ip-assignment.html",
-          "sha256": "af10f4aa647a6ebab7074b7d3da07669f3d1748fdfcb7c941fa172a763e0723b",
-          "bytes": 3282
+          "sha256": "c74047d591992963d3f9ff2f05957835cd1f11c7785df6cb185f20980f7734ce",
+          "bytes": 12159
         },
         {
           "ext": "md",
@@ -3168,8 +3168,8 @@
         {
           "ext": "docx",
           "path": "people/lib-ip-assignment.docx",
-          "sha256": "1b4a96dec88367d110243f89a3dd0d229e7e7c30f6dc65fe71dec3430583e15b",
-          "bytes": 10582
+          "sha256": "3dffdff2d8eb14b60a914d9a88026b9b52e1ecd938dde7d1311776fa39a8b8d0",
+          "bytes": 18975
         }
       ]
     },
@@ -3185,8 +3185,8 @@
         {
           "ext": "html",
           "path": "people/lib-staff-onboarding-checklist.html",
-          "sha256": "36e55cdff2689b8ddc730565741fad1879fcebc777c232aae5215a1d0ba5c67c",
-          "bytes": 2869
+          "sha256": "7affa04081b768800cbcdb8b18c07d4ab24c8e7e629181184dd01e27a7b4d299",
+          "bytes": 11746
         },
         {
           "ext": "md",
@@ -3203,8 +3203,8 @@
         {
           "ext": "docx",
           "path": "people/lib-staff-onboarding-checklist.docx",
-          "sha256": "93315fdc73fe562684faebd16d08072bbb8f6343017aa069dba1caa489459f26",
-          "bytes": 10231
+          "sha256": "c128304703e9fe73e130c6110a4aabe13afa86c7dbbb7b8320acbc6167200a81",
+          "bytes": 18625
         }
       ]
     },
@@ -3220,8 +3220,8 @@
         {
           "ext": "html",
           "path": "people/lib-staff-offboarding-checklist.html",
-          "sha256": "bfa6f00e79ce2a8b00507b3e505d9cca123f0dfa3a34446ac1c1c65f7fb0eb01",
-          "bytes": 2774
+          "sha256": "a277c1f110571f0855804cce9f912ea6c60f52bf398fd46012507b40583afb9c",
+          "bytes": 11651
         },
         {
           "ext": "md",
@@ -3238,8 +3238,8 @@
         {
           "ext": "docx",
           "path": "people/lib-staff-offboarding-checklist.docx",
-          "sha256": "e420d1963e0989870f12a7452ebf6f3fe21933ac24d198f5be294406ce47ca7b",
-          "bytes": 10190
+          "sha256": "0015435d15b65310941cad7a9d2865cfe81969fdf492310e7d93c51186f51ecd",
+          "bytes": 18588
         }
       ]
     },
@@ -3257,8 +3257,8 @@
         {
           "ext": "html",
           "path": "people/lib-leave-application.html",
-          "sha256": "3a12edb017653dac1e9278006afa78405b508e8a76b92cec1869c5e3716d8b3b",
-          "bytes": 3026
+          "sha256": "2de59eb52c59a9221f53e9948da8b6850aa0e3a7981839ea5e833c4e64904011",
+          "bytes": 11903
         },
         {
           "ext": "md",
@@ -3275,8 +3275,8 @@
         {
           "ext": "docx",
           "path": "people/lib-leave-application.docx",
-          "sha256": "a9a47b8d5c7a145cc9876c1a2ea63b851018e772007d3c880135dd0045263224",
-          "bytes": 10415
+          "sha256": "3b2de2dc1aad0b44cebbab75d794489b4e201ee0f4f5ad8110051367af75e24e",
+          "bytes": 18804
         }
       ]
     },
@@ -3292,8 +3292,8 @@
         {
           "ext": "html",
           "path": "people/lib-leave-register.html",
-          "sha256": "39f83b91083d18f1e324e5443adc80f5f437a8b3eac58299a0743f3060cbf2db",
-          "bytes": 2511
+          "sha256": "e476b3662501abadcc84f3e26debeeb920f71ce33e40bb3d972ce004367f97f0",
+          "bytes": 11388
         },
         {
           "ext": "md",
@@ -3310,14 +3310,14 @@
         {
           "ext": "docx",
           "path": "people/lib-leave-register.docx",
-          "sha256": "c4607f8d31ac3b1e8635d878933085497717fda37fe5bc79a2bd67abd37f59eb",
-          "bytes": 10084
+          "sha256": "3e85e19df8eed73e9175de26d7348a70a750261dc5cb43f80d0e5f00511d70a1",
+          "bytes": 18480
         },
         {
           "ext": "xlsx",
           "path": "people/lib-leave-register.xlsx",
-          "sha256": "77b0e8f8a7b9a31b9334e9c26ce696caf03c1847c2f3fa2b07cd8950182c4618",
-          "bytes": 9073
+          "sha256": "9b0d08d2d5b7d6ed4ce0499ccc155ec9a0b5d3456d5cecf7f2d25fee3022438d",
+          "bytes": 9078
         }
       ]
     },
@@ -3333,8 +3333,8 @@
         {
           "ext": "html",
           "path": "people/lib-performance-review.html",
-          "sha256": "6a0f6905aba61a43f9fdeedc20e116785c115e40c12194e577aa4efa989797da",
-          "bytes": 3096
+          "sha256": "bad078da75e8f6a5e10f0db1f1b7089b7045dea7e44985d07880838270186f21",
+          "bytes": 11973
         },
         {
           "ext": "md",
@@ -3351,8 +3351,8 @@
         {
           "ext": "docx",
           "path": "people/lib-performance-review.docx",
-          "sha256": "5e6e9a41df8baf22d3bbefd7a7046ef6255120f3b119ac4a98eb94f93580b56f",
-          "bytes": 10355
+          "sha256": "08674f1eb49be2e4e365d0a607a349dd432768e7ff65a79f4cafe83a7b505bda",
+          "bytes": 18744
         }
       ]
     },
@@ -3371,8 +3371,8 @@
         {
           "ext": "html",
           "path": "people/lib-disciplinary-procedure.html",
-          "sha256": "c96d2b8dc27344cbfb1cf57a658c6823ce67bc649eaf23dc0ac0113820858353",
-          "bytes": 3631
+          "sha256": "9ffc03cf1975e17bce088700960691485a62df4423c7e85c9b7b38d889105909",
+          "bytes": 12508
         },
         {
           "ext": "md",
@@ -3389,8 +3389,8 @@
         {
           "ext": "docx",
           "path": "people/lib-disciplinary-procedure.docx",
-          "sha256": "06b82bd1b8210d4d7c9047e57cb44007f3e12b5e22f03341addb95dc2fc437cd",
-          "bytes": 10704
+          "sha256": "9d8bae358abe613d030502eaafb55d4fcce8194fc2a240e1005e250fe7cbc8e9",
+          "bytes": 19098
         }
       ]
     },
@@ -3406,8 +3406,8 @@
         {
           "ext": "html",
           "path": "people/lib-code-of-conduct.html",
-          "sha256": "b536510ac9766572e691986a26178e781a4ad541d4e7e934f1c8a1c92979dce3",
-          "bytes": 2827
+          "sha256": "d4710df548e0710454db01dfccb1fa4b8e3985c25be5c97ff2123d12d92ae880",
+          "bytes": 11704
         },
         {
           "ext": "md",
@@ -3424,8 +3424,8 @@
         {
           "ext": "docx",
           "path": "people/lib-code-of-conduct.docx",
-          "sha256": "f3db5f0e840eb9c5556f24effbc1af88ab4e62a2d6bb325b571af9a38f45a470",
-          "bytes": 10268
+          "sha256": "5b9048c4920e31a0f4d5ca09c36e311a297163a5dfc5bd2a30ff401655dd531a",
+          "bytes": 18663
         }
       ]
     },
@@ -3443,8 +3443,8 @@
         {
           "ext": "html",
           "path": "security/lib-infosec-policy.html",
-          "sha256": "86268a1e65906eedf3e3e207d336ca0933bcc1a6e9154e77a607c9f8cec3a05a",
-          "bytes": 3528
+          "sha256": "1568c52bab1ec31bd07d16a24d817cae55af9468a7c0a4e23e2e082da19bead7",
+          "bytes": 12405
         },
         {
           "ext": "md",
@@ -3461,8 +3461,8 @@
         {
           "ext": "docx",
           "path": "security/lib-infosec-policy.docx",
-          "sha256": "c647f0874209fc1525585ebb8f1f9e8bebdc78ea03491a79af9ce3eea35f2eae",
-          "bytes": 10730
+          "sha256": "e20b02f99a6aa6c58d4c5870cfecb768d0874bad27463b723d9f507638aa4fd5",
+          "bytes": 19123
         }
       ]
     },
@@ -3478,8 +3478,8 @@
         {
           "ext": "html",
           "path": "security/lib-access-control-policy.html",
-          "sha256": "500819e0a734bf8ab4606a804983aaba3bc2a7a7d9a32072269bb46def58d9b5",
-          "bytes": 3002
+          "sha256": "2636b354d6ddb3e1bce4f6dd550f0936947373c4c3b48e8fef6ab17a5c2952ed",
+          "bytes": 11879
         },
         {
           "ext": "md",
@@ -3496,8 +3496,8 @@
         {
           "ext": "docx",
           "path": "security/lib-access-control-policy.docx",
-          "sha256": "a38fa0d96c2d367021470732f5773bf685560d42ca77460ef706761c4c5695ed",
-          "bytes": 10329
+          "sha256": "d01d9cbaa24a8aaebac3271ab41be7208d9ef162e8087ee64f230e3184b09118",
+          "bytes": 18723
         }
       ]
     },
@@ -3513,8 +3513,8 @@
         {
           "ext": "html",
           "path": "security/lib-password-mfa-policy.html",
-          "sha256": "7e84206253a229c90cc59698ade8f8454f7ed787993748913198ff85af64c730",
-          "bytes": 3038
+          "sha256": "936073cdf024682e0010390edb9017369177a7728740e0f7f895d6307fa5f1c6",
+          "bytes": 11915
         },
         {
           "ext": "md",
@@ -3531,8 +3531,8 @@
         {
           "ext": "docx",
           "path": "security/lib-password-mfa-policy.docx",
-          "sha256": "2b03c33ca6b0402b2505423053c22e115cb0dbbeb5a479e31a43bc054de4e6cc",
-          "bytes": 10355
+          "sha256": "2ef02bcb3161e87f27b6c2270b7e38f27c859a62d01f3ad3050bc6fd6a9b0fcc",
+          "bytes": 18754
         }
       ]
     },
@@ -3548,8 +3548,8 @@
         {
           "ext": "html",
           "path": "security/lib-staff-it-policy.html",
-          "sha256": "bdd4010521c4eef94af4a86a911a87c0bf3e63e0631ea6c322d9d51fe6f3e76b",
-          "bytes": 2967
+          "sha256": "4a1b6639d0e984b9d10feece882d48b25d28cce256db6af18f8926d4a8f525fd",
+          "bytes": 11844
         },
         {
           "ext": "md",
@@ -3566,8 +3566,8 @@
         {
           "ext": "docx",
           "path": "security/lib-staff-it-policy.docx",
-          "sha256": "657621963036f42fbb23fc9e53da5455058b5c23685e4596597290cc97de9b95",
-          "bytes": 10326
+          "sha256": "2cff8d5bebb54571bdc72192b90e36874498bc6208f01628acc378f3423ee1bc",
+          "bytes": 18720
         }
       ]
     },
@@ -3583,8 +3583,8 @@
         {
           "ext": "html",
           "path": "security/lib-backup-dr-policy.html",
-          "sha256": "a975258d610e464d73b5af43f0f30bd659a71ccfa6adf9b550e1b265223d77d6",
-          "bytes": 3301
+          "sha256": "f3397410d69db7d422586f174f392bf8d3ca548cd8c61292a4a6be8a3b9ba442",
+          "bytes": 12178
         },
         {
           "ext": "md",
@@ -3601,8 +3601,8 @@
         {
           "ext": "docx",
           "path": "security/lib-backup-dr-policy.docx",
-          "sha256": "772fb76e1c08050f520a2f9bb7447cc4ccf7388556bdc1b91e39df72f9b22412",
-          "bytes": 10507
+          "sha256": "20232c9e1225a508f7630f34bdb5414629f71af8ce2e2d36236f4dbbc7abbd90",
+          "bytes": 18899
         }
       ]
     },
@@ -3618,8 +3618,8 @@
         {
           "ext": "html",
           "path": "executive/lib-bcp.html",
-          "sha256": "581ac417cfb79ce4710164dcdaf2e851df27416d3600b044d6357a775b874d29",
-          "bytes": 3077
+          "sha256": "bd064c9309ef5b83bdba5ab18f58a44617b66947057de16aaa7611acdbe42be4",
+          "bytes": 11954
         },
         {
           "ext": "md",
@@ -3636,8 +3636,8 @@
         {
           "ext": "docx",
           "path": "executive/lib-bcp.docx",
-          "sha256": "72ac8f3e76459a882f3b1ce3d7a2d0cad6732e09b00c05dd1df7204064cdc319",
-          "bytes": 10368
+          "sha256": "9309de043ce47a010a6489002787ce868641ff950b2dc952042e954a6578bec0",
+          "bytes": 18764
         }
       ]
     },
@@ -3653,8 +3653,8 @@
         {
           "ext": "html",
           "path": "devops/lib-incident-response.html",
-          "sha256": "414fe7ebf050a8841bfb01317a44ebc21c4f5459af489ecfb6b734afcf81c1a4",
-          "bytes": 3229
+          "sha256": "595cc24153c170e30b4fa5ce5f124420adc91c0805088358f0a5e8ddf2098b46",
+          "bytes": 12106
         },
         {
           "ext": "md",
@@ -3671,8 +3671,8 @@
         {
           "ext": "docx",
           "path": "devops/lib-incident-response.docx",
-          "sha256": "7e3329ece73d3c433083767e0542c45d00104f4a99db23d73f470033a629ac6b",
-          "bytes": 10480
+          "sha256": "852b86818419f56e35be69d25bd7851168505c1de2a2f7abcc5abcef2c5afc4d",
+          "bytes": 18875
         }
       ]
     },
@@ -3688,8 +3688,8 @@
         {
           "ext": "html",
           "path": "devops/lib-change-management.html",
-          "sha256": "97046c9ecec6802f8ea652d8ac82243fa52bdbd935ca3421ea17688c62b819d1",
-          "bytes": 2796
+          "sha256": "745bb5975ea6befb373e713be221943ecb48f7870c7f6a101030aee3f077bc7d",
+          "bytes": 11673
         },
         {
           "ext": "md",
@@ -3706,8 +3706,8 @@
         {
           "ext": "docx",
           "path": "devops/lib-change-management.docx",
-          "sha256": "47abb3e76e48ad03e66c73d062d3b82ec7e6220f1cbe783925a755470f455e27",
-          "bytes": 10199
+          "sha256": "bd648c1c04c634d8b17629bed95a2d4ea4708614167cfbde8018edfa46a38d23",
+          "bytes": 18591
         }
       ]
     },
@@ -3723,8 +3723,8 @@
         {
           "ext": "html",
           "path": "security/lib-vuln-mgmt.html",
-          "sha256": "53fc8a5066345e2e32edcfdc887178e50a5deec1ca688167874b6a221c62bca6",
-          "bytes": 3005
+          "sha256": "8fdde9fe315ce6e69c480c66162e3ffe8bff6912238b067fbf7ea0b3ef6a4bf3",
+          "bytes": 11882
         },
         {
           "ext": "md",
@@ -3741,8 +3741,8 @@
         {
           "ext": "docx",
           "path": "security/lib-vuln-mgmt.docx",
-          "sha256": "cbf3218171be611fa86ac8475c2ae5358236f94af5f9c9d8cca0a63a6761c22e",
-          "bytes": 10319
+          "sha256": "7e0424988865324831c71b8252af0a5dbf77162d01455fcfa6040d678b76ff40",
+          "bytes": 18711
         }
       ]
     },
@@ -3758,8 +3758,8 @@
         {
           "ext": "html",
           "path": "security/lib-secrets-handling.html",
-          "sha256": "08e10633965ec023e33e5b82145590533ebaaae3362c2bf76633d1bb15e219c8",
-          "bytes": 2964
+          "sha256": "e885f8258786089ec2a360573a324aba76531da9ceb5bd03a806b2dad92afaac",
+          "bytes": 11841
         },
         {
           "ext": "md",
@@ -3776,8 +3776,8 @@
         {
           "ext": "docx",
           "path": "security/lib-secrets-handling.docx",
-          "sha256": "3fbfc451616212f344bbed835b5f0814a08bde61754805d6faf9a5aa54fac7fc",
-          "bytes": 10309
+          "sha256": "896207fbe83d1eb52a0ecfc68a4191a3eccf853efb3dcd546371d46fb529eb60",
+          "bytes": 18703
         }
       ]
     },
@@ -3793,8 +3793,8 @@
         {
           "ext": "html",
           "path": "security/lib-remote-work-byod.html",
-          "sha256": "18fad8e2e705058ec588391f09eefd3f01c98ff071d2763ddcb50ee58e5fee2b",
-          "bytes": 2974
+          "sha256": "d2d64d4e5b664a0d55bcfb04b7e503bec8ce156e6b9889d0f4257043dd691a22",
+          "bytes": 11851
         },
         {
           "ext": "md",
@@ -3811,8 +3811,8 @@
         {
           "ext": "docx",
           "path": "security/lib-remote-work-byod.docx",
-          "sha256": "0253aa9a332002ca9a4562564cc330d1d7325166ded312362495c5174c24d121",
-          "bytes": 10338
+          "sha256": "cbc50c53fae26306e72b640195fff5bc08ead212b59cc90812d32f291e9a087f",
+          "bytes": 18731
         }
       ]
     },
@@ -3828,8 +3828,8 @@
         {
           "ext": "html",
           "path": "executive/lib-risk-register.html",
-          "sha256": "811de45b4cd0a7b52d5d41e6237fb3a0022f902899efe14946834fb1991c961d",
-          "bytes": 2507
+          "sha256": "3b092c55d7f0d76476270657b72b3a37fa979c7174ab3742632c7e7473f95fbc",
+          "bytes": 11384
         },
         {
           "ext": "md",
@@ -3846,14 +3846,14 @@
         {
           "ext": "docx",
           "path": "executive/lib-risk-register.docx",
-          "sha256": "1bc08aba39ec248afd11cf3fd94b67dbbe02b9dcdc910bb082289db42079903c",
-          "bytes": 10082
+          "sha256": "5afdce2fc6c330ba0508b7b5db7c0f64ee4d94951b3166a3ad860af466743ced",
+          "bytes": 18475
         },
         {
           "ext": "xlsx",
           "path": "executive/lib-risk-register.xlsx",
-          "sha256": "5669401a010ec6ba0f9196892324a04a097202d63677fabd29e4e1b8c738cc83",
-          "bytes": 10321
+          "sha256": "ea67d5e9ccafee940a604f764801eaffe62dc337b120d9168cca57dc96838c0e",
+          "bytes": 10322
         }
       ]
     },
@@ -3871,8 +3871,8 @@
         {
           "ext": "html",
           "path": "legal/lib-ropa.html",
-          "sha256": "ace1bfa3483f91dafc2087add813dad1d07984971183b9c22dee7aa9a07b2cf3",
-          "bytes": 2773
+          "sha256": "258e31ba0ed9c48fdde03f62c59dc0fa6061c84388873931749181ef6391a53f",
+          "bytes": 11650
         },
         {
           "ext": "md",
@@ -3889,14 +3889,14 @@
         {
           "ext": "docx",
           "path": "legal/lib-ropa.docx",
-          "sha256": "cbb99b34460a796f8b31ce7ffdc8c92b335a79c5e58dfe781ab02a9d108739c7",
-          "bytes": 10236
+          "sha256": "2e70a08ef4f0b9523c35aaf6bc1ce0bd99cc9639af2f5bc6905c6722ecf79ff2",
+          "bytes": 18633
         },
         {
           "ext": "xlsx",
           "path": "legal/lib-ropa.xlsx",
-          "sha256": "316334814cf9b2716cd88efefd46edec923c40efdc1991db1581f2434ef3108a",
-          "bytes": 8032
+          "sha256": "cacff2a1daf32508c395b90b515f8c919bf6005a42dcdc5e4e0b6ea866beb166",
+          "bytes": 8033
         }
       ]
     },
@@ -3912,8 +3912,8 @@
         {
           "ext": "html",
           "path": "procurement/lib-supplier-register.html",
-          "sha256": "83ff86975887827e205531bb88499ee8a72a4f31ae6813458bb7053e16c9fd0d",
-          "bytes": 2523
+          "sha256": "ac72b49d78e2a77661dea0b15b5b05830fc925483b8660918f0de99201c8fedc",
+          "bytes": 11400
         },
         {
           "ext": "md",
@@ -3930,13 +3930,13 @@
         {
           "ext": "docx",
           "path": "procurement/lib-supplier-register.docx",
-          "sha256": "422f6cd1e9166c63f910c2de14c16dad68b292db330bf67f572a3bf1aaf85b0e",
-          "bytes": 10088
+          "sha256": "21ec0f5dd0d01292d28b4a86b324e698242ce009ae45aad9a7f34066c92ab8a9",
+          "bytes": 18480
         },
         {
           "ext": "xlsx",
           "path": "procurement/lib-supplier-register.xlsx",
-          "sha256": "054554ee81cf63511493a2274e8802869a78b441923d1bbef23a692eec6f0fb9",
+          "sha256": "6760a403258161f25dd7bd3ac10969451fbf5d96c044da63a146a62023cf5353",
           "bytes": 8780
         }
       ]
@@ -3953,8 +3953,8 @@
         {
           "ext": "html",
           "path": "legal/lib-contract-register.html",
-          "sha256": "80359904ebfca10375b36ba585075b4a89f0c7a229b454b4dcdb9b3d5c920d7e",
-          "bytes": 2523
+          "sha256": "1c12f85b75d2c32f7d4a86b7f498982591b5472b7ee5b5e60c52b4aad33233db",
+          "bytes": 11400
         },
         {
           "ext": "md",
@@ -3971,14 +3971,14 @@
         {
           "ext": "docx",
           "path": "legal/lib-contract-register.docx",
-          "sha256": "122280fd7fdd25e851f2dd1910c5bb8c42c9a874ac23711667e69120147dbe12",
-          "bytes": 10090
+          "sha256": "52da2b449af700f70e875971a1238c34ad4a94f872e078d8031b89ef29f99c2d",
+          "bytes": 18481
         },
         {
           "ext": "xlsx",
           "path": "legal/lib-contract-register.xlsx",
-          "sha256": "6c3de3f9fc42f60b27b40e5d45320cb2b0dc44cb48bbc24bd7c80c35aad1527a",
-          "bytes": 9078
+          "sha256": "777696500155bbd9e696cb76d64d12e171f2b111fdcf891cac0d10462d82916a",
+          "bytes": 9082
         }
       ]
     },
@@ -3996,8 +3996,8 @@
         {
           "ext": "html",
           "path": "security/lib-breach-register.html",
-          "sha256": "620d36b96afa7cfcc5178fd74ca1d03ffd6b8cdacdb023865eb0cfcec3a05586",
-          "bytes": 2818
+          "sha256": "ebccfa723f70ffbf4ec6571f46e8831ad4b4b81e72a59b8668f23240328f45c8",
+          "bytes": 11695
         },
         {
           "ext": "md",
@@ -4014,14 +4014,14 @@
         {
           "ext": "docx",
           "path": "security/lib-breach-register.docx",
-          "sha256": "6fa0f2262369d993ae1a585b88c33f250b83eb820e087626b4e8cff865675658",
-          "bytes": 10255
+          "sha256": "acbe5322e44a4c70c78065ec7d247d99d42824204d2c70b75980b5b319e94db9",
+          "bytes": 18650
         },
         {
           "ext": "xlsx",
           "path": "security/lib-breach-register.xlsx",
-          "sha256": "dada371f51fa43e51b5058fc68ac91684a80c486a912c471779f64346c8a3591",
-          "bytes": 9393
+          "sha256": "06c103b1c1470009c557022903780418504ff8c506f743ea76176793f52bb6e6",
+          "bytes": 9394
         }
       ]
     },
@@ -4037,8 +4037,8 @@
         {
           "ext": "html",
           "path": "product/lib-prd.html",
-          "sha256": "72090f48e00a7e015bd1d453bea1c68ed04441af921c590aa1262e2223bf2f51",
-          "bytes": 2985
+          "sha256": "50dc4c8ab413e4bba781360d21bfd5fa3d6ffc0ac00669cb81d2a7d20160cc21",
+          "bytes": 11862
         },
         {
           "ext": "md",
@@ -4055,8 +4055,8 @@
         {
           "ext": "docx",
           "path": "product/lib-prd.docx",
-          "sha256": "026516b1c65346803deb8d3c898842ccec66357bb0015467a512f747eccc2389",
-          "bytes": 10377
+          "sha256": "f6acfeac1fef5c528ffce3db3401ebbbe8ac92f02520d016af05ebdd9c11db70",
+          "bytes": 18766
         }
       ]
     },
@@ -4072,8 +4072,8 @@
         {
           "ext": "html",
           "path": "devops/lib-adr.html",
-          "sha256": "8b5fd2171c4b1a74ca8d38454fefd8eed3ce5b00c5befd716704778a38474386",
-          "bytes": 2852
+          "sha256": "53664d6aecfa48041b6d66cc9e184516c58834631717dac68a6e96f94a5829d5",
+          "bytes": 11729
         },
         {
           "ext": "md",
@@ -4090,8 +4090,8 @@
         {
           "ext": "docx",
           "path": "devops/lib-adr.docx",
-          "sha256": "d70863f245ddd1a0ebed9fc07c8c9a9ecc7e10c99b7615c22deeed82af4e9c87",
-          "bytes": 10306
+          "sha256": "f289228b27f7aa285999a5ba771babd8d88d16dc100eca9a4298c79ebb6f8f98",
+          "bytes": 18692
         }
       ]
     },
@@ -4107,8 +4107,8 @@
         {
           "ext": "html",
           "path": "devops/lib-release-sop.html",
-          "sha256": "0ec6d3c09f101bad0ae7677519d4557e4468319c7d98f95a018b0880ec90a093",
-          "bytes": 2752
+          "sha256": "b210dc819c9cb24bab3ceb84df6b51eb29d832f039c71b380f3e3a835c21d283",
+          "bytes": 11629
         },
         {
           "ext": "md",
@@ -4125,8 +4125,8 @@
         {
           "ext": "docx",
           "path": "devops/lib-release-sop.docx",
-          "sha256": "63f99eaabfe94fefe7f6a7dc0a850e9c1632c239dd52c3cc6a5a00a02a51836e",
-          "bytes": 10178
+          "sha256": "7d0d28a378150f39907890d16989e528e7c2c2522fca3add251a9b86673fc3a2",
+          "bytes": 18574
         }
       ]
     },
@@ -4142,8 +4142,8 @@
         {
           "ext": "html",
           "path": "devops/lib-test-plan.html",
-          "sha256": "7a7b937090ec198ba1db39b65e8c510bc1074ca3cb14bd48c12c5ab4d124c4f8",
-          "bytes": 2809
+          "sha256": "063754c34f69e3e66d6bf2073f8562e629d3fb8c05f7909da8f4317da9af6cb8",
+          "bytes": 11686
         },
         {
           "ext": "md",
@@ -4160,8 +4160,8 @@
         {
           "ext": "docx",
           "path": "devops/lib-test-plan.docx",
-          "sha256": "c29d7d1a244c572c13e88a0f3788f98aaa71d2e98d3214c9716e5542031fd483",
-          "bytes": 10269
+          "sha256": "d324431cb6d09857adb191e00d983c1a91a9c201e38fc44832fdceb86c2836e1",
+          "bytes": 18661
         }
       ]
     },
@@ -4177,8 +4177,8 @@
         {
           "ext": "html",
           "path": "devops/lib-postmortem.html",
-          "sha256": "f7394953feac7e9ac09d431a12143c062968b66c8689b96700e1a709892ea08e",
-          "bytes": 2800
+          "sha256": "48a79d7abb36446c79a840c1da086771e929acda8dc9b9b4ddf005610639223f",
+          "bytes": 11677
         },
         {
           "ext": "md",
@@ -4195,8 +4195,8 @@
         {
           "ext": "docx",
           "path": "devops/lib-postmortem.docx",
-          "sha256": "76bce105938f39154e1f28a64d2af3a5d1b3be28755b5e448d7ecc68c886c562",
-          "bytes": 10293
+          "sha256": "859f9891fd8eda5920efc350f9170580df95e390c761b337bc63d5dce85a1741",
+          "bytes": 18686
         }
       ]
     },
@@ -4212,8 +4212,8 @@
         {
           "ext": "html",
           "path": "devops/lib-runbook.html",
-          "sha256": "fbb3230e6a2102674aacf80ccfea0bc9a72391c950a1e8e414072f5427edbc90",
-          "bytes": 2738
+          "sha256": "3660e74406e843bac698cb77dbac11cdff5783fe1cb3d2c9be3f091d4b77ef4f",
+          "bytes": 11615
         },
         {
           "ext": "md",
@@ -4230,8 +4230,8 @@
         {
           "ext": "docx",
           "path": "devops/lib-runbook.docx",
-          "sha256": "77ee48378c3637210af6de43bb4eac08b28a1bd0d340f99d447b2ad6c9295d90",
-          "bytes": 10265
+          "sha256": "9d1e4d3a3c1012a79e1e74cfc216c56cf3dbe079a62ff84ea435733c341bd09d",
+          "bytes": 18657
         }
       ]
     },
@@ -4247,8 +4247,8 @@
         {
           "ext": "html",
           "path": "devops/lib-oncall.html",
-          "sha256": "7c62a5000614dc5f9eea34336e3588854ad37684bb3f7ade4243ec826326c52f",
-          "bytes": 2840
+          "sha256": "ab8ae28ac86e1740c87ba95708c757ab20f81121e77558ac84f308e7f419bfee",
+          "bytes": 11717
         },
         {
           "ext": "md",
@@ -4265,8 +4265,8 @@
         {
           "ext": "docx",
           "path": "devops/lib-oncall.docx",
-          "sha256": "3b494fe8788105f7d25e2bd411ebf64c44f7544525bb3b562009efb4c19b712d",
-          "bytes": 10308
+          "sha256": "4b9247bd5a0a2e372cc8ad47b4056241347b6cbf2cfb26ad3aa3d92aa8ce5276",
+          "bytes": 18699
         }
       ]
     },
@@ -4282,8 +4282,8 @@
         {
           "ext": "html",
           "path": "aibrain/lib-model-eval.html",
-          "sha256": "253881dfaa9c5ee5dfdace698c196154d0fd33d45ee5dfec3744da10ea2b2235",
-          "bytes": 2891
+          "sha256": "59ea9b748c2b7b6bfb87a8f8a9f312b8f6c38864ba29f174949f878edf4e1b8b",
+          "bytes": 11768
         },
         {
           "ext": "md",
@@ -4300,8 +4300,8 @@
         {
           "ext": "docx",
           "path": "aibrain/lib-model-eval.docx",
-          "sha256": "cca836b324d07665d8156798a3cbb449bf34e96ebd243f8a8a492a4903cea665",
-          "bytes": 10350
+          "sha256": "c37b73c73b44a844a9d5e26de085c78dd8c5394a75ca3c775aad7f08d7633533",
+          "bytes": 18736
         }
       ]
     },
@@ -4317,8 +4317,8 @@
         {
           "ext": "html",
           "path": "procurement/lib-rfq.html",
-          "sha256": "391ce7bfbf36d3059902cbc693a5af241339fe9fa78275b0434b33d4a46c7fab",
-          "bytes": 2890
+          "sha256": "af2156b37ca2166e588cc8bac4e98ddf6b2b36340580a293b9a6c1e11a5d039b",
+          "bytes": 11767
         },
         {
           "ext": "md",
@@ -4335,8 +4335,8 @@
         {
           "ext": "docx",
           "path": "procurement/lib-rfq.docx",
-          "sha256": "2c0fb42e104fb40f697f13b0f6354cf5ac19bfc55239bd83a6ff430ade06c0a1",
-          "bytes": 10351
+          "sha256": "834181e7fa48cda00733d4a599580e021d0405aba2b32f80c02f098638a8bd10",
+          "bytes": 18740
         }
       ]
     },
@@ -4352,8 +4352,8 @@
         {
           "ext": "html",
           "path": "government/lib-tender-checklist.html",
-          "sha256": "b333e761f1daec207c0be63bc3b947703e9c398d16e940910605b47d4be09cfa",
-          "bytes": 3140
+          "sha256": "f4136ee79de747967d87499f1f9546e6c716708729dbbf936178f365069900a6",
+          "bytes": 12017
         },
         {
           "ext": "md",
@@ -4370,8 +4370,8 @@
         {
           "ext": "docx",
           "path": "government/lib-tender-checklist.docx",
-          "sha256": "a9b5dd789015c1767c683922cb775af4b942ec5c0e8b2fe290d3297b47817658",
-          "bytes": 10370
+          "sha256": "a1659296a4d35f4798e8a7d1658559ef3c03f00adcadf1c68796b4f54a392dc4",
+          "bytes": 18764
         }
       ]
     },
@@ -4387,8 +4387,8 @@
         {
           "ext": "html",
           "path": "government/lib-grant-checklist.html",
-          "sha256": "8371cb750ca53de2e628fc26202068a1232fb3c400db01abc05f1bf080f86eff",
-          "bytes": 2756
+          "sha256": "de03d33c683fecb053c1cbd7b480b4eb4d68a97c0c533ba8912b2ca57f0b5759",
+          "bytes": 11633
         },
         {
           "ext": "md",
@@ -4405,8 +4405,8 @@
         {
           "ext": "docx",
           "path": "government/lib-grant-checklist.docx",
-          "sha256": "620de8ab1e5bd1beabe2f366e1ef1e2f97095fafa9786d671cad4a73705b7e27",
-          "bytes": 10185
+          "sha256": "4776595d4522f676bb33fed3944e8ecf41dbf9a438f3ec32e8ecbb4f7c63aba9",
+          "bytes": 18580
         }
       ]
     },
@@ -4424,8 +4424,8 @@
         {
           "ext": "html",
           "path": "government/lib-moa.html",
-          "sha256": "c811ba76e7c7c626a93a698416d4de7ba92e74b0d24d8184bbc450d82200f026",
-          "bytes": 3385
+          "sha256": "e8b38c14ac97981c4e84a4e8cbd514f6511464e0778ad3f2c98a8f7590f41f1e",
+          "bytes": 12262
         },
         {
           "ext": "md",
@@ -4442,8 +4442,8 @@
         {
           "ext": "docx",
           "path": "government/lib-moa.docx",
-          "sha256": "b5b258140aaa7e245167ff5e67533c2c3bbdc6540b62e2f6277d3c7eb560e16d",
-          "bytes": 10554
+          "sha256": "7f13a57c5f504066e27cbe1633108c4e91cb5f3c1050451336e8c4de4d902aa9",
+          "bytes": 18942
         }
       ]
     }
