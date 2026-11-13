@@ -1,0 +1,85 @@
+{
+  "title": "Complaints Policy and Form",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Consumer Protection Act 68 of 2008."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-complaints-policy"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Receive in writing or by phone.",
+        "Log it and confirm receipt within [Fill in: time].",
+        "Assign an owner.",
+        "Investigate and reply within [Fill in: time].",
+        "Escalate if unresolved to [Fill in: role].",
+        "Record the outcome and any fix."
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Complaint form",
+        ""
+      ],
+      "rows": [
+        [
+          "Name and school",
+          ""
+        ],
+        [
+          "Date",
+          ""
+        ],
+        [
+          "What happened",
+          ""
+        ],
+        [
+          "What you would like us to do",
+          ""
+        ],
+        [
+          "Contact",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-complaints-policy",
+    "Kind": "policy",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

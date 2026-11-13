@@ -1,0 +1,140 @@
+{
+  "title": "Partner and Referral Agreement",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Consumer Protection Act 68 of 2008; POPIA (Act 4 of 2013)."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-partner-agreement"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Partner",
+          "[Fill in: name and registration]"
+        ],
+        [
+          "Territory or schools",
+          "[Fill in: scope]"
+        ],
+        [
+          "Partner type",
+          "[Fill in: referrer, reseller or implementation partner]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "1. Role"
+    },
+    {
+      "type": "p",
+      "text": "What the partner may do and may not do, including no promises on behalf of the company."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "2. Commission or margin"
+    },
+    {
+      "type": "p",
+      "text": "How it is earned and paid."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: basis and terms; finance and counsel to decide]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "3. Marketing"
+    },
+    {
+      "type": "p",
+      "text": "Use of the company’s name and materials, and direct marketing rules."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "4. Data"
+    },
+    {
+      "type": "p",
+      "text": "The partner does not receive learner personal information unless a separate operator agreement is signed."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "5. Term and exit"
+    },
+    {
+      "type": "p",
+      "text": "How it ends."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: notice]"
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        "Company",
+        "Partner"
+      ],
+      "rows": [
+        [
+          "Name",
+          "",
+          ""
+        ],
+        [
+          "Signature",
+          "",
+          ""
+        ],
+        [
+          "Date",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-partner-agreement",
+    "Kind": "contract",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

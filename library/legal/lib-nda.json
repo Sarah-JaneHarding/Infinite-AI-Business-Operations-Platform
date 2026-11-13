@@ -1,0 +1,149 @@
+{
+  "title": "Mutual Non-Disclosure Agreement",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Common law of contract."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-nda"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Party A",
+          "[Fill in: name and registration]"
+        ],
+        [
+          "Party B",
+          "[Fill in: name and registration]"
+        ],
+        [
+          "Purpose",
+          "[Fill in: why information is being shared]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "1. Confidential information"
+    },
+    {
+      "type": "p",
+      "text": "Define it, and list what is not confidential."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "2. Use and protection"
+    },
+    {
+      "type": "p",
+      "text": "Use only for the purpose. Protect it with reasonable care."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "3. Personal information"
+    },
+    {
+      "type": "p",
+      "text": "No learner personal information is exchanged under this agreement."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "4. Duration"
+    },
+    {
+      "type": "p",
+      "text": "Term of the obligation."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: years]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "5. Return or destroy"
+    },
+    {
+      "type": "p",
+      "text": "On request."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "6. Law and disputes"
+    },
+    {
+      "type": "p",
+      "text": "South African law."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: forum]"
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        "Party A",
+        "Party B"
+      ],
+      "rows": [
+        [
+          "Name",
+          "",
+          ""
+        ],
+        [
+          "Signature",
+          "",
+          ""
+        ],
+        [
+          "Date",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-nda",
+    "Kind": "contract",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

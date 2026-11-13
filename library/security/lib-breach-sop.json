@@ -1,0 +1,125 @@
+{
+  "title": "Security Compromise (Breach) Response SOP",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) section 22."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-breach-sop"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "First hour"
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Stop the harm: revoke access, rotate affected secrets, isolate the system.",
+        "Tell the incident lead ([Fill in: role]).",
+        "Start a log. Write down times and facts, not guesses.",
+        "Preserve evidence; do not wipe systems."
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Assess"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "What data? Whose? How many people?",
+        "Was learner information involved?",
+        "Is the data readable by the person who got it?",
+        "Is it still happening?"
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Notify"
+    },
+    {
+      "type": "p",
+      "text": "Where the law requires it, the responsible party notifies the Regulator and the affected people. As operator the company tells the school without undue delay. Counsel decides what is notified and when."
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Who",
+        "When",
+        "Template",
+        "Done by"
+      ],
+      "rows": [
+        [
+          "The school",
+          "[Fill in: window from the DPA]",
+          "lib-breach-notice-school",
+          ""
+        ],
+        [
+          "The Regulator",
+          "[Fill in: as counsel advises]",
+          "lib-breach-notice-regulator",
+          ""
+        ],
+        [
+          "Affected people",
+          "[Fill in: as counsel advises]",
+          "lib-breach-notice-subjects",
+          ""
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Afterwards"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Postmortem (lib-postmortem).",
+        "Fix the cause.",
+        "Update the risk register and this SOP.",
+        "Record the entry in the breach register (lib-breach-register)."
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-breach-sop",
+    "Kind": "sop",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "title": "Month-End Close SOP",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-month-end-sop"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Record every invoice and receipt for the month.",
+        "Reconcile bank and payment-processor statements.",
+        "Review the debtors and creditors ageing.",
+        "Post accruals and prepayments.",
+        "Prepare the VAT workings.",
+        "Review the profit and loss with the owner.",
+        "Lock the period and back up the books."
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Owner: [Fill in: role]. Due: [Fill in: working day]"
+    },
+    {
+      "type": "checklist",
+      "checks": [
+        {
+          "label": "Bank reconciled",
+          "done": false
+        },
+        {
+          "label": "Processor settlements reconciled",
+          "done": false
+        },
+        {
+          "label": "Ageing reviewed",
+          "done": false
+        },
+        {
+          "label": "Accruals posted",
+          "done": false
+        },
+        {
+          "label": "VAT workings done",
+          "done": false
+        },
+        {
+          "label": "Period locked",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-month-end-sop",
+    "Kind": "sop",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

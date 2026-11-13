@@ -1,0 +1,79 @@
+{
+  "title": "Breach Notice to the Information Regulator",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) section 22(2)."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-breach-notice-regulator"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "The responsible party (normally the school) notifies the Regulator. Use the Regulator’s current form and channel, taken from its website on the day."
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        ""
+      ],
+      "rows": [
+        [
+          "Responsible party",
+          "[Fill in: name, contact]"
+        ],
+        [
+          "Information Officer",
+          "[Fill in: name, contact]"
+        ],
+        [
+          "Nature of the compromise",
+          "[Fill in: ]"
+        ],
+        [
+          "Date discovered",
+          "[Fill in: date]"
+        ],
+        [
+          "Categories and number affected",
+          "[Fill in: ]"
+        ],
+        [
+          "Likely consequences",
+          "[Fill in: ]"
+        ],
+        [
+          "Measures taken",
+          "[Fill in: ]"
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-breach-notice-regulator",
+    "Kind": "notice",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

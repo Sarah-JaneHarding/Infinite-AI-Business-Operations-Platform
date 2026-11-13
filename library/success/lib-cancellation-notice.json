@@ -1,0 +1,63 @@
+{
+  "title": "Cancellation and Non-Renewal Notice",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney before use. This is a drafting outline, not legal advice and not an approved document."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-cancellation-notice"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Dear [Fill in: contact name],"
+    },
+    {
+      "type": "p",
+      "text": "We acknowledge your notice dated [Fill in: date] to [Fill in: cancel or not renew] the subscription for [Fill in: school]."
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "What happens next"
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Your service continues until [Fill in: end date].",
+        "We will contact you to agree how your data is returned.",
+        "We will erase the data afterwards and send you a certificate.",
+        "We will send a final statement of account."
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Before you go, we would value a short conversation about what we could have done better (lib-exit-interview). Contact: [Fill in: name, role, email]."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-cancellation-notice",
+    "Kind": "letter",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

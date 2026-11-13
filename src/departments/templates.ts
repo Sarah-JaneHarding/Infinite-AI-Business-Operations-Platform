@@ -5,6 +5,8 @@
  * Templates that carry legal weight are outlines for counsel to finalise.
  */
 import type { Block, Doc } from '../core/types';
+import type { LibraryItem } from '../library/kit';
+import { LIBRARY } from '../library';
 
 export interface Template {
   id: string;
@@ -15,6 +17,9 @@ export interface Template {
   /** Needs a lawyer or other qualified person before use. */
   review?: string;
   doc: Doc;
+  /** Library documents say what kind they are and which statutes the reviewer should check. */
+  kind?: LibraryItem['kind'];
+  law?: string[];
 }
 
 const F = (what: string) => `[Fill in: ${what}]`;
@@ -81,6 +86,9 @@ export const TEMPLATES: Template[] = [
   { id: 'tpl-partner-onboarding', title: 'Partner onboarding checklist', group: 'customer', dept: 'government', summary: 'Bring a partner organisation in.',
     doc: d('Partner onboarding', [kv(['Partner', F('organisation')], ['Start', F('date')]), h('Steps'), checks('Agreement or MoU signed', 'Roles for personal information recorded', 'Named contacts by role on both sides', 'Communications and branding rules agreed', 'Reporting rhythm agreed', 'Exit terms and data return agreed'), h('Owners'), table(['Step', 'Owner (role)', 'Due'], ...blank(4, 3))]) },
 ];
+
+// The document library (src/library) joins the quick templates above; ids are unique across both.
+TEMPLATES.push(...LIBRARY.map(({ workbook: _w, ...t }) => t));
 
 export const templateById = (id: string) => TEMPLATES.find((t) => t.id === id);
 export const templatesFor = (group?: Template['group']) => TEMPLATES.filter((t) => !group || t.group === group);

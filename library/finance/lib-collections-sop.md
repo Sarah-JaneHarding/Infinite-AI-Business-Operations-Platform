@@ -1,0 +1,20 @@
+# Collections SOP
+
+- **Document ID:** lib-collections-sop
+- **Version:** 1.0 (draft)
+- **Owner (role):** [Fill in: role]
+- **Approved by (role):** [Fill in: role]
+- **Effective date:** [Fill in: date]
+- **Next review:** [Fill in: date]
+
+| Stage | When | Action | Template |
+| --- | --- | --- | --- |
+| Reminder | [Fill in: days overdue] | Friendly email |  |
+| Second notice | [Fill in: days overdue] | Email and call |  |
+| Escalation | [Fill in: days overdue] | [Fill in: who decides what next] |  |
+| Suspension | [Fill in: days overdue] | Only with written approval and notice per the agreement |  |
+
+A school is never suspended without the notice the agreement requires and a named approver.
+
+---
+*Library ID:* lib-collections-sop · *Kind:* sop · *Version:* 1.0 · *Status:* DRAFT, not approved for use
