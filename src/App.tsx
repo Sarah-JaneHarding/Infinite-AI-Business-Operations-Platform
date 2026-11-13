@@ -36,6 +36,8 @@ import { EducationEcosystemWebsite } from '../legacy/components/EducationEcosyst
 import { onNavigate } from './ui/nav';
 import { BrainView, ConnectorView, Dept, GuardrailLab, LedgerView, Overview, WarehouseView } from './ui/Views';
 import { DEPARTMENTS } from './departments';
+import { BRAND } from './brand';
+import { BrandView } from './ui/BrandView';
 
 function Shell() {
   const { view, go, p, mode, actor, setActor, llm, setLlm, health, authNeeded, authError, signIn, syncError } = useOps();
@@ -70,17 +72,13 @@ function Shell() {
           {/* Logo & Brand Header */}
           <div className="mb-4 px-2 pt-2 border-b border-indigo-900/40 pb-3 cursor-pointer" onClick={() => go({ name: 'overview' })}>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 via-teal-400 to-cyan-400 p-[1.5px] shadow-sm">
-                <div className="w-full h-full bg-[#0e0b24] rounded-[6px] flex items-center justify-center">
-                  <span className="font-mono text-cyan-400 font-black text-xs">∞</span>
-                </div>
-              </div>
+              <img src={BRAND.assets.logoSmall} alt={BRAND.name} width={34} height={34} className="rounded-lg" />
               <div>
                 <div className="text-base font-bold text-white tracking-wide" style={{ fontFamily: 'var(--fd)' }}>
                   INFINITE-AI <span className="text-cyan-400 font-black">OPS</span>
                 </div>
                 <div className="mono text-[9.5px] tracking-wider" style={{ color: '#9d97cf' }}>
-                  OPERATIONS PLATFORM
+                  {BRAND.tagline}
                 </div>
               </div>
             </div>
@@ -122,6 +120,7 @@ function Shell() {
             {item({ name: 'board' }, 'Review Board', <ClipboardCheck size={16} className="text-amber-300" />, view.name === 'board')}
             {item({ name: 'contracts' }, 'Agent Contracts', <FileCheck2 size={16} className="text-teal-300" />, view.name === 'contracts')}
             {item({ name: 'models' }, 'Model Hub', <Cpu size={16} className="text-violet-300" />, view.name === 'models')}
+            {item({ name: 'brand' }, 'Brand Kit', <Sparkles size={16} className="text-cyan-300" />, view.name === 'brand')}
             {item({ name: 'erasure' }, 'Erasure Requests', <Eraser size={16} className="text-rose-300" />, view.name === 'erasure')}
             {item({ name: 'copilot' }, 'Operations Copilot & Tools', <Sparkles size={16} className="text-violet-400" />, view.name === 'copilot')}
           </div>
@@ -167,6 +166,7 @@ function Shell() {
           ) : view.name === 'overview' ? <Overview />
             : view.name === 'dept' ? <Dept id={view.id} />
             : view.name === 'studio' ? <DocumentStudio initialArtefactId={view.id} initialDocId={view.docId} />
+            : view.name === 'brand' ? <BrandView />
             : view.name === 'copilot' ? <AICopilot />
             : view.name === 'brain' ? <BrainView />
             : view.name === 'ledger' ? <LedgerView />

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --cream: #070B14;
-  --card: #0E172A;
+  --cream: #05070F;
+  --card: #0C1224;
   --card2: #0B132B;
   --line: #1E293B;
   --line-strong: #334155;
@@ -10,11 +10,11 @@
   --ink2: #1E293B;
   --muted: #CBD5E1;
   --muted-soft: #94A3B8;
-  --violet: #8B5CF6;
-  --amber: #FBBF24;
+  --violet: #8D6CFF;
+  --amber: #F5B841;
   --emerald: #34D399;
   --rose: #FB7185;
-  --cyan: #38BDF8;
+  --cyan: #5BC8EC;
   --fd: 'Space Grotesk', system-ui, sans-serif;
   --fb: Inter, system-ui, sans-serif;
   --fm: 'Space Mono', ui-monospace, monospace;
