@@ -1,13 +1,14 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Learner Data Policy</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-:root{--ink:#14112b;--violet:#6d4aff;--amber:#f5a524;--emerald:#12a870;--rose:#e5484d;--cyan:#12a4c7;--cream:#fbf8f1}
+:root{color-scheme:light dark;--ink:#14112b;--violet:#6d4aff;--amber:#f5a524;--emerald:#12a870;--rose:#e5484d;--cyan:#12a4c7;--cream:#fbf8f1;--rule:#d9d3c3;--zebra:#f3eee0;--thbg:#14112b;--thfg:#fff;--muted:#55507a;--ci:#e8f6fa;--cw:#fdf3dc;--co:#e2f6ee;--link:#4a2fd0}
+@media(prefers-color-scheme:dark){:root{--ink:#ecebf7;--violet:#a18fff;--cream:#12102a;--rule:#3a3665;--zebra:#1a1738;--thbg:#2a2560;--thfg:#fff;--muted:#b4b0d6;--ci:#10324a;--cw:#3d2e0c;--co:#0d3a2c;--link:#b6a8ff}}
 body{font:16px/1.6 Inter,system-ui,sans-serif;color:var(--ink);background:var(--cream);max-width:860px;margin:0 auto;padding:40px 24px}
 h1,h2,h3,h4{font-family:'Space Grotesk',Inter,sans-serif;line-height:1.2}h1{font-size:2rem;border-bottom:4px solid var(--violet);padding-bottom:.4rem}
-table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.92rem}th{background:var(--ink);color:#fff;text-align:left}th,td{border:1px solid #d9d3c3;padding:6px 10px;vertical-align:top}tr:nth-child(even) td{background:#f3eee0}
-.callout{border-left:5px solid var(--cyan);background:#e8f6fa;padding:10px 14px;margin:1rem 0}.callout.warn{border-color:var(--amber);background:#fdf3dc}.callout.ok{border-color:var(--emerald);background:#e2f6ee}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.92rem}th{background:var(--thbg);color:var(--thfg);text-align:left}th,td{border:1px solid var(--rule);padding:6px 10px;vertical-align:top}tr:nth-child(even) td{background:var(--zebra)}
+.callout{border-left:5px solid var(--cyan);background:var(--ci);padding:10px 14px;margin:1rem 0}.callout.warn{border-color:var(--amber);background:var(--cw)}.callout.ok{border-color:var(--emerald);background:var(--co)}
 dl{display:grid;grid-template-columns:minmax(150px,36%) 1fr;gap:4px 16px}dt{font-weight:600}dd{margin:0}.chk{list-style:none;padding-left:0}
-.meta{font:12px 'Space Mono',monospace;color:#55507a;display:flex;flex-wrap:wrap;gap:4px 14px;border-top:1px solid #d9d3c3;margin-top:2rem;padding-top:.6rem}
-.draft{display:inline-block;background:var(--amber);color:var(--ink);font:700 11px 'Space Mono',monospace;padding:2px 8px;border-radius:99px;letter-spacing:.06em}
-@media print{body{background:#fff;padding:0}}
+.meta{font:12px 'Space Mono',monospace;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;border-top:1px solid var(--rule);margin-top:2rem;padding-top:.6rem}
+.draft{display:inline-block;background:#f5a524;color:#14112b;font:700 11px 'Space Mono',monospace;padding:2px 8px;border-radius:99px;letter-spacing:.06em}
+@media print{:root{--ink:#14112b;--cream:#fff}body{background:#fff;color:#14112b;padding:0}}
 </style></head><body><span class="draft">AI DRAFT · THE HUMAN DECIDES</span><h1>Learner Data Policy</h1><div class="callout warn">Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) section 34.</div>
 <dl><dt>Document ID</dt><dd>lib-learner-data-policy</dd><dt>Version</dt><dd>1.0 (draft)</dd><dt>Owner (role)</dt><dd>[Fill in: role]</dd><dt>Approved by (role)</dt><dd>[Fill in: role]</dd><dt>Effective date</dt><dd>[Fill in: date]</dd><dt>Next review</dt><dd>[Fill in: date]</dd></dl>
 <ul><li>Used only for the declared purposes.</li><li>Seen only by roles that need it.</li><li>Never in a prompt.</li><li>Never used for marketing.</li><li>Never sold.</li><li>Returned and erased on exit.</li></ul>
