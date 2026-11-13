@@ -1,0 +1,86 @@
+{
+  "title": "Proposal Template",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-proposal"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "1. What we heard"
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: the school’s own words]"
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "2. What we propose"
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: modules and outcomes]"
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "3. How it works"
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: onboarding plan, summary of lib-onboarding-plan]"
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "4. Your privacy"
+    },
+    {
+      "type": "p",
+      "text": "Learner information is never put into an AI prompt. A teacher approves anything that affects a learner."
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "5. Investment"
+    },
+    {
+      "type": "p",
+      "text": "Attach the quote from the quote calculator. Pricing is provisional until approved."
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "6. Next steps"
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: dates]"
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-proposal",
+    "Kind": "template",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

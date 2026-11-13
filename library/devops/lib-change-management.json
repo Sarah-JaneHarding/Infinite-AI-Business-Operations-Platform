@@ -1,0 +1,51 @@
+{
+  "title": "Change Management SOP",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-change-management"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Change proposed in a pull request with its tests.",
+        "Reviewed by someone other than the author.",
+        "Checks green.",
+        "Approved by a human.",
+        "Released using lib-release-sop.",
+        "Rollback ready."
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-change-management",
+    "Kind": "sop",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

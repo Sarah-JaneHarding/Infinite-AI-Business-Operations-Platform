@@ -1,0 +1,55 @@
+{
+  "title": "Vulnerability Management SOP",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by the security lead before use. This is a drafting outline, not legal advice and not an approved document."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-vuln-mgmt"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Scan dependencies and code regularly.",
+        "Record each finding with severity.",
+        "Decide fix, mitigate or accept, with a named approver.",
+        "Fix within [Fill in: target set by the security lead].",
+        "Record dependency changes as the repository rules require."
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-vuln-mgmt",
+    "Kind": "sop",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

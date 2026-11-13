@@ -1,0 +1,48 @@
+{
+  "title": "Demo Script",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-demo-script"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Open with the school’s own pain from discovery.",
+        "Show the planning tool with sample content.",
+        "Show a draft that needs teacher approval, and the approval step.",
+        "Show the privacy design: codes instead of names, audit trail.",
+        "Show the quote calculator output for the school.",
+        "Agree the next step and date."
+      ]
+    },
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Use demonstration data only. Never load a real learner into a demo."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-demo-script",
+    "Kind": "template",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

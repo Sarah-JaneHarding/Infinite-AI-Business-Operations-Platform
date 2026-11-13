@@ -1,0 +1,65 @@
+{
+  "title": "Runbook Template",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-runbook"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Section",
+        "Content"
+      ],
+      "rows": [
+        [
+          "Component",
+          ""
+        ],
+        [
+          "Symptoms",
+          ""
+        ],
+        [
+          "Checks",
+          ""
+        ],
+        [
+          "Fix steps",
+          ""
+        ],
+        [
+          "Rollback",
+          ""
+        ],
+        [
+          "Who to call",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-runbook",
+    "Kind": "template",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

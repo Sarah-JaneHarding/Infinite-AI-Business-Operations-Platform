@@ -1,0 +1,90 @@
+{
+  "title": "POPIA Compliance Checklist",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) chapter 3."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-popia-checklist"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "checklist",
+      "checks": [
+        {
+          "label": "Accountability: Information Officer appointed and registered",
+          "done": false
+        },
+        {
+          "label": "Processing limitation: lawful ground recorded for each purpose",
+          "done": false
+        },
+        {
+          "label": "Purpose specification: purposes written down, retention set by the school",
+          "done": false
+        },
+        {
+          "label": "Further processing limitation: new uses checked against the declared purpose",
+          "done": false
+        },
+        {
+          "label": "Information quality: correction route exists",
+          "done": false
+        },
+        {
+          "label": "Openness: privacy notice and PAIA manual published",
+          "done": false
+        },
+        {
+          "label": "Security safeguards: policy, access control, breach SOP tested",
+          "done": false
+        },
+        {
+          "label": "Data subject participation: request route and SOP in use",
+          "done": false
+        },
+        {
+          "label": "Operator agreements signed with every school",
+          "done": false
+        },
+        {
+          "label": "Children’s information: extra care documented",
+          "done": false
+        },
+        {
+          "label": "Direct marketing rules followed",
+          "done": false
+        },
+        {
+          "label": "Transfers outside the country checked",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-popia-checklist",
+    "Kind": "checklist",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

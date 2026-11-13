@@ -1,0 +1,45 @@
+{
+  "title": "Customer Survey Template",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-nps-survey"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "How likely are you to recommend us to another school? (0 to 10)",
+        "What is the main reason?",
+        "What is one thing we should fix first?",
+        "What do you value most?"
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Responses are about the service, not about learners. Do not include learner names."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-nps-survey",
+    "Kind": "form",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

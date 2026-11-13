@@ -1,0 +1,35 @@
+# Tax Invoice Template
+
+> **WARN** Needs review by a registered tax practitioner or the company’s accountant before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: VAT Act 89 of 1991 section 20.
+
+- **Document ID:** lib-tax-invoice
+- **Version:** 1.0 (draft)
+- **Prepared by (role):** [Fill in: role]
+- **Date:** [Fill in: date]
+
+> **WARN** Use this only once the company is registered for VAT (see lib-vat-registration-checklist). Until then issue an invoice without the words “tax invoice” and without VAT. Confirm the required particulars with the tax adviser.
+
+- **Words “Tax Invoice”:** Shown prominently, once VAT-registered
+- **Supplier name, address and VAT number:** [Fill in: details]
+- **Customer name, address and VAT number if registered:** [Fill in: details]
+- **Invoice number (sequential):** [Fill in: number]
+- **Date of issue:** [Fill in: date]
+- **Description, quantity and price of each item:** See lines
+- **Value excluding VAT, VAT amount, total:** See totals
+
+| Description | Quantity | Unit price excl. VAT | Amount excl. VAT |
+| --- | --- | --- | --- |
+|  |  |  |  |
+|  |  |  |  |
+|  |  |  |  |
+|  |  |  |  |
+|  |  |  |  |
+
+| Total excl. VAT | VAT | Total incl. VAT |
+| --- | --- | --- |
+|  |  |  |
+
+Payment details: [Fill in: bank details held by finance; never in this template file if it is shared widely]. Terms: [Fill in: payment term].
+
+---
+*Library ID:* lib-tax-invoice · *Kind:* template · *Version:* 1.0 · *Status:* DRAFT, not approved for use

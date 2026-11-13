@@ -1,0 +1,36 @@
+{
+  "title": "13-Week Cash Flow (workbook)",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-cashflow-13w"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Spreadsheet. Open the .xlsx file."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-cashflow-13w",
+    "Kind": "workbook",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

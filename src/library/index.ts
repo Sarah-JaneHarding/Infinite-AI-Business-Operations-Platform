@@ -1,0 +1,11 @@
+import type { LibraryItem } from './kit';
+import { CONTRACTS } from './contracts';
+import { PRIVACY } from './privacy';
+import { FINANCE } from './finance';
+import { GROWTH } from './growth';
+import { OPERATIONS } from './operations';
+
+/** Every library document. Batches are added here; ids must be unique across the library and the quick templates. */
+export const LIBRARY: LibraryItem[] = [...CONTRACTS, ...PRIVACY, ...FINANCE, ...GROWTH, ...OPERATIONS];
+
+export const libraryById = (id: string) => LIBRARY.find((i) => i.id === id);

@@ -1,0 +1,91 @@
+{
+  "title": "AI Use Policy",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013)."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-ai-use-policy"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Rules built into the platform"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Every model call goes through the Model Gateway. There is no second route.",
+        "No learner personal information enters a prompt. Data is de-identified and stamped first.",
+        "Anything that affects a learner needs a human approval record before it takes effect.",
+        "AI output is a draft, never a decision.",
+        "Facts in the Brain are superseded with a new version, not overwritten."
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Rules for staff"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Do not paste learner information into any outside AI tool.",
+        "Do not accept AI output without reading it.",
+        "Report mistakes and unsafe output."
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Review"
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Owner",
+          "[Fill in: role]"
+        ],
+        [
+          "Review cycle",
+          "[Fill in: interval]"
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-ai-use-policy",
+    "Kind": "policy",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

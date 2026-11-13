@@ -1,0 +1,28 @@
+# Disciplinary and Grievance Procedure (outline)
+
+> **WARN** Needs review by a labour-law practitioner or attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Labour Relations Act 66 of 1995; Schedule 8 Code of Good Practice: Dismissal.
+
+- **Document ID:** lib-disciplinary-procedure
+- **Version:** 1.0 (draft)
+- **Owner (role):** [Fill in: role]
+- **Approved by (role):** [Fill in: role]
+- **Effective date:** [Fill in: date]
+- **Next review:** [Fill in: date]
+
+Steps, rules, and sanctions are set by the company with its adviser; none are assumed here.
+
+| Stage | Who | Notes |
+| --- | --- | --- |
+| Informal discussion | [Fill in: role] |  |
+| Written notice of a hearing | [Fill in: role] | [Fill in: notice period] |
+| Hearing | [Fill in: role] | [Fill in: rights of the employee] |
+| Outcome and appeal | [Fill in: role] | [Fill in: ] |
+
+## Grievance
+
+1. Employee raises it in writing.
+2. Manager responds in [Fill in: time].
+3. Escalation to [Fill in: role].
+
+---
+*Library ID:* lib-disciplinary-procedure · *Kind:* policy · *Version:* 1.0 · *Status:* DRAFT, not approved for use

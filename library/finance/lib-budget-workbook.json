@@ -1,0 +1,43 @@
+{
+  "title": "Operating Budget (workbook)",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-budget-workbook"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Spreadsheet. Open the .xlsx file."
+    },
+    {
+      "type": "ul",
+      "items": [
+        "One row per line per month.",
+        "Variance is actual minus budget."
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-budget-workbook",
+    "Kind": "workbook",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

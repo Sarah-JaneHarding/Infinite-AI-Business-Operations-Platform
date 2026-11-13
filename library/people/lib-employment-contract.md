@@ -1,0 +1,39 @@
+# Employment Contract (outline)
+
+> **WARN** Needs review by a labour-law practitioner or attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Basic Conditions of Employment Act 75 of 1997 section 29; Labour Relations Act 66 of 1995.
+
+- **Document ID:** lib-employment-contract
+- **Version:** 1.0 (draft)
+- **Owner (role):** [Fill in: role]
+- **Approved by (role):** [Fill in: role]
+- **Effective date:** [Fill in: date]
+- **Next review:** [Fill in: date]
+
+- **Employer:** [Fill in: name, registration, address]
+- **Employee:** [Fill in: name and address]
+- **Job title and duties:** [Fill in: ]
+- **Start date:** [Fill in: date]
+- **Place of work:** [Fill in: ]
+- **Hours:** [Fill in: ]
+- **Remuneration and how paid:** [Fill in: agreed by the founder; not stated here]
+- **Leave:** [Fill in: as the law and the company agree]
+- **Notice:** [Fill in: ]
+- **Probation:** [Fill in: if any]
+
+## Clauses to include
+
+- Confidentiality and handling of personal information.
+- Intellectual property assignment (lib-ip-assignment).
+- Conflict of interest.
+- Acceptable use of company systems (lib-staff-it-policy).
+- Disciplinary and grievance procedures (lib-disciplinary-procedure).
+- Termination.
+
+|  | Employer | Employee |
+| --- | --- | --- |
+| Name |  |  |
+| Signature |  |  |
+| Date |  |  |
+
+---
+*Library ID:* lib-employment-contract · *Kind:* contract · *Version:* 1.0 · *Status:* DRAFT, not approved for use

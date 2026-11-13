@@ -1,0 +1,70 @@
+{
+  "title": "Leave Application Form",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a labour-law practitioner or attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Basic Conditions of Employment Act 75 of 1997."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-leave-application"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        ""
+      ],
+      "rows": [
+        [
+          "Employee",
+          ""
+        ],
+        [
+          "Leave type",
+          ""
+        ],
+        [
+          "From",
+          ""
+        ],
+        [
+          "To",
+          ""
+        ],
+        [
+          "Approved by",
+          ""
+        ],
+        [
+          "Date",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-leave-application",
+    "Kind": "form",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

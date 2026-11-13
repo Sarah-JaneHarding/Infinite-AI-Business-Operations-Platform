@@ -1,0 +1,109 @@
+{
+  "title": "Data Subject Request Form",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) sections 23 to 25; PAIA (Act 2 of 2000)."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-dsr-form"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        ""
+      ],
+      "rows": [
+        [
+          "Request type",
+          "Access / Correction / Deletion / Objection"
+        ],
+        [
+          "Requester name",
+          ""
+        ],
+        [
+          "Relationship to the data subject",
+          ""
+        ],
+        [
+          "Learner or person concerned",
+          ""
+        ],
+        [
+          "Details of the request",
+          ""
+        ],
+        [
+          "Date",
+          ""
+        ],
+        [
+          "Signature",
+          ""
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Identity check"
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: what proof the school will accept; decided by the Information Officer]"
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Office use"
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Received",
+          "[Fill in: date]"
+        ],
+        [
+          "Due by",
+          "[Fill in: date set by the response-time rule in lib-dsr-sop]"
+        ],
+        [
+          "Outcome",
+          "[Fill in: granted, partly, refused with reason]"
+        ],
+        [
+          "Handled by (role)",
+          "[Fill in: role]"
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-dsr-form",
+    "Kind": "form",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

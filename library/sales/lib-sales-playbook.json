@@ -1,0 +1,123 @@
+{
+  "title": "Sales Playbook (schools)",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-sales-playbook"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Who we sell to"
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: ideal school profile, agreed by the founder]"
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Stages"
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Stage",
+        "Exit test",
+        "Owner",
+        "Next step"
+      ],
+      "rows": [
+        [
+          "Lead",
+          "A named decision maker is identified",
+          "[Fill in: role]",
+          ""
+        ],
+        [
+          "Qualified",
+          "Qualification form complete (lib-lead-qualification)",
+          "[Fill in: role]",
+          ""
+        ],
+        [
+          "Demo",
+          "Demo held using lib-demo-script",
+          "[Fill in: role]",
+          ""
+        ],
+        [
+          "Quote",
+          "Quote generated from lib-pricing-calculator",
+          "[Fill in: role]",
+          ""
+        ],
+        [
+          "Agreement",
+          "Order Form and MSA signed",
+          "[Fill in: role]",
+          ""
+        ],
+        [
+          "Onboarding",
+          "Handed to customer success",
+          "[Fill in: role]",
+          ""
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Qualification"
+    },
+    {
+      "type": "p",
+      "text": "Use the MEDDICC prompts in the platform’s sales tools: metrics, economic buyer, decision criteria, decision process, identified pain, champion, competition."
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Rules"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Prices come only from the quote calculator. Never quote from memory.",
+        "No promise about a feature that is not built.",
+        "No learner data is shown in a demo."
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-sales-playbook",
+    "Kind": "plan",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

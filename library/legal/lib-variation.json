@@ -1,0 +1,127 @@
+{
+  "title": "Contract Variation Form",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney before use. This is a drafting outline, not legal advice and not an approved document."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-variation"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Agreement varied",
+          "[Fill in: document and date]"
+        ],
+        [
+          "Customer",
+          "[Fill in: school]"
+        ],
+        [
+          "Variation number",
+          "[Fill in: number]"
+        ],
+        [
+          "Effective from",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Change"
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Clause",
+        "Current wording",
+        "New wording"
+      ],
+      "rows": [
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Effect on price"
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: state from a new quote; do not retype a price]"
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        "Supplier",
+        "Customer"
+      ],
+      "rows": [
+        [
+          "Name",
+          "",
+          ""
+        ],
+        [
+          "Signature",
+          "",
+          ""
+        ],
+        [
+          "Date",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-variation",
+    "Kind": "form",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

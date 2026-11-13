@@ -1,0 +1,125 @@
+{
+  "title": "Website and Platform Terms of Use",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Electronic Communications and Transactions Act 25 of 2002; Consumer Protection Act 68 of 2008; POPIA (Act 4 of 2013)."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-terms-of-use"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "1. Who we are"
+    },
+    {
+      "type": "p",
+      "text": "Company details required for electronic commerce."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: registered name, registration number, physical address, contact details]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "2. Acceptance"
+    },
+    {
+      "type": "p",
+      "text": "Using the site means accepting these terms."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "3. Accounts"
+    },
+    {
+      "type": "p",
+      "text": "Accounts are provided through the school. Users keep credentials safe."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "4. Content and IP"
+    },
+    {
+      "type": "p",
+      "text": "Ownership and permitted use."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "5. Disclaimers and liability"
+    },
+    {
+      "type": "p",
+      "text": "As in the Master Services Agreement."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: wording; counsel to decide]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "6. Privacy"
+    },
+    {
+      "type": "p",
+      "text": "Refer to the privacy notice (lib-privacy-notice)."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "7. Changes"
+    },
+    {
+      "type": "p",
+      "text": "How terms change and how users are told."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "8. Law"
+    },
+    {
+      "type": "p",
+      "text": "South African law."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-terms-of-use",
+    "Kind": "contract",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

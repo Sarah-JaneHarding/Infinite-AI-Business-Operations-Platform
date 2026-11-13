@@ -1,0 +1,263 @@
+{
+  "title": "Master Services Agreement (school)",
+  "subtitle": "Drafting outline for counsel",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Consumer Protection Act 68 of 2008; Electronic Communications and Transactions Act 25 of 2002; POPIA (Act 4 of 2013)."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-msa"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Parties"
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Supplier",
+          "[Fill in: registered company name, registration number, VAT number, address]"
+        ],
+        [
+          "Customer (school)",
+          "[Fill in: legal name of the school or governing body, address, who may sign]"
+        ],
+        [
+          "Signatory authority",
+          "[Fill in: SGB resolution or delegation that lets the signatory bind the school]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "1. Definitions"
+    },
+    {
+      "type": "p",
+      "text": "Define: Platform, Services, Order Form, Educator, Learner, School Data, Personal Information, De-identified Data, Term, Fees, Business Day."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "2. Services and licence"
+    },
+    {
+      "type": "p",
+      "text": "State what the subscription includes by reference to the Order Form, and grant a non-exclusive, non-transferable right to use the platform for the school’s own educational purposes."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "3. School responsibilities"
+    },
+    {
+      "type": "p",
+      "text": "Lawful basis for the data the school loads, authorised users only, credentials kept safe, no unlawful content."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "4. Fees and payment"
+    },
+    {
+      "type": "p",
+      "text": "Fees follow the Order Form. State the invoice date, the payment term and what happens on late payment."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: payment term, late-payment position, whether prices are quoted VAT-inclusive; decide with counsel and the tax adviser]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "5. Personal information"
+    },
+    {
+      "type": "p",
+      "text": "The school is the responsible party and the supplier is the operator. Incorporate the Data Processing Agreement (lib-dpa) as a schedule. Say that learner personal information is never placed in a prompt to a model and is de-identified first, matching the product’s privacy design."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "6. Intellectual property"
+    },
+    {
+      "type": "p",
+      "text": "Supplier keeps the platform. School keeps School Data. State ownership of content the school creates with the tools."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: licence terms for school-created content]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "7. Confidentiality"
+    },
+    {
+      "type": "p",
+      "text": "Mutual, with exceptions for law and the Regulator."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "8. Service levels"
+    },
+    {
+      "type": "p",
+      "text": "Refer to the Service Level Agreement (lib-sla) as a schedule."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "9. Warranties and AI output"
+    },
+    {
+      "type": "p",
+      "text": "State that AI output is a draft that a teacher must review, and that no output is approved for use without a human decision."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: warranty wording and any disclaimer; counsel to check it against the Consumer Protection Act]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "10. Liability"
+    },
+    {
+      "type": "p",
+      "text": "Limitation and exclusion of liability."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: cap amount or formula, carve-outs; counsel to decide and to check what the law does not allow to be limited]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "11. Term, renewal and termination"
+    },
+    {
+      "type": "p",
+      "text": "Start date from the Order Form. Renewal mechanics. Termination for breach, for convenience and on insolvency."
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: notice periods, renewal notice rules]"
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "12. Exit and data return"
+    },
+    {
+      "type": "p",
+      "text": "On exit, return the school’s data and then erase it, with a certificate (lib-data-return-erasure). Reference the offboarding SOP."
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "13. Disputes and governing law"
+    },
+    {
+      "type": "p",
+      "text": "South African law. Escalation path before any proceedings."
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Dispute route: choose one.",
+        "Option A: Negotiation then mediation then court",
+        "Option B: Negotiation then arbitration",
+        "Option C: Court only"
+      ]
+    },
+    {
+      "type": "h",
+      "level": 3,
+      "text": "14. General"
+    },
+    {
+      "type": "p",
+      "text": "Whole agreement, variation in writing (lib-variation), notices and addresses, assignment, severability, counterparts and electronic signature."
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Signature"
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        "Supplier",
+        "Customer"
+      ],
+      "rows": [
+        [
+          "Name",
+          "",
+          ""
+        ],
+        [
+          "Capacity",
+          "",
+          ""
+        ],
+        [
+          "Signature",
+          "",
+          ""
+        ],
+        [
+          "Date",
+          "",
+          ""
+        ],
+        [
+          "Place",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-msa",
+    "Kind": "contract",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

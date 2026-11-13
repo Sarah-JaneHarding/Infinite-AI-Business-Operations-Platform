@@ -1,0 +1,21 @@
+# Renewal Playbook
+
+- **Document ID:** lib-renewal-playbook
+- **Version:** 1.0 (draft)
+- **Owner (role):** [Fill in: role]
+- **Approved by (role):** [Fill in: role]
+- **Effective date:** [Fill in: date]
+- **Next review:** [Fill in: date]
+
+| When | Action |
+| --- | --- |
+| [Fill in: time before renewal] | Review health scorecard and usage |
+| [Fill in: time] | Meet the champion and economic buyer |
+| [Fill in: time] | Send renewal quote generated from the quote calculator |
+| [Fill in: time] | Follow up; escalate if no reply |
+| On renewal | Confirm and update records |
+
+Define red, amber and green yourself: [Fill in: criteria agreed by the founder; none are assumed here]
+
+---
+*Library ID:* lib-renewal-playbook · *Kind:* plan · *Version:* 1.0 · *Status:* DRAFT, not approved for use

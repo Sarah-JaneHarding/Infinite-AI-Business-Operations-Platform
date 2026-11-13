@@ -1,0 +1,73 @@
+{
+  "title": "Escalation Matrix",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-escalation-matrix"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Situation",
+        "First contact",
+        "Then",
+        "Within"
+      ],
+      "rows": [
+        [
+          "Platform down",
+          "[Fill in: role]",
+          "[Fill in: role]",
+          "[Fill in: time]"
+        ],
+        [
+          "Suspected data breach",
+          "[Fill in: role]",
+          "[Fill in: Information Officer]",
+          "[Fill in: time]"
+        ],
+        [
+          "Safeguarding concern",
+          "The school’s lead",
+          "[Fill in: role]",
+          "Immediately"
+        ],
+        [
+          "Unhappy customer",
+          "[Fill in: role]",
+          "[Fill in: role]",
+          "[Fill in: time]"
+        ],
+        [
+          "Wrong AI output reaching a learner",
+          "[Fill in: role]",
+          "[Fill in: role]",
+          "[Fill in: time]"
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-escalation-matrix",
+    "Kind": "template",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

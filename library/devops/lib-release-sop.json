@@ -1,0 +1,52 @@
+{
+  "title": "Release SOP",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-release-sop"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "All checks green on the branch.",
+        "Release notes written.",
+        "Approval recorded.",
+        "Deploy.",
+        "Smoke test.",
+        "Watch for [Fill in: time].",
+        "Roll back if the smoke test fails."
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-release-sop",
+    "Kind": "sop",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

@@ -1,0 +1,18 @@
+# Remote Work and Personal Device Policy
+
+> **WARN** Needs review by the security lead before use. This is a drafting outline, not legal advice and not an approved document.
+
+- **Document ID:** lib-remote-work-byod
+- **Version:** 1.0 (draft)
+- **Owner (role):** [Fill in: role]
+- **Approved by (role):** [Fill in: role]
+- **Effective date:** [Fill in: date]
+- **Next review:** [Fill in: date]
+
+- Use a trusted network or the company’s secure access.
+- Personal devices only if they meet [Fill in: minimum standard].
+- No learner data stored locally.
+- Lost device reported at once.
+
+---
+*Library ID:* lib-remote-work-byod · *Kind:* policy · *Version:* 1.0 · *Status:* DRAFT, not approved for use

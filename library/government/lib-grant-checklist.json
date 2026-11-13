@@ -1,0 +1,61 @@
+{
+  "title": "Grant Application Checklist",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-grant-checklist"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "checklist",
+      "checks": [
+        {
+          "label": "Eligibility checked in writing",
+          "done": false
+        },
+        {
+          "label": "Budget prepared and approved",
+          "done": false
+        },
+        {
+          "label": "Outcomes stated, measured not promised",
+          "done": false
+        },
+        {
+          "label": "Letters of support gathered",
+          "done": false
+        },
+        {
+          "label": "Reporting duties understood",
+          "done": false
+        },
+        {
+          "label": "Submitted before the deadline",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-grant-checklist",
+    "Kind": "checklist",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

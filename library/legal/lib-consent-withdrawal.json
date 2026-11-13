@@ -1,0 +1,96 @@
+{
+  "title": "Consent Withdrawal Form",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) section 11."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-consent-withdrawal"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        ""
+      ],
+      "rows": [
+        [
+          "Name",
+          ""
+        ],
+        [
+          "Relationship to learner",
+          ""
+        ],
+        [
+          "Learner",
+          ""
+        ],
+        [
+          "What consent is withdrawn",
+          ""
+        ],
+        [
+          "Date",
+          ""
+        ],
+        [
+          "Signature",
+          ""
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "School use"
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Received by",
+          "[Fill in: role]"
+        ],
+        [
+          "Date recorded in the consent ledger",
+          "[Fill in: date]"
+        ],
+        [
+          "Systems updated",
+          "[Fill in: list]"
+        ]
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Withdrawal is recorded as a new entry in the consent ledger. Earlier entries are not changed."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-consent-withdrawal",
+    "Kind": "form",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

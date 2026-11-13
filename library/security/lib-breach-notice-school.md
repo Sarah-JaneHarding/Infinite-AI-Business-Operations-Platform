@@ -1,0 +1,26 @@
+# Breach Notice to a School
+
+> **WARN** Needs review by a South African attorney or the appointed Information Officer before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) section 21(2).
+
+- **Document ID:** lib-breach-notice-school
+- **Version:** 1.0 (draft)
+- **Prepared by (role):** [Fill in: role]
+- **Date:** [Fill in: date]
+
+To: [Fill in: Information Officer, school]
+
+We have identified a security compromise affecting information we hold for your school. Details so far:
+
+|  |  |
+| --- | --- |
+| Date and time discovered | [Fill in: date and time] |
+| What happened | [Fill in: facts only] |
+| Data involved | [Fill in: categories] |
+| People affected | [Fill in: number if known] |
+| What we have done | [Fill in: actions] |
+| What we recommend you do | [Fill in: actions] |
+| Next update | [Fill in: time] |
+| Contact | [Fill in: name, role, phone] |
+
+---
+*Library ID:* lib-breach-notice-school · *Kind:* notice · *Version:* 1.0 · *Status:* DRAFT, not approved for use

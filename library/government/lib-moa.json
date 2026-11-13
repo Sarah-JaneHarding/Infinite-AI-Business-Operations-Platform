@@ -1,0 +1,99 @@
+{
+  "title": "Memorandum of Agreement (outline)",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Public Finance Management Act 1 of 1999 where a public body is party."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-moa"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Parties",
+          "[Fill in: ]"
+        ],
+        [
+          "Purpose",
+          "[Fill in: ]"
+        ],
+        [
+          "Roles",
+          "[Fill in: ]"
+        ],
+        [
+          "Funding",
+          "[Fill in: ]"
+        ],
+        [
+          "Data and privacy",
+          "A separate operator agreement applies where personal information is processed"
+        ],
+        [
+          "Term and exit",
+          "[Fill in: ]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        "Party A",
+        "Party B"
+      ],
+      "rows": [
+        [
+          "Name",
+          "",
+          ""
+        ],
+        [
+          "Signature",
+          "",
+          ""
+        ],
+        [
+          "Date",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-moa",
+    "Kind": "contract",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

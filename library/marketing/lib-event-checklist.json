@@ -1,0 +1,69 @@
+{
+  "title": "Event Checklist",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-event-checklist"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "checklist",
+      "checks": [
+        {
+          "label": "Goal and audience written down",
+          "done": false
+        },
+        {
+          "label": "Budget approved",
+          "done": false
+        },
+        {
+          "label": "Venue or platform confirmed",
+          "done": false
+        },
+        {
+          "label": "Materials prepared (demo data only)",
+          "done": false
+        },
+        {
+          "label": "Sign-up form follows direct-marketing rules",
+          "done": false
+        },
+        {
+          "label": "Follow-up emails drafted",
+          "done": false
+        },
+        {
+          "label": "Leads logged within a day",
+          "done": false
+        },
+        {
+          "label": "Review held afterwards",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-event-checklist",
+    "Kind": "checklist",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

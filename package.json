@@ -13,6 +13,8 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "build:library": "tsx scripts/build-library.ts",
+    "seed:library": "tsx scripts/seed-library.ts",
     "audit:ecosystem": "node scripts/audit-ecosystem.mjs",
     "server": "tsx server.ts"
   },

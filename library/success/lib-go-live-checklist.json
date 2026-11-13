@@ -1,0 +1,81 @@
+{
+  "title": "Go-Live Checklist",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-go-live-checklist"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "checklist",
+      "checks": [
+        {
+          "label": "Agreements signed",
+          "done": false
+        },
+        {
+          "label": "Information Officer named",
+          "done": false
+        },
+        {
+          "label": "Parent letters issued",
+          "done": false
+        },
+        {
+          "label": "Consent recorded where relied on",
+          "done": false
+        },
+        {
+          "label": "Retention schedule loaded",
+          "done": false
+        },
+        {
+          "label": "Roles assigned, least access",
+          "done": false
+        },
+        {
+          "label": "Multi-factor sign-in on for administrators",
+          "done": false
+        },
+        {
+          "label": "Import checked against the source",
+          "done": false
+        },
+        {
+          "label": "Staff trained",
+          "done": false
+        },
+        {
+          "label": "Support contacts shared",
+          "done": false
+        },
+        {
+          "label": "Backup and exit plan explained",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-go-live-checklist",
+    "Kind": "checklist",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}
