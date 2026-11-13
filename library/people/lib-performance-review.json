@@ -1,0 +1,106 @@
+{
+  "title": "Performance Review Form",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-performance-review"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Goal",
+        "Evidence",
+        "Rating",
+        "Comment"
+      ],
+      "rows": [
+        [
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        ""
+      ],
+      "rows": [
+        [
+          "Strengths",
+          ""
+        ],
+        [
+          "Development",
+          ""
+        ],
+        [
+          "Next goals",
+          ""
+        ],
+        [
+          "Reviewer",
+          ""
+        ],
+        [
+          "Employee",
+          ""
+        ],
+        [
+          "Date",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-performance-review",
+    "Kind": "form",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

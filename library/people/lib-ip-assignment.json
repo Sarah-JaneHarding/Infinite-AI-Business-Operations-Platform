@@ -1,0 +1,79 @@
+{
+  "title": "Confidentiality and IP Assignment",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by an intellectual property attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: Copyright Act 98 of 1978."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-ip-assignment"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ul",
+      "items": [
+        "What is assigned: [Fill in: scope]",
+        "Prior work excluded: [Fill in: list]",
+        "Open-source obligations are followed and recorded.",
+        "No customer or learner data leaves the platform."
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        "Company",
+        "Individual"
+      ],
+      "rows": [
+        [
+          "Name",
+          "",
+          ""
+        ],
+        [
+          "Signature",
+          "",
+          ""
+        ],
+        [
+          "Date",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-ip-assignment",
+    "Kind": "contract",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

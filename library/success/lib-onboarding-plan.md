@@ -1,0 +1,22 @@
+# School Onboarding Plan
+
+- **Document ID:** lib-onboarding-plan
+- **Version:** 1.0 (draft)
+- **Owner (role):** [Fill in: role]
+- **Approved by (role):** [Fill in: role]
+- **Effective date:** [Fill in: date]
+- **Next review:** [Fill in: date]
+
+| Step | Owner | Due | Done |
+| --- | --- | --- | --- |
+| Agreements signed | [Fill in: role] | [Fill in: date] |  |
+| Parent letters issued and consent recorded | [Fill in: role] | [Fill in: date] |  |
+| Retention schedule supplied | [Fill in: role] | [Fill in: date] |  |
+| Data import (lib-data-import-request) | [Fill in: role] | [Fill in: date] |  |
+| Administrator trained | [Fill in: role] | [Fill in: date] |  |
+| Educators trained (lib-training-register) | [Fill in: role] | [Fill in: date] |  |
+| Go-live checklist passed | [Fill in: role] | [Fill in: date] |  |
+| First check-in | [Fill in: role] | [Fill in: date] |  |
+
+---
+*Library ID:* lib-onboarding-plan · *Kind:* plan · *Version:* 1.0 · *Status:* DRAFT, not approved for use

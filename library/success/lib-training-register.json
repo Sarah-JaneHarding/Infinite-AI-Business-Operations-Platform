@@ -1,0 +1,96 @@
+{
+  "title": "Training Attendance Register",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-training-register"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Attendance is recorded here. Any professional-development credit is a matter for the provider and the relevant body, and is not stated by the company."
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Name",
+        "Role",
+        "Signature"
+      ],
+      "rows": [
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-training-register",
+    "Kind": "register",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

@@ -45,3 +45,12 @@ telemetry, which conflicts with the no-invented-metrics rule. It remains in git 
 - Integrations page with honest states; outbound send of APPROVED artefacts to allowlisted https hosts (SSRF guarded, off unless OPS_OUTBOUND_ALLOWLIST is set).
 - Not built: SSO (OPQ-002), email/WhatsApp (OPQ-003), payments (OPQ-004), live Google/Microsoft connectors.
 - Known and unchanged: `src/components/*` still imports missing `src/data/*`, so `vite build` fails and `tsc` reports 65 errors, all in those files. The new UI is in `src/ui/*` and adds none. UI was type-checked and bundles with esbuild but was not exercised in a browser.
+
+## 2026-11-13: document library (120 documents)
+- `src/library` holds 120 business and customer documents as canonical Docs: customer contracts (MSA, order form, DPA, SLA, pilot, AUP, terms of use, NDA, partner, variation, cancellation, data return and erasure certificate), privacy and POPIA (notices, consent, data subject requests, breach SOP and notices, PAIA manual outline, impact assessment, retention, AI use, learner data, complaints, safeguarding outline), finance (tax invoice, credit note, statement, expense claim, PO, requisition, month-end and collections SOPs, VAT checklist), sales and marketing, customer success and support, people, security, product and engineering, procurement and government.
+- 22 are native spreadsheets built with exceljs, with live formulas, validation lists and totals. The school quote calculator reads its rates from `SCHOOL_PRICING`, so there is one place to change a price.
+- They join `TEMPLATES`, so the Library, Builders and department assistants see them with no UI change.
+- `npm run build:library` writes `library/<dept>/<id>.{docx,html,md,json[,xlsx]}`, `library/manifest.json` (sha256 per file) and `library/README.md`. A test fails if the manifest and files disagree.
+- `npm run seed:library` saves each document into the warehouse as a `documents` record (origin `template`) with its editable .docx or .xlsx as `document_chunks`. It skips ids already stored, so a second run writes nothing and a person's edit is never overwritten.
+- Same rules as the quick templates: every blank is "[Fill in: …]", no rand amounts or personal data in document text, every document that carries legal weight names its reviewer. The safeguarding outline invents no reporting steps.
+- Not done: PDF originals (print the HTML); the seed is a script, not run on server start (OPQ-025).

@@ -1,0 +1,81 @@
+{
+  "title": "Incident Response Plan",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by the security lead before use. This is a drafting outline, not legal advice and not an approved document."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-incident-response"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Detect and declare.",
+        "Name an incident lead.",
+        "Contain.",
+        "Communicate to affected schools.",
+        "Fix.",
+        "Review within [Fill in: time] (lib-postmortem)."
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Role",
+        "Who",
+        "Contact"
+      ],
+      "rows": [
+        [
+          "Incident lead",
+          "[Fill in: name]",
+          "[Fill in: ]"
+        ],
+        [
+          "Backup",
+          "[Fill in: name]",
+          "[Fill in: ]"
+        ],
+        [
+          "Communications",
+          "[Fill in: name]",
+          "[Fill in: ]"
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-incident-response",
+    "Kind": "plan",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

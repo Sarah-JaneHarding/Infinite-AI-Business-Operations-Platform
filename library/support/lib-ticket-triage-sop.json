@@ -1,0 +1,57 @@
+{
+  "title": "Support Ticket Triage SOP",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-ticket-triage-sop"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Log the ticket with school, contact and time.",
+        "Check for personal information in the message. Do not copy it into notes or tools.",
+        "Set severity using the table in the SLA.",
+        "Assign an owner.",
+        "Reply to confirm receipt.",
+        "Resolve or escalate (lib-escalation-matrix).",
+        "Close with the customer’s confirmation."
+      ]
+    },
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "A ticket that mentions a possible data breach goes to the breach SOP immediately."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-ticket-triage-sop",
+    "Kind": "sop",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

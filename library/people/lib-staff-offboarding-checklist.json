@@ -1,0 +1,61 @@
+{
+  "title": "Staff Offboarding Checklist",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-staff-offboarding-checklist"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "checklist",
+      "checks": [
+        {
+          "label": "Accounts and keys revoked on the last day",
+          "done": false
+        },
+        {
+          "label": "Secrets the person knew are rotated",
+          "done": false
+        },
+        {
+          "label": "Devices returned and wiped",
+          "done": false
+        },
+        {
+          "label": "Handover written",
+          "done": false
+        },
+        {
+          "label": "Final pay approved by the founder",
+          "done": false
+        },
+        {
+          "label": "Exit conversation held",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-staff-offboarding-checklist",
+    "Kind": "checklist",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "title": "Monthly Service Report",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-sla-report"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "School",
+          "[Fill in: name]"
+        ],
+        [
+          "Month",
+          "[Fill in: month]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Measure",
+        "Result"
+      ],
+      "rows": [
+        [
+          "Tickets opened",
+          ""
+        ],
+        [
+          "Tickets resolved",
+          ""
+        ],
+        [
+          "Met response targets",
+          ""
+        ],
+        [
+          "Availability",
+          "[Fill in: measured, not estimated]"
+        ]
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Actions for next month: [Fill in: ]"
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-sla-report",
+    "Kind": "template",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

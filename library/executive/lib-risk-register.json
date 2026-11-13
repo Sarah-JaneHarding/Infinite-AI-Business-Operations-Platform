@@ -1,0 +1,36 @@
+{
+  "title": "Risk Register (workbook)",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-risk-register"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Spreadsheet. Open the .xlsx file."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-risk-register",
+    "Kind": "register",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Architecture Decision Record",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-adr"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "",
+        ""
+      ],
+      "rows": [
+        [
+          "Title",
+          "[Fill in: ]"
+        ],
+        [
+          "Status",
+          "[Fill in: proposed, accepted, superseded]"
+        ],
+        [
+          "Context",
+          "[Fill in: ]"
+        ],
+        [
+          "Decision",
+          "[Fill in: ]"
+        ],
+        [
+          "Consequences",
+          "[Fill in: ]"
+        ],
+        [
+          "Alternatives rejected and why",
+          "[Fill in: ]"
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-adr",
+    "Kind": "template",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "title": "Test Plan Template",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-test-plan"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Area",
+        "Happy path",
+        "Failure paths",
+        "Security test needed"
+      ],
+      "rows": [
+        [
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-test-plan",
+    "Kind": "template",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

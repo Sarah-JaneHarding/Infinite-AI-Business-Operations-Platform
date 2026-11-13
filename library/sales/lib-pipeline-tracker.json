@@ -1,0 +1,36 @@
+{
+  "title": "Sales Pipeline Tracker (workbook)",
+  "blocks": [
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-pipeline-tracker"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Prepared by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Date",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Spreadsheet. Open the .xlsx file."
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-pipeline-tracker",
+    "Kind": "workbook",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

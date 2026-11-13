@@ -1,0 +1,92 @@
+{
+  "title": "Information Security Policy",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by the security lead before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) sections 19 to 22."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-infosec-policy"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Principles"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Each school’s data is isolated in the database, enforced by the database.",
+        "No learner personal information in any AI prompt.",
+        "Least access: roles get only what they need.",
+        "Every access to learner data has a declared purpose and a lawful basis.",
+        "Audit and consent records are append-only.",
+        "No secret in code or documents."
+      ]
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Scope"
+    },
+    {
+      "type": "p",
+      "text": "[Fill in: systems and people covered]"
+    },
+    {
+      "type": "h",
+      "level": 2,
+      "text": "Responsibilities"
+    },
+    {
+      "type": "table",
+      "headers": [
+        "Role",
+        "Responsibility"
+      ],
+      "rows": [
+        [
+          "[Fill in: role]",
+          "Owns this policy"
+        ],
+        [
+          "All staff",
+          "Follow it and report incidents"
+        ]
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-infosec-policy",
+    "Kind": "policy",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}

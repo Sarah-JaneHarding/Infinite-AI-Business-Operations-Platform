@@ -1,0 +1,59 @@
+{
+  "title": "Customer Offboarding SOP",
+  "blocks": [
+    {
+      "type": "callout",
+      "tone": "warn",
+      "text": "Needs review by a South African attorney before use. This is a drafting outline, not legal advice and not an approved document. The statutes and instruments named are pointers for the reviewer: POPIA (Act 4 of 2013) section 14."
+    },
+    {
+      "type": "kv",
+      "pairs": [
+        [
+          "Document ID",
+          "lib-offboarding-sop"
+        ],
+        [
+          "Version",
+          "1.0 (draft)"
+        ],
+        [
+          "Owner (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Approved by (role)",
+          "[Fill in: role]"
+        ],
+        [
+          "Effective date",
+          "[Fill in: date]"
+        ],
+        [
+          "Next review",
+          "[Fill in: date]"
+        ]
+      ]
+    },
+    {
+      "type": "ol",
+      "items": [
+        "Confirm the end date in writing (lib-cancellation-notice).",
+        "Agree how data is returned and who receives it.",
+        "Export the school’s data and check it.",
+        "Return it by a secure route.",
+        "Erase through the retention and tombstone path.",
+        "Issue the certificate (lib-data-return-erasure).",
+        "Send the final statement of account.",
+        "Hold the exit interview.",
+        "Close access and record the closure."
+      ]
+    }
+  ],
+  "meta": {
+    "Library ID": "lib-offboarding-sop",
+    "Kind": "sop",
+    "Version": "1.0",
+    "Status": "DRAFT, not approved for use"
+  }
+}
