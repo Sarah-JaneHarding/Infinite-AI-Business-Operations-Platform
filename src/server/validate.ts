@@ -4,6 +4,8 @@ import type { Rec } from '../core/warehouse';
 import { ERASURE_CATEGORIES } from '../core/erasure';
 import { failedChecks, runAcceptance } from '../core/acceptance';
 import type { Doc } from '../core/types';
+import { DEFAULT_SIGNING, SINGLE_SIGNER, holdsProfession, requiresTwoPerson, soloWaitRemainingMs, type SigningPolicy } from '../core/signing';
+import { maySignFor, type Signer } from './signing';
 import { checkTaskText, MAX_NOTES, MAX_TITLE } from '../core/ceo/guard';
 import { isDate } from '../core/ceo/time';
 
@@ -41,6 +43,23 @@ export interface AppendCtx {
   store: ReadStore;
   /** The actor's roles, when roles are configured. Undefined means roles are not enforced. */
   roles?: readonly string[];
+  /** The configured signing policy. Undefined means DEFAULT_SIGNING (dual). */
+  signing?: SigningPolicy;
+  /** The signer registry. Undefined or empty means no registry: scope checks are skipped (legacy), but nobody holds a profession. */
+  signers?: readonly Signer[];
+  /** The actor signed in again just now (required to countersign your own approval in solo mode). */
+  reauthed?: boolean;
+  /** The server's clock, for the solo wait. Defaults to now. */
+  now?: Date;
+}
+
+/**
+ * The registry scope check, skipped when no registry is configured. A custom agent's definition does carry a department,
+ * but the server ignores it (the contract is never taken from client-written data) and passes none, so only a '*'-scoped
+ * signer can sign for a custom agent. Fails closed.
+ */
+function checkRegistry(ctx: AppendCtx, personId: string, department: string | undefined) {
+  if (ctx.signers?.length && !maySignFor(ctx.signers, personId, department)) bad('you are not a registered signer for this department', 403);
 }
 
 const latestById = (rows: readonly Rec[], id: unknown) => rows.filter((r) => r.id === id).at(-1);
@@ -106,6 +125,8 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
   if (typeof rec.agentId !== 'string' || !(agentById(rec.agentId) || customIds.has(rec.agentId))) bad('unknown agent');
   if (status !== 'APPROVED' && status !== 'REJECTED' && status !== 'RATIFIED' && status !== 'INGESTED' && rec.approvedBy !== undefined) bad('only a decision carries approvedBy');
   if (status !== 'RATIFIED' && status !== 'INGESTED' && rec.countersignedBy !== undefined) bad('only a ratified artefact carries countersignedBy');
+  if (rec.signing !== undefined && rec.signing !== SINGLE_SIGNER) bad('the only signing marker is single-signer');
+  if (status !== 'APPROVED' && status !== 'RATIFIED' && status !== 'INGESTED' && rec.signing !== undefined) bad('only an approved or ratified artefact carries the single-signer marker');
   const cur = latestById(ctx.store.list('artefact_versions'), rec.id);
 
   if (!cur) {
@@ -127,6 +148,10 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
     return;
   }
   if (rec.requestedBy !== cur.requestedBy || rec.agentId !== cur.agentId || rec.orgId !== cur.orgId) bad('requestedBy, agent and org cannot change');
+  // The contract always comes from the stored artefact, never from anything the client sends.
+  const contract = agentById(String(cur.agentId));
+  const custom = !contract && customIds.has(String(cur.agentId));
+  const policy = ctx.signing ?? DEFAULT_SIGNING;
   const sameDoc = rec.docHash === cur.docHash && rec.version === cur.version;
 
   if (status === 'DRAFT') {
@@ -145,7 +170,16 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
     if (typeof approver !== 'string' || !approver) bad('a decision needs approvedBy');
     if (String(approver).startsWith('auto:')) bad('an autonomous actor can never approve', 403);
     if (ctx.actor && approver !== ctx.actor) bad('approvedBy is not you', 403);
-    if ((agentById(String(cur.agentId))?.secondApprover || customIds.has(String(cur.agentId))) && approver === cur.requestedBy) bad('this agent requires a second person to approve', 403);
+    checkRegistry(ctx, String(approver), contract?.dept);
+    // The author approving their own work: only a secondApprover (or custom) agent restricts it, and solo mode relaxes
+    // that for an agent that is not two-person, flagged single-signer. A rejection never carries the marker.
+    let single = false;
+    if ((contract?.secondApprover || custom) && approver === cur.requestedBy) {
+      if (policy.mode !== 'solo' || (contract && requiresTwoPerson(contract))) bad('this agent requires a second person to approve', 403);
+      single = status === 'APPROVED';
+    }
+    if (single && rec.signing !== SINGLE_SIGNER) bad('a solo self-approval must carry the single-signer marker');
+    if (!single && rec.signing !== undefined) bad('only a solo self-approval carries the single-signer marker');
     if (status === 'REJECTED' && !String(rec.note ?? '').trim()) bad('a rejection needs a reason');
   } else if (cur.status === 'APPROVED' && status === 'RATIFIED') {
     // The second signature: a different human countersigns exactly what was approved.
@@ -154,12 +188,40 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
     if (typeof signer !== 'string' || !signer) bad('ratifying needs countersignedBy');
     if (String(signer).startsWith('auto:')) bad('an autonomous actor can never countersign', 403);
     if (ctx.actor && signer !== ctx.actor) bad('countersignedBy is not you', 403);
-    if (signer === cur.approvedBy) bad('a different person from the approver must countersign', 403);
+    checkRegistry(ctx, String(signer), contract?.dept);
+    const single = signer === cur.approvedBy;
+    const twoPerson = contract !== undefined && requiresTwoPerson(contract);
+    if (single && twoPerson) bad('a different person from the approver must countersign', 403);
+    const required = contract?.professionalReview;
+    if (required && !holdsProfession(ctx.signers ?? [], String(signer), required)) bad(`only a registered ${required.replace('_', ' ')} can countersign this artefact`, 403);
+    if (single) {
+      // Solo mode only: the one signer countersigns their own approval after signing in again and waiting.
+      if (policy.mode !== 'solo') bad('a different person from the approver must countersign', 403);
+      if (ctx.reauthed !== true) bad('solo signing: sign in again before you countersign your own approval', 403);
+      // The wait is timed from the server-authored ledger entry for THIS approval (same approver, version and content),
+      // never from the client-supplied `at` on the artefact version, and never from an entry for an earlier version.
+      const entry = ctx.store.list('ledger').filter((e) => {
+        const d = e.detail as { version?: unknown; docHash?: unknown } | undefined;
+        return e.action === 'hitl.approved' && e.subject === cur.id && e.actor === cur.approvedBy && d?.version === cur.version && (cur.docHash === undefined || d?.docHash === cur.docHash);
+      }).at(-1);
+      // No retry: an approval whose ledger entry was lost stays unratifiable until it is edited and approved again.
+      if (!entry) return bad('solo signing: the approval was saved but is not recorded in the ledger for this version; if it does not appear after a reload, edit the artefact and approve it again', 409);
+      const left = soloWaitRemainingMs(String(entry.at), ctx.now ?? new Date(), policy);
+      if (left !== 0) {
+        const mins = Math.max(1, Math.ceil((Number.isFinite(left) ? left : policy.waitMs) / 60_000));
+        bad(`solo signing: ${mins} minute${mins === 1 ? '' : 's'} left to wait after approval before you can countersign your own approval`, 409);
+      }
+      if (rec.signing !== SINGLE_SIGNER) bad('a solo countersignature must carry the single-signer marker');
+    } else {
+      if (twoPerson && rec.signing !== undefined) bad('a two-person artefact never carries the single-signer marker');
+      if (rec.signing !== cur.signing) bad('the single-signer marker must match the approval');
+    }
     if (rec.approvedBy !== cur.approvedBy) bad('approvedBy cannot change');
     if (typeof rec.ratifiedAt !== 'string') bad('ratifying needs ratifiedAt');
   } else if (cur.status === 'RATIFIED' && status === 'INGESTED') {
     if (!sameDoc) bad('ingesting cannot change the document');
     if (rec.approvedBy !== cur.approvedBy || rec.countersignedBy !== cur.countersignedBy) bad('signers cannot change');
+    if (rec.signing !== cur.signing) bad('the single-signer marker cannot change');
     if (agentById(String(cur.agentId))?.ingestion === 'none') bad('this agent\'s contract says its output is not ingested', 409);
     const doc = latestById(ctx.store.list('documents'), `rat_${String(cur.id)}_v${String(cur.version)}`);
     if (!doc || doc.origin !== 'ratified' || (doc.ratifiedFrom as { docHash?: string } | undefined)?.docHash !== cur.docHash) bad('the ratified document is not in the library yet', 409);
@@ -171,9 +233,14 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
 
 function countersignature(rec: Rec, ctx: AppendCtx) {
   const art = latestById(ctx.store.list('artefact_versions'), rec.artefactId);
-  if (!art || art.status !== 'RATIFIED' || art.countersignedBy !== rec.signer || art.docHash !== rec.docHash || art.version !== rec.version) bad('countersignature does not match a ratified artefact', 409);
+  if (!art || art.status !== 'RATIFIED' || art.countersignedBy !== rec.signer || art.docHash !== rec.docHash || art.version !== rec.version) return bad('countersignature does not match a ratified artefact', 409);
   if (ctx.actor && rec.signer !== ctx.actor) bad('signer is not you', 403);
+  if (rec.signing !== countersignMarker(art)) bad('countersignature single-signer marker does not match the artefact', 409);
+  if (rec.profession !== agentById(String(art.agentId))?.professionalReview) bad('countersignature profession does not match the agent contract', 409);
 }
+
+/** A countersignature row or ledger entry carries the marker iff the approver countersigned (which only a flagged artefact allows). */
+export const countersignMarker = (art: Rec): typeof SINGLE_SIGNER | undefined => (art.approvedBy === art.countersignedBy && art.signing === SINGLE_SIGNER ? SINGLE_SIGNER : undefined);
 
 /** A ratified library document is the exact approved-and-countersigned content, and once written it never changes. */
 async function document(rec: Rec, ctx: AppendCtx) {
@@ -188,8 +255,13 @@ async function document(rec: Rec, ctx: AppendCtx) {
 
 function approval(rec: Rec, ctx: AppendCtx) {
   const art = latestById(ctx.store.list('artefact_versions'), rec.artefactId);
-  if (!art || art.status !== rec.decision || art.approvedBy !== rec.approver) bad('approval does not match a recorded decision', 409);
+  if (!art || art.status !== rec.decision || art.approvedBy !== rec.approver || art.signing !== rec.signing) bad('approval does not match a recorded decision', 409);
   if (ctx.actor && rec.approver !== ctx.actor) bad('approver is not you', 403);
+  if (rec.decision === 'APPROVED') {
+    // One APPROVED row per version, naming the version it approves.
+    if (rec.version !== art?.version) bad('approval does not name the approved version', 409);
+    if (ctx.store.list('approvals').some((r) => r.artefactId === rec.artefactId && r.decision === 'APPROVED' && r.version === rec.version)) bad('this approval is already recorded', 409);
+  }
 }
 
 function brain(rec: Rec, ctx: AppendCtx) {

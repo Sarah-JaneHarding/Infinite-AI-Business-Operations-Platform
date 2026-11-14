@@ -9,6 +9,10 @@ import { Platform } from '../src/core/platform';
 import { ServerAdapter, serverSequencer } from '../src/core/serverAdapter';
 import { AGENTS } from '../src/departments';
 import type { Actor } from '../src/core/types';
+import { MemoryAdapter, type Rec } from '../src/core/warehouse';
+import { FileStore } from '../src/server/fileAdapter';
+import { validateAppend } from '../src/server/validate';
+import { appendLedger } from '../src/server/ledgerService';
 
 /** Boots the real server.ts as a child process (explicit env, so no host secret can leak in) and attacks it over HTTP. */
 const ROOT = process.cwd();
@@ -633,4 +637,156 @@ describe('server: autonomy configuration fails closed', () => {
     expect(r?.code).toBe(1);
     expect(r?.err).toMatch(msg);
   }, 20_000);
+});
+
+// ---- signing: the signer registry and solo mode, end to end ----
+describe('server: signing registry and solo mode', () => {
+  const SOLO_ENV = { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'sarah|Sarah Harding|*', OPS_SIGNING_MODE: 'solo', OPS_SOLO_WAIT_MINUTES: '1', ANTHROPIC_API_KEY: 'sk-ant-not-real-key-for-tests' };
+  let solo = '';
+  beforeAll(async () => { solo = await boot(3431, SOLO_ENV); }, 60_000);
+
+  it('signing: whoami reports dual, ten minutes and no signer in the default configuration', async () => {
+    expect((await call(base, '/api/whoami', { token: T_DAN })).json).toMatchObject({ actor: 'dan', mode: 'users', signing: { mode: 'dual', waitMinutes: 10 }, signer: false });
+    expect((await call(open, '/api/whoami')).json).toMatchObject({ actor: null, mode: 'open', signing: { mode: 'dual', waitMinutes: 10 }, signer: false });
+  });
+
+  it('signing: whoami reports solo, the wait and that the actor is a registered signer', async () => {
+    expect((await call(solo, '/api/whoami', { token: T_SARAH })).json).toMatchObject({ actor: 'sarah', mode: 'users', signing: { mode: 'solo', waitMinutes: 1 }, signer: true });
+  });
+
+  it('signing: whoami shows the caller their own profession only, never the registration text', async () => {
+    const REG = 'REG-SECRET-12345';
+    const pro = await boot(3433, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: `sarah|Sarah Harding|legal|attorney|${REG};dan|Dan Roe|*`, ANTHROPIC_API_KEY: 'sk-ant-not-real-key-for-tests' });
+    const sarah = await call(pro, '/api/whoami', { token: T_SARAH });
+    expect(sarah.json).toMatchObject({ actor: 'sarah', signer: true, profession: 'attorney' });
+    const dan = await call(pro, '/api/whoami', { token: T_DAN });
+    expect(dan.json).toMatchObject({ actor: 'dan', signer: true });
+    expect(dan.json).not.toHaveProperty('profession');
+    expect(JSON.stringify(sarah.json)).not.toContain(REG);
+    expect(JSON.stringify(dan.json)).not.toContain(REG);
+    expect(await call(base, '/api/whoami', { token: T_DAN })).toHaveProperty('json.signer', false);
+    expect((await call(base, '/api/whoami', { token: T_DAN })).json).not.toHaveProperty('profession');
+    expect((await call(open, '/api/whoami')).json).not.toHaveProperty('profession');
+  });
+
+  it('signing: a solo countersign needs a fresh sign-in; a wrong one is refused and counts against the bad-token limit', async () => {
+    const agent = AGENTS.find((a) => !a.secondApprover)!;
+    const inputs = Object.fromEntries(agent.inputs.map((i) => [i.key, i.kind === 'number' ? '5' : i.kind === 'select' ? i.options![0] : 'Pilot school onboarding process']));
+    const withToken = (token: string): typeof fetch => (u, i) => fetch(u, { ...i, headers: { ...(i?.headers as Record<string, string>), 'x-ops-token': token } });
+    const p = await new Platform({ adapter: new ServerAdapter(`${solo}/api/warehouse`, withToken(T_SARAH)), sequencer: serverSequencer(`${solo}/api/ledger`, withToken(T_SARAH)) }).init();
+    const a = await p.runAgent(agent, inputs, human('sarah'));
+    await p.submitForReview(a.id, human('sarah'));
+    await p.decide(a.id, human('sarah'), 'APPROVED', 'self-approved in solo mode', agent);
+    await p.flush();
+    const cur = p.artefact(a.id)!;
+    const body = { ...cur, status: 'RATIFIED', countersignedBy: 'sarah', ratifiedAt: new Date().toISOString(), signing: 'single-signer' };
+    const send = (headers?: Record<string, string>) => call(solo, '/api/warehouse/artefact_versions', { token: T_SARAH, body, headers });
+
+    const none = await send();
+    expect(none.status).toBe(403);
+    expect(String(none.json?.error)).toMatch(/sign in again/);
+    const wrong = await send({ 'x-ops-reauth': 'x'.repeat(24) });
+    expect(wrong.status).toBe(403);
+    expect(String(wrong.json?.error)).toMatch(/sign in again/);
+    // the right sign-in is accepted as a sign-in; the solo wait is what holds the countersignature back
+    const right = await send({ 'x-ops-reauth': T_SARAH });
+    expect(right.status).toBe(409);
+    expect(String(right.json?.error)).toMatch(/left to wait/);
+
+    // each wrong sign-in counts as a bad token: ten in a minute are answered, the eleventh is refused. `wrong` above was
+    // the first (no header and the right token count nothing). The limiter is a sliding 60 s window, and these requests
+    // take well under a second, so no window boundary can fall between them.
+    const firstTen = [wrong.status];
+    for (let i = 0; i < 9; i++) firstTen.push((await send({ 'x-ops-reauth': 'y'.repeat(24) })).status);
+    expect(firstTen).toEqual(Array(10).fill(403));
+    expect((await send({ 'x-ops-reauth': 'y'.repeat(24) })).status).toBe(429);
+  }, 60_000);
+});
+
+describe('server: single-signer report', () => {
+  it('signing: a signed-in person gets the report, no token gets 401, and no registration text leaks', async () => {
+    const REG = 'REG-SECRET-98765';
+    const pro = await boot(3435, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: `sarah|Sarah Harding|legal|attorney|${REG};dan|Dan Roe|*`, ANTHROPIC_API_KEY: 'sk-ant-not-real-key-for-tests' });
+    const ok = await call(pro, '/api/signing/report', { token: T_DAN });
+    expect(ok.status).toBe(200);
+    expect(ok.json).toEqual({ count: 0, items: [] });
+    expect((await call(pro, '/api/signing/report')).status).toBe(401);
+    expect(JSON.stringify(ok.json)).not.toContain(REG);
+    expect((await call(open, '/api/signing/report')).status).toBe(200);
+  }, 60_000);
+
+  it('signing: lists a real single-signer ratification that went through the validators', async () => {
+    // Build the warehouse the way the server would: every write passes validateAppend / appendLedger against the very
+    // FileStore the server then boots from. The solo wait is passed by injecting a clock 11 minutes ahead.
+    const cwd = mkdtempSync(join(tmpdir(), 'ops-e2e-'));
+    const disk = new FileStore(join(cwd, 'data', 'warehouse'));
+    const later = () => new Date(Date.now() + 11 * 60_000);
+    const solo = { mode: 'solo' as const, waitMs: 600_000 };
+    const signers = [{ id: 'sarah', name: 'Sarah', scope: '*' as const }];
+    const adapter = new MemoryAdapter();
+    const orig = adapter.append.bind(adapter);
+    adapter.append = async (c: string, r: Rec) => {
+      if (c === 'ledger') await appendLedger(disk, { orgId: r.orgId, actor: r.actor, action: r.action, subject: r.subject, detail: r.detail }, disk.list('ledger').length, 'sarah');
+      else disk.append(c, await validateAppend(c, structuredClone(r), { actor: 'sarah', store: disk, signing: solo, signers, reauthed: true, now: later() }));
+      return orig(c, r);
+    };
+    const errors: Error[] = [];
+    const p = await new Platform({ adapter, signing: solo, signers, onPersistError: (e) => errors.push(e) }).init();
+    const agent = AGENTS.find((a) => !a.secondApprover && !a.twoPerson && !a.professionalReview)!;
+    const inputs = Object.fromEntries(agent.inputs.map((i) => [i.key, i.kind === 'number' ? '5' : i.kind === 'select' ? i.options![0] : 'Pilot school onboarding process']));
+    const a = await p.runAgent(agent, inputs, human('sarah'));
+    await p.submitForReview(a.id, human('sarah'));
+    await p.decide(a.id, human('sarah'), 'APPROVED', 'self-approved in solo mode', agent);
+    await p.countersign(a.id, human('sarah'), '', agent, later());
+    await p.flush();
+    expect(errors).toEqual([]);
+
+    const b = await boot(3473, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: 'sarah|Sarah|*', OPS_SIGNING_MODE: 'solo' }, cwd);
+    const rep = await call(b, '/api/signing/report', { token: T_DAN });
+    expect(rep.status).toBe(200);
+    expect(rep.json).toMatchObject({ count: 1, items: [{ artefactId: a.id, agentId: agent.id, kind: 'self-countersign', signer: 'sarah' }] });
+    const item = (rep.json?.items as Array<{ docHash: string; ratifiedAt: string }>)[0]!;
+    expect(item.docHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(Number.isNaN(Date.parse(item.ratifiedAt))).toBe(false);
+  }, 60_000);
+});
+
+describe('server: signing configuration fails closed', () => {
+  const tryBoot = (env: Record<string, string>) => new Promise<{ code: number | null; err: string } | null>((resolve) => {
+    const p = spawn(process.execPath, [join(ROOT, 'node_modules/tsx/dist/cli.mjs'), join(ROOT, 'server.ts')], {
+      cwd: mkdtempSync(join(tmpdir(), 'ops-e2e-')),
+      env: { PATH: process.env.PATH ?? '', NODE_ENV: 'production', HOST: '127.0.0.1', ...env },
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    let err = '';
+    p.stderr?.on('data', (d) => (err += String(d)));
+    const t = setTimeout(() => { p.kill(); resolve(null); }, 8000);
+    p.on('exit', (code) => { clearTimeout(t); resolve({ code, err }); });
+  });
+  const ONE = { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'sarah|Sarah Harding|*' };
+  const cases: Array<[string, Record<string, string>, RegExp]> = [
+    ['solo without OPS_USERS', { OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*named users/],
+    ['solo with two signers', { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: 'sarah|Sarah|*;dan|Dan|*', OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*exactly one non-professional signer.*found 2/],
+    ['solo with only a professional signer', { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'sarah|Sarah|legal|attorney|LPC 1', OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*exactly one non-professional signer.*found 0/],
+    ['a signer who is not a user', { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'dan|Dan|*' }, /FATAL: OPS_SIGNERS.*not a user/],
+    ['a bad wait value', { ...ONE, OPS_SIGNING_MODE: 'solo', OPS_SOLO_WAIT_MINUTES: 'soon' }, /FATAL: OPS_SOLO_WAIT_MINUTES/],
+    ['an unknown mode', { ...ONE, OPS_SIGNING_MODE: 'triple' }, /FATAL: OPS_SIGNING_MODE.*unknown mode/],
+  ];
+  it.each(cases)('signing: exits with FATAL for %s', async (_name, env, re) => {
+    const r = await tryBoot({ PORT: '3441', ...env });
+    expect(r?.code).toBe(1);
+    expect(r?.err).toMatch(re);
+  }, 20_000);
+});
+
+describe('server: signing configuration that must start', () => {
+  it('signing: the empty keys .env.example ships (OPS_SIGNERS=, OPS_SIGNING_MODE=, OPS_SOLO_WAIT_MINUTES=) start in dual with ten minutes', async () => {
+    const b = await boot(3471, { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: '', OPS_SIGNING_MODE: '', OPS_SOLO_WAIT_MINUTES: ' ' });
+    expect((await call(b, '/api/whoami', { token: T_SARAH })).json).toMatchObject({ actor: 'sarah', signing: { mode: 'dual', waitMinutes: 10 }, signer: false });
+  }, 60_000);
+  it('signing: solo with the owner and a registered attorney starts in solo', async () => {
+    const b = await boot(3472, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: 'sarah|Sarah|*;dan|Dan|legal|attorney|LPC 1', OPS_SIGNING_MODE: 'solo' });
+    expect((await call(b, '/api/whoami', { token: T_SARAH })).json).toMatchObject({ actor: 'sarah', signing: { mode: 'solo', waitMinutes: 10 }, signer: true });
+    expect((await call(b, '/api/whoami', { token: T_DAN })).json).toMatchObject({ actor: 'dan', signer: true, profession: 'attorney' });
+  }, 60_000);
 });

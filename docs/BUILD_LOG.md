@@ -64,6 +64,39 @@ telemetry, which conflicts with the no-invented-metrics rule. It remains in git 
 ## 2026-11-14: AI Studio install failure
 - "Dependency installation failed" came from the tracked `bun.lock`, which still listed `@google/genai` (removed from `package.json` when the model path moved to Claude). A frozen bun install rejected it. Regenerated `bun.lock` (79 lines removed, nothing added); `bun install --frozen-lockfile`, `npm ci`, `npm install` and the build all pass on a clean copy. `package-lock.json` remains the lockfile CI and Docker use.
 
+## 2026-11-14: Phase 0, signer registry and solo mode
+Built:
+- Signing core (`src/core/signing.ts`): signer registry, professions, `single-signer` marker, solo wait, two-person rules.
+- Contracts: `twoPerson` and `professionalReview` fields and check C11; default mapping (OPS-LEG-01 to 05 attorney; OPS-SEC-01 and OPS-PPL-04 two-person).
+- Server enforcement (`src/server/validate.ts`, `finality.ts`): registry scope, re-authentication header `x-ops-reauth`, server-timed wait from the `hitl.approved` ledger entry, marker checks.
+- Server wiring (`src/server/signing.ts`): `OPS_SIGNERS`, `OPS_SIGNING_MODE`, `OPS_SOLO_WAIT_MINUTES`; `/api/whoami` reports `signing`, `signer` and own `profession`.
+- UI: solo banner, token prompt for re-authentication, single-signer badge on the Board.
+- `GET /api/signing/report`: single-signer ratifications for later second review.
+- Docs and policy: `docs/REVIEW_BOARD.md` section, `docs/PR_POLICY.md`, `.github/CODEOWNERS`, OPQ-017/019 notes, OPQ-032 resolved, OPQ-033 raised, design doc corrections (IONOS, no prices, no registration numbers yet), `test/docs.test.ts`.
+
+Tests: `npx vitest run`: 37 files, 1212 tests passed (before the final review fixes).
+
+Final review fixes (2026-11-14): blank signing keys mean unset; solo allows registered professionals beside one non-professional signer; one contract resolver (`contractFor`) for built-in and custom agents in the Board, Studio, board gate and Platform; actionable lost-ledger-entry text; `signingCtx` shared by both server write paths; docs corrected. Tests: `npx vitest run`: 37 files, 1231 tests passed.
+
+Not verified / known limits:
+- The solo countersign success path is not driven end to end with a real wait; it is covered at validator level with an injected clock.
+- Registration numbers are free text and unverified.
+- The second signer and the professionals are not registered (OPQ-033), so two-person and professional artefacts stay approved and unratified.
+- With `OPS_SIGNERS` unset, behaviour is as before except that `professionalReview` agents (OPS-LEG-01 to 05) can never be ratified and `twoPerson` agents need a second person, in every mode. Legal artefacts approved but not countersigned stay approved until an attorney is registered; legal artefacts ratified before this change lack `profession` on the countersignature and will not pass the outbound gate without a revision through the board.
+- The ledger names the professional and their profession, not their registration text (kept in the registry).
+- Re-authentication is token re-entry (the token the browser already holds), proof of a deliberate act, not a second factor.
+- After deploying, reload open tabs: an older bundle writes approvals without `version`, and that approval then cannot pass the outbound gate.
+- The Board countdown is computed at render, not live.
+- `withReauth` sets the header module-wide for the duration of one countersign call.
+- Signing and profession markers must now match exactly on re-appended rows.
+- `hitl.approved` ledger entries written before this change have no version, so a solo self-countersign for an artefact approved earlier needs a re-approval.
+- `|` and `;` cannot appear in a registration.
+- An empty or blank `OPS_SIGNERS`, `OPS_SIGNING_MODE` or `OPS_SOLO_WAIT_MINUTES` means unset (no registry, dual, 10 minutes), so `cp .env.example .env` starts the server. (Corrected in the final review fix: an empty mode or wait used to stop the server.)
+- Solo needs exactly one non-professional signer; any number of registered professionals may sit beside them (final review fix).
+- The single-signer report trusts stored fields that write-time validation enforces.
+- The `server.js` bundle was not regenerated.
+- The Dependabot `uuid` alert via exceljs remains an open owner decision.
+
 ## 2026-11-14: CEO Command Centre and v1.4 alignment
 - New first screen, `CEO Command Centre`: 16 department lights, one consolidated task list with status badges, a human-flag marker, and a SAST calendar of flagged tasks. Recomputed every 30 seconds from recorded data. See `docs/CEO_COMMAND_CENTRE.md`.
 - v1.4 package (HTML, Word) and library index stored in `docs/business-plan/` and seeded by `npm run seed:business`; plan figures in `src/core/ceo/plan.ts` are checked against `SCHOOL_PRICING`.

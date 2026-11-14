@@ -46,9 +46,9 @@ describe('appendLedger (server)', () => {
     expect((await reject(appendLedger(inReview, input({ actor: 'dan', action: 'hitl.approved', subject: 'art_1' }), 0, 'dan')))?.status).toBe(409);
     expect((await reject(appendLedger(memStore({ artefact_versions: [art('DRAFT')] }), input({ action: 'artefact.submit', subject: 'art_1' }), 0, 'sarah')))?.status).toBe(409);
     await expect(appendLedger(inReview, input({ action: 'artefact.submit', subject: 'art_1' }), 0, 'sarah')).resolves.toBeDefined();
-    const decided = memStore({ artefact_versions: [art('APPROVED', { approvedBy: 'dan' })] });
-    expect((await reject(appendLedger(decided, input({ actor: 'sarah', action: 'hitl.approved', subject: 'art_1' }), 0, 'sarah')))?.status).toBe(409); // approver differs
-    await expect(appendLedger(decided, input({ actor: 'dan', action: 'hitl.approved', subject: 'art_1' }), 0, 'dan')).resolves.toBeDefined();
+    const decided = memStore({ artefact_versions: [art('APPROVED', { approvedBy: 'dan', version: 1 })] });
+    expect((await reject(appendLedger(decided, input({ actor: 'sarah', action: 'hitl.approved', subject: 'art_1', detail: { version: 1 } }), 0, 'sarah')))?.status).toBe(409); // approver differs
+    await expect(appendLedger(decided, input({ actor: 'dan', action: 'hitl.approved', subject: 'art_1', detail: { version: 1 } }), 0, 'dan')).resolves.toBeDefined(); // an approval entry names the version it approves
   });
   it('lets an agent act under its own id in open mode, but never as a human act', async () => {
     await expect(appendLedger(memStore(), input({ actor: 'OPS-SEC-01', action: 'gateway.complete' }), 0, 'sarah')).resolves.toBeDefined();

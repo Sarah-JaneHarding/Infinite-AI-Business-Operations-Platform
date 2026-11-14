@@ -2,7 +2,7 @@
 
 Specialist agents can do routine work without being asked: on a schedule, when something happens on GitHub, or when a person
 asks an order to run. **They only ever produce drafts.** A draft is tested automatically, and only one that passes reaches
-the [Review Board](REVIEW_BOARD.md), where people approve it, a different person countersigns it, and it is ratified and
+the [Review Board](REVIEW_BOARD.md), where people approve it, a different person countersigns it (except in solo mode, where one registered person may do both steps, flagged; never for `twoPerson` or `professionalReview` agents; see [REVIEW_BOARD.md](REVIEW_BOARD.md)), and it is ratified and
 ingested. Open it from the sidebar: **Autonomous Agents**.
 
 ```

@@ -61,8 +61,21 @@ describe('each rule fires on its own violation (and a good contract is clean)', 
     ['C10', 'no formats', { formats: [] }],
     ['C10', 'bad ingestion', { ingestion: 'sometimes' }],
     ['C10', 'build is not a function', { build: 'rm -rf' }],
+    ['C11', 'unknown profession', { professionalReview: 'barrister' }],
+    ['C11', 'twoPerson that is not true', { twoPerson: 'yes' }],
   ];
   for (const [rule, label, o] of cases) it(`${rule}: ${label}`, () => expect(rulesOf(mutate(o))).toContain(rule));
+
+  it('C11: each valid profession passes, absence passes, twoPerson true passes', () => {
+    for (const professionalReview of ['attorney', 'accountant', 'tax_practitioner']) expect(rulesOf(mutate({ professionalReview })), professionalReview).not.toContain('C11');
+    expect(rulesOf(mutate({}))).not.toContain('C11');
+    expect(rulesOf(mutate({ twoPerson: true }))).not.toContain('C11');
+  });
+
+  it('gates exactly the agreed agents: legal 1 to 5 need an attorney, SEC-01 and PPL-04 need two people, nothing else', () => {
+    const gated = AGENTS.filter((a) => a.professionalReview || a.twoPerson).map((a) => `${a.id}:${a.professionalReview ?? 'two'}`).sort();
+    expect(gated).toEqual(['OPS-LEG-01:attorney', 'OPS-LEG-02:attorney', 'OPS-LEG-03:attorney', 'OPS-LEG-04:attorney', 'OPS-LEG-05:attorney', 'OPS-PPL-04:two', 'OPS-SEC-01:two']);
+  });
 
   it('never throws on a malformed object and reports duplicates in a registry', () => {
     expect(() => checkContract({} as AgentContract, env)).not.toThrow();

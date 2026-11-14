@@ -1,3 +1,4 @@
+import type { Profession } from './signing';
 import type { ArtefactFormat, BrainTier, DataClass, Doc, LawfulBasis, Purpose } from './types';
 
 export interface InputField {
@@ -40,7 +41,11 @@ export interface AgentContract {
   /** Providers allowed to serve this agent. Absent: any attested provider. The model rules still apply to every call. */
   models?: string[];
   requiresApproval: true; // literal: there is no agent that skips the human
-  secondApprover?: boolean; // approver must differ from requester
+  secondApprover?: boolean; // approver must differ from requester (solo mode may relax this, flagged single-signer)
+  /** Always two different people, in every signing mode: no solo relaxation, no single-signer path. */
+  twoPerson?: true;
+  /** The countersigner must hold this profession in the signer list (and differ from the approver). Implies twoPerson. */
+  professionalReview?: Profession;
   /** Where a ratified artefact goes: the document library and a Brain episode (default), or nowhere when ingesting it would not be relevant. */
   ingestion?: 'library' | 'none';
   budget: { maxPromptChars: number };

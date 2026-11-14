@@ -7,6 +7,8 @@ import { checkInput, checkOutput, runGates } from './guardrails/engine';
 import type { AgentContract, RunContext } from './agent';
 import type { Actor, Doc, LedgerEntry, Status } from './types';
 import { deidentify, detectPii, LearnerDataRefused } from './guardrails/pii';
+import { DEFAULT_SIGNING, SINGLE_SIGNER, holdsProfession, requiresTwoPerson, soloWaitRemainingMs, type Profession, type SigningPolicy } from './signing';
+import { contractFor } from '../departments/custom';
 import { ERASURE_CATEGORIES, normalizeSubject, type ErasureCategory, type ErasureRequest } from './erasure';
 
 export interface Artefact {
@@ -28,10 +30,19 @@ export interface Artefact {
   /** sha-256 of the document: every signature is bound to it. */
   docHash?: string;
   countersignedBy?: string;
+  /** Set when the approver also countersigned (solo mode, after the wait). */
+  signing?: typeof SINGLE_SIGNER;
   ratifiedAt?: string;
   ingestedAt?: string;
   /** Set on a revision: the ratified artefact it was copied from. */
   revisionOf?: string;
+}
+
+/** A copy of the artefact with no `signing` key at all (not even undefined): the marker is part of the signature state. */
+function withoutSigning(a: Artefact): Artefact {
+  const { signing: _dropped, ...rest } = a;
+  void _dropped;
+  return rest;
 }
 
 /** Autonomous actors are named `auto:<order>`. They can draft and submit, and can never approve, countersign or ratify. */
@@ -57,6 +68,10 @@ export interface PlatformOptions {
   onPersistError?: (e: Error) => void;
   /** When set, the server authors and stores every ledger entry; the platform does not write the ledger itself. */
   sequencer?: Sequencer;
+  /** Who may countersign. Default: dual (a different person from the approver). */
+  signing?: SigningPolicy;
+  /** Who holds which profession. The browser needs only this; the server stays authoritative for who may sign. */
+  signers?: readonly { id: string; profession?: Profession }[];
 }
 
 /** One object wiring departments → guardrails → brain → gateway → warehouse → ledger → HITL → learning. */
@@ -73,6 +88,8 @@ export class Platform {
   private tombstoned = new Set<string>();
   private onPersistError: (e: Error) => void;
   private sequencer?: Sequencer;
+  private signingPolicy: SigningPolicy;
+  private signers: readonly { id: string; profession?: Profession }[];
   private persistTail: Promise<void> = Promise.resolve();
 
   constructor(o: PlatformOptions = {}) {
@@ -80,6 +97,8 @@ export class Platform {
     this.warehouse = new Warehouse(o.adapter ?? new MemoryAdapter());
     this.engine = o.engine;
     this.sequencer = o.sequencer;
+    this.signingPolicy = o.signing ?? DEFAULT_SIGNING;
+    this.signers = o.signers ?? [];
     this.wire([], []);
     this.factsFn = o.facts ?? (() => ({}));
     this.knownNames = o.knownNames ?? [];
@@ -301,7 +320,7 @@ export class Platform {
     if (editor.kind !== 'human') throw new Error('Only a human can edit an artefact.');
     if (cur.status === 'RATIFIED' || cur.status === 'INGESTED') throw new RunRefused('hitl', 'A ratified artefact is final. Start a revision instead.');
     const clean = JSON.parse(JSON.stringify(doc)) as Doc;
-    const next: Artefact = { ...cur, id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: 'DRAFT', approvedBy: undefined, at: new Date().toISOString() };
+    const next: Artefact = { ...withoutSigning(cur), id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: 'DRAFT', approvedBy: undefined, at: new Date().toISOString() };
     // learner identifiers can never be saved via an edit either
     try {
       deidentify(JSON.stringify(clean), ['edit']);
@@ -324,18 +343,31 @@ export class Platform {
     return next;
   }
 
-  /** HITL. No agent, no self-approval where the contract demands a second person, no skip flag. */
-  async decide(artefactId: string, approver: Actor, decision: 'APPROVED' | 'REJECTED', note: string, agent?: AgentContract) {
+  /**
+   * HITL. No agent, no self-approval where the contract demands a second person, no skip flag. When the caller does not
+   * pass the agent, its contract is resolved from the artefact (built-in, else a custom definition in this warehouse), so
+   * the gates always run.
+   */
+  async decide(artefactId: string, approver: Actor, decision: 'APPROVED' | 'REJECTED', note: string, given?: AgentContract) {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error('Unknown artefact.');
+    const agent = given ?? contractFor(cur.agentId, this.warehouse);
     if (approver.kind !== 'human' || isAutonomous(approver.id)) throw new RunRefused('hitl', 'Only a named human can approve or reject.');
     if (cur.status !== 'IN_REVIEW') throw new RunRefused('hitl', 'Artefact must be submitted for review first.');
-    if (agent?.secondApprover && approver.id === cur.requestedBy) throw new RunRefused('hitl', 'This agent requires a second person to approve.');
+    // Only a secondApprover agent restricts the author. Solo mode relaxes that for a plain secondApprover agent;
+    // one that is also twoPerson or professionalReview never relaxes. (The two-person rule bites at countersign.)
+    let mark: { signing?: typeof SINGLE_SIGNER } = {};
+    if (agent?.secondApprover && approver.id === cur.requestedBy) {
+      if (requiresTwoPerson(agent) || this.signingPolicy.mode !== 'solo') throw new RunRefused('hitl', 'This agent requires a second person to approve.');
+      if (decision === 'APPROVED') mark = { signing: SINGLE_SIGNER };
+    }
     if (decision === 'REJECTED' && !note.trim()) throw new RunRefused('hitl', 'A rejection needs a reason.');
-    const next: Artefact = { ...cur, id: artefactId, status: decision, approvedBy: approver.id, note, at: new Date().toISOString() };
+    const next: Artefact = { ...withoutSigning(cur), id: artefactId, status: decision, approvedBy: approver.id, note, at: new Date().toISOString(), ...mark };
     await this.warehouse.put('artefact_versions', { ...next, editedBy: approver.id });
-    await this.warehouse.put('approvals', { id: newId('apr'), artefactId, decision, approver: approver.id, note, at: next.at });
-    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'hitl.' + decision.toLowerCase(), subject: artefactId, detail: { note } });
+    await this.warehouse.put('approvals', { id: newId('apr'), artefactId, decision, approver: approver.id, version: cur.version, note, at: next.at, ...mark });
+    // An approval names the version and content it approves, so the server can bind the solo wait to this exact approval.
+    const bound = decision === 'APPROVED' ? { version: cur.version, docHash: cur.docHash ?? (await sha256Hex(canonical(cur.doc))) } : {};
+    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'hitl.' + decision.toLowerCase(), subject: artefactId, detail: { note, ...mark, ...bound } });
     return next;
   }
 
@@ -343,21 +375,37 @@ export class Platform {
    * Second signature. A different human from the approver countersigns the exact content that was approved; that
    * ratifies it, and then (unless the agent's contract says it is not relevant) it is ingested.
    */
-  async countersign(artefactId: string, signer: Actor, note: string, agent?: AgentContract): Promise<Artefact> {
+  async countersign(artefactId: string, signer: Actor, note: string, given?: AgentContract, now: Date = new Date()): Promise<Artefact> {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error('Unknown artefact.');
+    const agent = given ?? contractFor(cur.agentId, this.warehouse); // resolved from the artefact when the caller omits it
     if (signer.kind !== 'human' || isAutonomous(signer.id)) throw new RunRefused('hitl', 'Only a named human can countersign.');
     if (cur.status !== 'APPROVED') throw new RunRefused('hitl', 'Only an approved artefact can be countersigned.');
-    if (signer.id === cur.approvedBy) throw new RunRefused('hitl', 'A different person from the approver must countersign.');
+    const single = signer.id === cur.approvedBy;
+    const twoPerson = agent !== undefined && requiresTwoPerson(agent);
+    if (single && twoPerson) throw new RunRefused('hitl', 'A different person from the approver must countersign.');
+    const required = agent?.professionalReview;
+    if (required && !holdsProfession(this.signers, signer.id, required)) throw new RunRefused('hitl', `Only a registered ${required.replace('_', ' ')} can countersign this artefact.`);
+    const prof = required ? { profession: required } : {};
+    if (single) {
+      if (this.signingPolicy.mode !== 'solo') throw new RunRefused('hitl', 'A different person from the approver must countersign.');
+      const left = soloWaitRemainingMs(cur.at, now, this.signingPolicy);
+      if (!(left <= 0)) {
+        const mins = Number.isFinite(left) ? Math.ceil(left / 60000) : Math.ceil(this.signingPolicy.waitMs / 60000);
+        throw new RunRefused('hitl', `Solo signing: ${mins} minute${mins === 1 ? '' : 's'} left to wait after approval before you can countersign your own approval.`);
+      }
+    }
+    const mark = single ? { signing: SINGLE_SIGNER } : {};
     const n = (note ?? '').trim();
     if (n.length > 300) throw new RunRefused('hitl', 'Keep the countersignature note to 300 characters.');
     const docHash = cur.docHash ?? (await sha256Hex(canonical(cur.doc)));
     const at = new Date().toISOString();
-    const next: Artefact = { ...cur, id: artefactId, docHash, status: 'RATIFIED', countersignedBy: signer.id, ratifiedAt: at, at };
+    const inherited = cur.signing ? { signing: SINGLE_SIGNER } : {}; // set at a solo author self-approval
+    const next: Artefact = { ...withoutSigning(cur), id: artefactId, docHash, status: 'RATIFIED', countersignedBy: signer.id, ratifiedAt: at, at, ...inherited, ...mark };
     await this.warehouse.put('artefact_versions', { ...next, editedBy: signer.id });
-    await this.warehouse.put('countersignatures', { id: newId('sig'), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at });
-    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.countersigned', subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy } });
-    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.ratified', subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id } });
+    await this.warehouse.put('countersignatures', { id: newId('sig'), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at, ...mark, ...prof });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.countersigned', subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy, ...mark, ...prof } });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.ratified', subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id, ...mark, ...prof } });
     if (agent?.ingestion === 'none') return next;
     return this.ingest(artefactId, signer);
   }

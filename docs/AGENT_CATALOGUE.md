@@ -3,7 +3,7 @@
 Roles, tasks and specialist agents for the 16 business operations departments. **Roles are drafted for the founder to review**: the repository defines none, so rename, merge or drop any of them. Each role has two tasks, and each task has one agent.
 
 - 100 agents in total: 100 built, 0 planned.
-- Every agent drafts for a human, needs approval, and invents no numbers or policy. Agents marked **2nd** need a second approver.
+- Every agent drafts for a human, needs approval, and invents no numbers or policy. Agents marked **2nd** need a second approver (in solo mode the author may self-approve, flagged, except for `twoPerson` and `professionalReview` agents; see `docs/REVIEW_BOARD.md`).
 - Ids follow `OPS-<CODE>-nn`. Existing agents keep their numbers. New ones continue from 04.
 - All 100 agents are built. The Batch number in the source is the order they were built: Finance and Government first, then one department per batch.
 
@@ -418,4 +418,4 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 
 1. Do the drafted roles suit how you will run each department? Rename, merge or drop any.
 2. FIN-05 quotes use the pricing formula, which is still a proposal (decision D-1). Approve D-1 before any quote leaves the company.
-3. Departments with legal, employment or funder-facing output carry a second approver. Say if you want more or fewer.
+3. Departments with legal, employment or funder-facing output carry a second approver (see the solo-mode exception in `docs/REVIEW_BOARD.md`). Say if you want more or fewer.

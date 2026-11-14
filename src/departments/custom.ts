@@ -8,7 +8,7 @@ import type { AgentContract, InputField } from '../core/agent';
 import { PURPOSES, type Doc, type Purpose } from '../core/types';
 import { defineAgent, v, type Sec } from './kit';
 import { checkContract } from '../core/contract';
-import { DEPARTMENTS } from './index';
+import { DEPARTMENTS, agentById } from './index';
 import type { CalcOut } from './calc';
 import type { Col, Widget } from './types';
 
@@ -147,7 +147,7 @@ export async function saveDef(s: DefStore, d: CustomDef): Promise<CustomDef> {
   return d;
 }
 /** Custom agents, numbered in creation order within their department. The id is the definition's own id, which the server recognises. */
-export function customAgents(s: DefStore, dept?: string): AgentContract[] {
+export function customAgents(s: Pick<DefStore, 'latest'>, dept?: string): AgentContract[] {
   const seen: Record<string, number> = {};
   const out: AgentContract[] = [];
   for (const d of s.latest<CustomDef>('custom_defs', 'id').filter((x): x is CustomAgentDef => x.kind === 'agent' && !x.deleted).sort((x, y) => x.at.localeCompare(y.at) || x.id.localeCompare(y.id))) {
@@ -158,6 +158,15 @@ export function customAgents(s: DefStore, dept?: string): AgentContract[] {
     if (!checkContract(a, { departments: DEPARTMENTS.map((x) => x.id) }).length) out.push(a);
   }
   return out;
+}
+/**
+ * The contract for an artefact's agent: a built-in agent first, else a custom agent defined in this warehouse's
+ * `custom_defs` (always `secondApprover`, never `twoPerson` or `professionalReview`). The one resolver the Board, the
+ * Studio, the board gate and the Platform use for approval decisions, so a custom agent is never treated as unknown.
+ * An agent definition that breaks the contract rules is not registered (it cannot run, so it has no artefacts).
+ */
+export function contractFor(id: string, s: Pick<DefStore, 'latest'>): AgentContract | undefined {
+  return agentById(id) ?? customAgents(s).find((a) => a.id === id);
 }
 export const customWidgets = (s: DefStore, dept?: string): Widget[] => listDefs(s).filter((d): d is CustomWidgetDef => d.kind === 'widget' && (!dept || d.dept === dept)).map(buildCustomWidget);
 export const customArtefacts = (s: DefStore, dept?: string): CustomArtefactDef[] => listDefs(s).filter((d): d is CustomArtefactDef => d.kind === 'artefact' && (!dept || d.dept === dept));

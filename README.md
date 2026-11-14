@@ -21,7 +21,7 @@ Agents can run on schedules and events under standing orders (proposed by one pe
 
 ### Review board
 
-Output is a draft until a reviewer approves it, a different person countersigns it, and it is ratified and ingested. See `docs/REVIEW_BOARD.md`.
+Output is a draft until a reviewer approves it, a different person countersigns it (except in solo mode, where one registered person may do both steps, flagged; never for `twoPerson` or `professionalReview` agents; see `docs/REVIEW_BOARD.md`), and it is ratified and ingested.
 
 ### AI models
 
@@ -37,7 +37,7 @@ docker compose up -d --build        # http://127.0.0.1:3000, loopback only; put 
 ```
 
 Set `OPS_USERS` in `.env` (see `.env.example`) to require a token per person; without it the server runs in open dev mode
-(loopback only, identity self-declared, publishing disabled). SSO is still an open question (OPQ-002). Audit and fixes:
+(loopback only, identity self-declared, publishing disabled). SSO is still an open question (OPQ-002). Signing is configured with `OPS_SIGNERS` (who may sign, and their profession), `OPS_SIGNING_MODE` (`solo` is a temporary one-signer mode: exactly one non-professional signer, plus any registered professionals; empty means dual) and `OPS_SOLO_WAIT_MINUTES` (wait before a solo countersign, default 10); see `docs/REVIEW_BOARD.md`. Audit and fixes:
 `docs/AUDIT_2026-10-24.md`.
 
 Without any keys it still works: the committed ecosystem snapshot is used and a deterministic local engine drafts.

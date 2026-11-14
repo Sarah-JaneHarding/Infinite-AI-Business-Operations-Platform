@@ -4,7 +4,9 @@ import { useOps } from './store';
 import { apiFetch } from '../core/api';
 import { Badge, Card, statusTone } from './primitives';
 import { toHtml, toMarkdown } from '../core/artefacts/render';
-import { AGENTS, agentById } from '../departments';
+import { AGENTS } from '../departments';
+import { contractFor } from '../departments/custom';
+import { can } from './boardGate';
 import { RunRefused, type Artefact } from '../core/platform';
 import type { Block, Doc } from '../core/types';
 import { download } from './primitives';
@@ -33,8 +35,9 @@ export function BlockEditor({ b, set }: { b: Block; set: (n: Block) => void }) {
 }
 
 function ArtefactPanel({ a }: { a: Artefact }) {
-  const { p, actor, bump, health, mode } = useOps();
-  const agent = agentById(a.agentId);
+  const { p, actor, bump, health, mode, signing } = useOps();
+  const agent = contractFor(a.agentId, p!.warehouse);
+  const approveGate = can(a, actor.id, { signing, now: new Date(), defs: p!.warehouse });
   const [mode2, setMode2] = useState<'preview' | 'markdown' | 'edit' | 'history' | 'ledger'>('preview');
   const [doc, setDoc] = useState<Doc>(a.doc);
   const [note, setNote] = useState('');
@@ -90,7 +93,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
           <input className="input" placeholder="Reason / note (required to reject)" value={note} onChange={(e) => setNote(e.target.value)} />
           <div className="flex flex-wrap gap-2">
             <button className="btn" disabled={a.status !== 'DRAFT'} onClick={() => act(() => p!.submitForReview(a.id, actor), 'Submitted for review.')}><Send size={14} /> Submit for review</button>
-            <button className="btn ok" disabled={a.status !== 'IN_REVIEW'} onClick={() => act(() => p!.decide(a.id, actor, 'APPROVED', note, agent), 'Approved.')}><CheckCircle2 size={14} /> Approve</button>
+            <button className="btn ok" disabled={a.status !== 'IN_REVIEW' || !approveGate.ok} title={a.status === 'IN_REVIEW' && !approveGate.ok ? approveGate.why : ''} onClick={() => act(() => p!.decide(a.id, actor, 'APPROVED', note, agent), 'Approved.')}><CheckCircle2 size={14} /> Approve</button>
             <button className="btn danger" disabled={a.status !== 'IN_REVIEW'} onClick={() => act(() => p!.decide(a.id, actor, 'REJECTED', note, agent), 'Rejected.')}><XCircle size={14} /> Reject</button>
             <button className="btn primary" disabled={a.status !== 'APPROVED' || a.approvedBy === actor.id} title={a.status === 'APPROVED' && a.approvedBy === actor.id ? 'A different person from the approver must countersign' : ''} onClick={() => act(() => p!.countersign(a.id, actor, note, agent), 'Countersigned and ratified.')}><PenLine size={14} /> Countersign and ratify</button>
           </div>

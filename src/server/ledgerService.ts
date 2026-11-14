@@ -1,7 +1,8 @@
 import { canonical, sha256Hex } from '../core/crypto';
 import type { LedgerEntry } from '../core/types';
 import type { Rec } from '../core/warehouse';
-import { MAX_RECORDS, Rejected, type ReadStore } from './validate';
+import { agentById } from '../departments';
+import { MAX_RECORDS, Rejected, countersignMarker, type ReadStore } from './validate';
 
 const GENESIS = '0'.repeat(64);
 const MAX_DETAIL_BYTES = 16 * 1024;
@@ -27,6 +28,13 @@ export function appendLedger(store: LedgerStore, input: unknown, knownSeq: unkno
   return run;
 }
 
+/**
+ * Ledger writes queue here, per store. Warehouse writes queue separately (`serial` in server.ts), so a ledger append can
+ * interleave with a warehouse append. That is safe because both sides only grow (rows and entries are appended, never
+ * updated or deleted) and every cross-check fails closed: a `hitl.*` entry checked before its decision is stored is
+ * refused 409, and a solo countersign checked before its `hitl.approved` entry is stored is refused 409. Neither order
+ * lets something through that a strictly serial order would refuse.
+ */
 const tails = new WeakMap<object, Promise<unknown>>();
 
 /** Actions only the server writes. Budgets and test results are counted from them, so a client must not be able to add them. */
@@ -51,8 +59,20 @@ async function write(store: LedgerStore, input: unknown, knownSeq: unknown, acto
   // A decision or submission is only ledgered if the warehouse already holds the matching state.
   const art = store.list('artefact_versions').filter((r) => r.id === subject).at(-1);
   if (/^hitl\.(approved|rejected)$/.test(action) && (art?.status !== action.slice(5).toUpperCase() || art.approvedBy !== who)) bad('no recorded decision matches this ledger entry', 409);
+  const d = detail as Record<string, unknown>;
+  // The single-signer marker and the profession in a board entry must say exactly what the warehouse says.
+  if (/^hitl\.(approved|rejected)$/.test(action) && d.signing !== art?.signing) bad('the single-signer marker does not match the recorded decision', 409);
+  if (action === 'hitl.approved') {
+    // Each entry names the version it approves, and there is exactly one per version: the solo wait is timed from it.
+    if (typeof d.version !== 'number' || d.version !== art?.version) bad('the approved version does not match the recorded decision', 409);
+    if (store.list('ledger').some((e) => e.action === 'hitl.approved' && e.subject === subject && (e.detail as { version?: unknown } | undefined)?.version === d.version)) bad('this approval is already in the ledger', 409);
+  }
   if (action === 'artefact.submit' && art?.status !== 'IN_REVIEW') bad('artefact is not in review', 409);
-  if (/^artefact\.(countersigned|ratified)$/.test(action) && ((art?.status !== 'RATIFIED' && art?.status !== 'INGESTED') || art?.countersignedBy !== who)) bad('no recorded countersignature matches this ledger entry', 409);
+  if (/^artefact\.(countersigned|ratified)$/.test(action)) {
+    if (!art || (art.status !== 'RATIFIED' && art.status !== 'INGESTED') || art.countersignedBy !== who) return bad('no recorded countersignature matches this ledger entry', 409);
+    if (d.signing !== countersignMarker(art)) bad('the single-signer marker does not match the recorded countersignature', 409);
+    if (d.profession !== agentById(String(art.agentId))?.professionalReview) bad('the profession does not match the agent contract', 409);
+  }
   if (action === 'artefact.ingested' && art?.status !== 'INGESTED') bad('artefact is not ingested', 409);
   // Erasure acts are only ledgered when the warehouse holds the matching state, by the same person.
   const er = store.list('erasure_requests').filter((r) => r.id === subject).at(-1);
