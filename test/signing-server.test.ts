@@ -10,6 +10,8 @@ import { Rejected, validateAppend, type AppendCtx, type ReadStore } from '../src
 import { appendLedger, type LedgerStore } from '../src/server/ledgerService';
 import { ratifiedProblem } from '../src/server/finality';
 import type { Signer } from '../src/server/signing';
+import { contractFor, customAgents, saveDef, type CustomAgentDef } from '../src/departments/custom';
+import { can } from '../src/ui/boardGate';
 
 type Row = Record<string, unknown>;
 const DOC = { title: 'one', blocks: [], meta: {} };
@@ -624,5 +626,63 @@ describe('round trip: the server accepts exactly what a correct Platform writes'
     expect('signing' in done).toBe(false);
     expect(rows.countersignatures).toEqual([expect.objectContaining({ signer: 'lerato', profession: 'attorney' })]);
     expect(ratifiedProblem(store(rows), store(rows).list('artefact_versions').filter((r) => r.id === a.id).at(-1))).toBeNull();
+  });
+  describe('a custom agent, decided and countersigned the way the Board calls the Platform', () => {
+    const def: CustomAgentDef = { id: 'agt-roundtrip1', kind: 'agent', dept: 'finance', name: 'Petty cash note', summary: 'Records a petty cash purchase', purpose: 'financial_planning', inputs: [{ key: 'what', label: 'What', kind: 'text' }], sections: [{ h: 'What', kind: 'input', ref: 'what' }], by: 'sarah', at: '2026-11-11T08:00:00Z' };
+    const later = () => new Date(Date.now() + 11 * 60_000);
+
+    async function drafted(signing: SigningPolicy, signers: Signer[], extra: () => Partial<AppendCtx> = () => ({})) {
+      const { adapter, errors, rows } = serverBacked(() => ({ signing, signers, ...extra() }));
+      const p = await new Platform({ adapter, signing, signers, onPersistError: (e) => errors.push(e) }).init();
+      await saveDef(p.warehouse, def);
+      const contract = customAgents(p.warehouse).find((a) => a.id === def.id);
+      if (!contract) throw new Error('the custom agent did not register');
+      const sarah = human('sarah');
+      const a = await p.runAgent(contract, { what: 'Printer paper' }, sarah);
+      await p.submitForReview(a.id, sarah);
+      return { p, a, errors, rows, sarah };
+    }
+
+    it('contractFor resolves the custom agent from the warehouse: second approver, never two-person or professional', async () => {
+      const { p, a } = await drafted(DUAL, []);
+      const c = contractFor(a.agentId, p.warehouse);
+      expect(c).toMatchObject({ id: def.id, secondApprover: true });
+      expect(c?.twoPerson).toBeUndefined();
+      expect(c?.professionalReview).toBeUndefined();
+      expect(contractFor('agt-no-such-agent', p.warehouse)).toBeUndefined();
+    });
+
+    it('dual: the author approving their own run is refused by the Board gate, the Platform and the server', async () => {
+      const { p, a, errors, rows, sarah } = await drafted(DUAL, []);
+      const cur = p.artefact(a.id)!;
+      expect(can(cur, 'sarah', { signing: DUAL, now: new Date(), defs: p.warehouse })).toEqual({ ok: false, why: 'This agent needs someone other than its author to approve.' });
+      // the Board passes contractFor(...); a caller that omits the agent gets the same answer, resolved from the artefact
+      await expect(p.decide(a.id, sarah, 'APPROVED', 'mine', contractFor(a.agentId, p.warehouse))).rejects.toThrow(/second person to approve/);
+      await expect(p.decide(a.id, sarah, 'APPROVED', 'mine')).rejects.toThrow(/second person to approve/);
+      // a forged self-approval straight to the server is refused too
+      const forged = await rej(validateAppend('artefact_versions', { ...cur, status: 'APPROVED', approvedBy: 'sarah' }, { actor: 'sarah', store: store(rows), signing: DUAL }));
+      expect(forged?.status).toBe(403);
+      await p.flush();
+      expect(errors).toEqual([]);
+      // a different person may approve it
+      await expect(p.decide(a.id, human('dan'), 'APPROVED', 'ok', contractFor(a.agentId, p.warehouse))).resolves.toMatchObject({ status: 'APPROVED', approvedBy: 'dan' });
+    });
+
+    for (const how of ['with contractFor, as the Board calls it', 'without the agent (the Platform resolves it)'] as const) {
+      it(`solo: the author self-approves (${how}), carrying the marker, then countersigns after the wait`, async () => {
+        const signers = [signer('sarah', '*')];
+        const { p, a, errors, rows, sarah } = await drafted(SOLO, signers, () => ({ reauthed: true, now: later() }));
+        const agent = how === 'without the agent (the Platform resolves it)' ? undefined : contractFor(a.agentId, p.warehouse);
+        expect(can(p.artefact(a.id)!, 'sarah', { signing: SOLO, now: new Date(), defs: p.warehouse }).ok).toBe(true);
+        const approved = await p.decide(a.id, sarah, 'APPROVED', 'ok', agent);
+        expect(approved).toMatchObject({ status: 'APPROVED', approvedBy: 'sarah', signing: 'single-signer' });
+        const done = await p.countersign(a.id, sarah, '', agent, later());
+        await p.flush();
+        expect(errors).toEqual([]);
+        expect(done).toMatchObject({ status: 'INGESTED', approvedBy: 'sarah', countersignedBy: 'sarah', signing: 'single-signer' });
+        expect(rows.approvals).toEqual([expect.objectContaining({ approver: 'sarah', signing: 'single-signer' })]);
+        expect(ratifiedProblem(store(rows), store(rows).list('artefact_versions').filter((r) => r.id === a.id).at(-1))).toBeNull();
+      });
+    }
   });
 });

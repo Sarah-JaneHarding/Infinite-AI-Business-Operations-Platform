@@ -6,6 +6,7 @@ import { apiFetch, withReauth } from '../core/api';
 import type { LedgerEntry } from '../core/types';
 import { Badge, Card, statusTone } from './primitives';
 import { agentById } from '../departments';
+import { contractFor } from '../departments/custom';
 import { isAutonomous, RunRefused, type Artefact } from '../core/platform';
 import { failedChecks, runAcceptance } from '../core/acceptance';
 
@@ -93,8 +94,8 @@ function Item({ a, me, act, open, failed = [] }: { a: Artefact; me: string; act:
   const { p, actor, signing } = useOps();
   const [note, setNote] = useState('');
   const [token, setToken] = useState('');
-  const agent = agentById(a.agentId);
-  const gate = can(a, me, { signing, now: new Date(), approvedAtFromLedger: approvedAtFromLedger(p!.ledger.all, a) });
+  const agent = contractFor(a.agentId, p!.warehouse);
+  const gate = can(a, me, { signing, now: new Date(), defs: p!.warehouse, approvedAtFromLedger: approvedAtFromLedger(p!.ledger.all, a) });
   const hint = signingHint(agent);
   const isApprover = a.approvedBy === me;
   const auto = isAutonomous(a.requestedBy);

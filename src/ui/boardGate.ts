@@ -1,10 +1,12 @@
-import { agentById } from '../departments';
+import { contractFor, type DefStore } from '../departments/custom';
 import type { Artefact } from '../core/platform';
 import { requiresTwoPerson, soloWaitRemainingMs, type SigningPolicy } from '../core/signing';
 
 export interface GateContext {
   signing: SigningPolicy;
   now: Date;
+  /** Where custom agent definitions live (the Platform's warehouse), so a custom agent's contract is known. */
+  defs: Pick<DefStore, 'latest'>;
   /** Server-stamped time of the latest `hitl.approved` ledger entry for this artefact version, if the ledger holds one yet. */
   approvedAtFromLedger?: string;
 }
@@ -21,7 +23,7 @@ export function signingHint(agent: { twoPerson?: boolean; professionalReview?: s
 
 /** What this person may do to this artefact now, or why not. Mirrors the rules the server enforces; the server stays the authority. */
 export function can(a: Artefact, me: string, ctx: GateContext): { ok: boolean; why: string } {
-  const agent = agentById(a.agentId);
+  const agent = contractFor(a.agentId, ctx.defs);
   if (a.status === 'IN_REVIEW') {
     if (agent?.secondApprover && a.requestedBy === me && (ctx.signing.mode !== 'solo' || requiresTwoPerson(agent))) return { ok: false, why: 'This agent needs someone other than its author to approve.' };
     return { ok: true, why: '' };

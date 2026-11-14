@@ -8,6 +8,7 @@ import type { AgentContract, RunContext } from './agent';
 import type { Actor, Doc, LedgerEntry, Status } from './types';
 import { deidentify, detectPii, LearnerDataRefused } from './guardrails/pii';
 import { DEFAULT_SIGNING, SINGLE_SIGNER, holdsProfession, requiresTwoPerson, soloWaitRemainingMs, type Profession, type SigningPolicy } from './signing';
+import { contractFor } from '../departments/custom';
 import { ERASURE_CATEGORIES, normalizeSubject, type ErasureCategory, type ErasureRequest } from './erasure';
 
 export interface Artefact {
@@ -342,10 +343,15 @@ export class Platform {
     return next;
   }
 
-  /** HITL. No agent, no self-approval where the contract demands a second person, no skip flag. */
-  async decide(artefactId: string, approver: Actor, decision: 'APPROVED' | 'REJECTED', note: string, agent?: AgentContract) {
+  /**
+   * HITL. No agent, no self-approval where the contract demands a second person, no skip flag. When the caller does not
+   * pass the agent, its contract is resolved from the artefact (built-in, else a custom definition in this warehouse), so
+   * the gates always run.
+   */
+  async decide(artefactId: string, approver: Actor, decision: 'APPROVED' | 'REJECTED', note: string, given?: AgentContract) {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error('Unknown artefact.');
+    const agent = given ?? contractFor(cur.agentId, this.warehouse);
     if (approver.kind !== 'human' || isAutonomous(approver.id)) throw new RunRefused('hitl', 'Only a named human can approve or reject.');
     if (cur.status !== 'IN_REVIEW') throw new RunRefused('hitl', 'Artefact must be submitted for review first.');
     // Only a secondApprover agent restricts the author. Solo mode relaxes that for a plain secondApprover agent;
@@ -369,9 +375,10 @@ export class Platform {
    * Second signature. A different human from the approver countersigns the exact content that was approved; that
    * ratifies it, and then (unless the agent's contract says it is not relevant) it is ingested.
    */
-  async countersign(artefactId: string, signer: Actor, note: string, agent?: AgentContract, now: Date = new Date()): Promise<Artefact> {
+  async countersign(artefactId: string, signer: Actor, note: string, given?: AgentContract, now: Date = new Date()): Promise<Artefact> {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error('Unknown artefact.');
+    const agent = given ?? contractFor(cur.agentId, this.warehouse); // resolved from the artefact when the caller omits it
     if (signer.kind !== 'human' || isAutonomous(signer.id)) throw new RunRefused('hitl', 'Only a named human can countersign.');
     if (cur.status !== 'APPROVED') throw new RunRefused('hitl', 'Only an approved artefact can be countersigned.');
     const single = signer.id === cur.approvedBy;
