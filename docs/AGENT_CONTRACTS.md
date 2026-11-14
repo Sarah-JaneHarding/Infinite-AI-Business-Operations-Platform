@@ -12,13 +12,18 @@ Every agent is a contract: data a machine can check. `src/core/contract.ts` hold
 | **C2** Owner | An accountable owner *role* (never a person, no personal data). |
 | **C3** Purpose | One purpose from the closed list, among the contract's allowed purposes. |
 | **C4** Data-class ceiling | public, internal, confidential or personal. Never learner. Personal needs a lawful basis. |
-| **C5** Approval cannot be skipped | `requiresApproval` is true; custom agents also need a second approver. |
+| **C5** Approval cannot be skipped | `requiresApproval` is true; custom agents also need a second approver, except that in solo mode the author may approve their own run (flagged `single-signer`), because custom agents are not `twoPerson`. |
 | **C6** Allowed models | If `models` lists providers they must be known, and **the model hub tries only those**. No list means any attested provider. |
 | **C7** Budget | Whole-number prompt budget, at most 20,000 characters (the hub's input limit). |
 | **C8** Evaluation | `evalRef` names a test file under `test/` (the tests check it exists). |
 | **C9** Inputs | At most 12, unique keys, labels, options for a choice. |
 | **C10** Reads and outputs | Known Brain tiers and formats; `ingestion` is `library` or `none`. |
 | **C11** Two people and professional review | `twoPerson`, when present, is `true`. `professionalReview`, when present, is `attorney`, `accountant` or `tax_practitioner`, and implies two people. Neither is ever relaxed by solo signing: the countersigner differs from the approver and, for `professionalReview`, holds that profession in the signer list. Drafting is never gated. |
+
+Optional signing fields: `twoPerson: true` means the countersigner must be a different person from the approver in every mode,
+with no solo fallback. `professionalReview` (`attorney`, `accountant` or `tax_practitioner`) implies `twoPerson` and requires the
+countersigner to be a registered signer holding that profession. Defaults: OPS-LEG-01 to 05 need an attorney; OPS-SEC-01 and
+OPS-PPL-04 are `twoPerson`. See `docs/REVIEW_BOARD.md`.
 
 What the contract does **not** do: it does not stop a person using the browser to call `/api/gateway/complete` without an
 `agentId`. Purpose and provider limits bind only when the call names a built-in agent, and always bind autonomous runs and

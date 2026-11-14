@@ -142,7 +142,7 @@ signer that rule makes the platform unusable, and the owner has said they sign e
   ratified text is built into the site. Unratified numbers render as nothing, never as a guess (`[UNSOURCED]` rule).
 - No pricing page until D-1/OPQ-026 are confirmed; "request a demo" is a mailto to the brand address (no form, no tracking
   by default; any analytics is a separate decision).
-- Deploy target: Cloudflare Pages (as the planning package recommends); deployment needs the owner's account and domain.
+- Deploy target: **IONOS** for hosting, domain and email (replaces Cloudflare Pages). Deployment needs the owner's IONOS account.
 
 ## 6. Delivery plan (each item is one or more draft PRs, <= ~400 lines each)
 
@@ -165,12 +165,13 @@ how to generate the font manifest; page copy drafts (they go through the Board);
 1. The public site lives in the **Ops repo** (`site/`) because session access is limited to two repos.
 2. Solo mode needs a **10-minute wait and re-authentication** between approve and countersign.
 3. The Ecosystem's new API exposes **counts only**, never identifiers, to stay clear of OPQ-007.
-4. **Cloudflare Pages** for hosting, from the planning package; not decided by the owner.
+4. Hosting: my call to use Cloudflare Pages is **superseded**; the owner chose IONOS. The hosting choice is now the owner's.
 5. Ecosystem re-skin goes dark-first; any light mode is a follow-up.
 
 ## 9. Open items needing the owner (not guessed)
 
 - Approve solo-signer mode (5.1).
-- Enable branch protection and code-owner review on both repos (settings only the owner can change).
-- Provide the domain, Cloudflare account, and confirm pricing/VAT status before any price is shown.
-- Company registration and VAT numbers (brand letterhead blanks) for the site footer.
+- Branch protection and code-owner review were switched on by the owner; OPQ-027 (the owner approving their own PRs) is resolved in `docs/PR_POLICY.md`.
+- Deployment needs the owner's IONOS account (hosting, domain and email).
+- Payments are not finalised, so there is no pricing page and no price anywhere on the site.
+- Company and VAT registration numbers do not exist yet, so footers omit them rather than invent them.

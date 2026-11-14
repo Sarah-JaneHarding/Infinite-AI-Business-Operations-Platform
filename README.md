@@ -37,7 +37,7 @@ docker compose up -d --build        # http://127.0.0.1:3000, loopback only; put 
 ```
 
 Set `OPS_USERS` in `.env` (see `.env.example`) to require a token per person; without it the server runs in open dev mode
-(loopback only, identity self-declared, publishing disabled). SSO is still an open question (OPQ-002). Audit and fixes:
+(loopback only, identity self-declared, publishing disabled). SSO is still an open question (OPQ-002). Signing is configured with `OPS_SIGNERS` (who may sign, and their profession), `OPS_SIGNING_MODE` (`solo` is a temporary one-signer mode) and `OPS_SOLO_WAIT_MINUTES` (wait before a solo countersign, default 10); see `docs/REVIEW_BOARD.md`. Audit and fixes:
 `docs/AUDIT_2026-10-24.md`.
 
 Without any keys it still works: the committed ecosystem snapshot is used and a deterministic local engine drafts.
