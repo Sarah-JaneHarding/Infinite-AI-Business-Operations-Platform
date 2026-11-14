@@ -21,7 +21,7 @@ Agents can run on schedules and events under standing orders (proposed by one pe
 
 ### Review board
 
-Output is a draft until a reviewer approves it, a different person countersigns it, and it is ratified and ingested. See `docs/REVIEW_BOARD.md`.
+Output is a draft until a reviewer approves it, a different person countersigns it (except in solo mode, where one registered person may do both steps, flagged; never for `twoPerson` or `professionalReview` agents; see `docs/REVIEW_BOARD.md`), and it is ratified and ingested.
 
 ### AI models
 
