@@ -634,3 +634,76 @@ describe('server: autonomy configuration fails closed', () => {
     expect(r?.err).toMatch(msg);
   }, 20_000);
 });
+
+// ---- signing: the signer registry and solo mode, end to end ----
+describe('server: signing registry and solo mode', () => {
+  const SOLO_ENV = { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'sarah|Sarah Harding|*', OPS_SIGNING_MODE: 'solo', OPS_SOLO_WAIT_MINUTES: '1', ANTHROPIC_API_KEY: 'sk-ant-not-real-key-for-tests' };
+  let solo = '';
+  beforeAll(async () => { solo = await boot(3431, SOLO_ENV); }, 60_000);
+
+  it('signing: whoami reports dual, ten minutes and no signer in the default configuration', async () => {
+    expect((await call(base, '/api/whoami', { token: T_DAN })).json).toMatchObject({ actor: 'dan', mode: 'users', signing: { mode: 'dual', waitMinutes: 10 }, signer: false });
+    expect((await call(open, '/api/whoami')).json).toMatchObject({ actor: null, mode: 'open', signing: { mode: 'dual', waitMinutes: 10 }, signer: false });
+  });
+
+  it('signing: whoami reports solo, the wait and that the actor is a registered signer', async () => {
+    expect((await call(solo, '/api/whoami', { token: T_SARAH })).json).toMatchObject({ actor: 'sarah', mode: 'users', signing: { mode: 'solo', waitMinutes: 1 }, signer: true });
+  });
+
+  it('signing: a solo countersign needs a fresh sign-in; a wrong one is refused and counts against the bad-token limit', async () => {
+    const agent = AGENTS.find((a) => !a.secondApprover)!;
+    const inputs = Object.fromEntries(agent.inputs.map((i) => [i.key, i.kind === 'number' ? '5' : i.kind === 'select' ? i.options![0] : 'Pilot school onboarding process']));
+    const withToken = (token: string): typeof fetch => (u, i) => fetch(u, { ...i, headers: { ...(i?.headers as Record<string, string>), 'x-ops-token': token } });
+    const p = await new Platform({ adapter: new ServerAdapter(`${solo}/api/warehouse`, withToken(T_SARAH)), sequencer: serverSequencer(`${solo}/api/ledger`, withToken(T_SARAH)) }).init();
+    const a = await p.runAgent(agent, inputs, human('sarah'));
+    await p.submitForReview(a.id, human('sarah'));
+    await p.decide(a.id, human('sarah'), 'APPROVED', 'self-approved in solo mode', agent);
+    await p.flush();
+    const cur = p.artefact(a.id)!;
+    const body = { ...cur, status: 'RATIFIED', countersignedBy: 'sarah', ratifiedAt: new Date().toISOString(), signing: 'single-signer' };
+    const send = (headers?: Record<string, string>) => call(solo, '/api/warehouse/artefact_versions', { token: T_SARAH, body, headers });
+
+    const none = await send();
+    expect(none.status).toBe(403);
+    expect(String(none.json?.error)).toMatch(/sign in again/);
+    const wrong = await send({ 'x-ops-reauth': 'x'.repeat(24) });
+    expect(wrong.status).toBe(403);
+    expect(String(wrong.json?.error)).toMatch(/sign in again/);
+    // the right sign-in is accepted as a sign-in; the solo wait is what holds the countersignature back
+    const right = await send({ 'x-ops-reauth': T_SARAH });
+    expect(right.status).toBe(409);
+    expect(String(right.json?.error)).toMatch(/left to wait/);
+
+    // each wrong sign-in counts as a bad token: after ten in a minute the address is refused
+    let limited = 0;
+    for (let i = 0; i < 12; i++) if ((await send({ 'x-ops-reauth': 'y'.repeat(24) })).status === 429) limited++;
+    expect(limited).toBeGreaterThan(0);
+  }, 60_000);
+});
+
+describe('server: signing configuration fails closed', () => {
+  const tryBoot = (env: Record<string, string>) => new Promise<{ code: number | null; err: string } | null>((resolve) => {
+    const p = spawn(process.execPath, [join(ROOT, 'node_modules/tsx/dist/cli.mjs'), join(ROOT, 'server.ts')], {
+      cwd: mkdtempSync(join(tmpdir(), 'ops-e2e-')),
+      env: { PATH: process.env.PATH ?? '', NODE_ENV: 'production', HOST: '127.0.0.1', ...env },
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    let err = '';
+    p.stderr?.on('data', (d) => (err += String(d)));
+    const t = setTimeout(() => { p.kill(); resolve(null); }, 8000);
+    p.on('exit', (code) => { clearTimeout(t); resolve({ code, err }); });
+  });
+  const ONE = { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'sarah|Sarah Harding|*' };
+  const cases: Array<[string, Record<string, string>, RegExp]> = [
+    ['solo without OPS_USERS', { OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*named users/],
+    ['solo with two signers', { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: 'sarah|Sarah|*;dan|Dan|*', OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*exactly one signer/],
+    ['a signer who is not a user', { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'dan|Dan|*' }, /FATAL: OPS_SIGNERS.*not a user/],
+    ['a bad wait value', { ...ONE, OPS_SIGNING_MODE: 'solo', OPS_SOLO_WAIT_MINUTES: 'soon' }, /FATAL: OPS_SOLO_WAIT_MINUTES/],
+    ['an unknown mode', { ...ONE, OPS_SIGNING_MODE: 'triple' }, /FATAL: OPS_SIGNING_MODE.*unknown mode/],
+  ];
+  it.each(cases)('signing: exits with FATAL for %s', async (_name, env, re) => {
+    const r = await tryBoot({ PORT: '3441', ...env });
+    expect(r?.code).toBe(1);
+    expect(r?.err).toMatch(re);
+  }, 20_000);
+});

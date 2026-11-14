@@ -9,6 +9,8 @@ import { ProposalPublisher, proposalFromArtefact, PublishRefused } from './src/c
 import { FileStore } from './src/server/fileAdapter';
 import { authenticate, parseAuth } from './src/server/auth';
 import { Rejected, validateAppend } from './src/server/validate';
+import { parseSigners, parseSigningPolicy, type Signer } from './src/server/signing';
+import type { SigningPolicy } from './src/core/signing';
 import { RateLimiter } from './src/server/rate';
 import { appendLedger } from './src/server/ledgerService';
 import { ratifiedProblem } from './src/server/finality';
@@ -40,6 +42,17 @@ try {
   process.exit(1);
 }
 
+// The signer registry and the signing mode fail closed in the same way: a bad value stops the boot.
+let signers: Signer[];
+let signing: SigningPolicy;
+try {
+  signers = parseSigners(env.OPS_SIGNERS, auth, DEPARTMENTS.map((d) => d.id));
+  signing = parseSigningPolicy(env, signers, auth);
+} catch (err) {
+  console.error(`FATAL: ${(err as Error).message}`);
+  process.exit(1);
+}
+
 // A built-in agent that breaks its contract stops the boot: better no server than an agent without its promises.
 const contractProblems = checkRegistry(AGENTS, { departments: DEPARTMENTS.map((d) => d.id) });
 if (Object.keys(contractProblems).length) {
@@ -60,7 +73,7 @@ try {
 
 /** A server-side write takes the same validated, serialised path a client write takes. */
 const appendValidated = (collection: string, rec: Rec, actor: string) => serial(async () => {
-  const v = await validateAppend(collection, rec, { actor, store });
+  const v = await validateAppend(collection, rec, { actor, store, signing, signers, reauthed: false, now: new Date() });
   store.append(collection, v);
 });
 let autonomy: AutonomyService;
@@ -146,7 +159,15 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-app.get('/api/whoami', (_q, res) => res.json({ actor: actorOf(res), mode: auth.mode }));
+app.get('/api/whoami', (_q, res) => {
+  const actor = actorOf(res);
+  res.json({
+    actor,
+    mode: auth.mode,
+    signing: { mode: signing.mode, waitMinutes: signing.waitMs / 60_000 },
+    signer: actor !== null && signers.some((s) => s.id === actor)
+  });
+});
 
 // ---- connector: read-only live status, cached briefly ----
 let cache: { at: number; status: LiveStatus } | null = null;
@@ -223,8 +244,17 @@ app.post('/api/ledger', wrap(async (req, res) => {
 app.get('/api/warehouse', (_q, res) => res.json(store.load()));
 app.post('/api/warehouse/:collection', wrap(async (req, res) => {
   try {
+    const actor = actorOf(res);
+    // A fresh sign-in is the actor's own token again in x-ops-reauth. A header that does not match counts as a bad token
+    // (so it cannot be brute-forced) and simply yields reauthed: false; the validator refuses what needs it.
+    let reauthed = false;
+    const again = req.header('x-ops-reauth');
+    if (auth.mode === 'users' && actor && again !== undefined) {
+      reauthed = authenticate(auth, again) === actor;
+      if (!reauthed && limits.failure(req, res)) return;
+    }
     await serial(async () => {
-      const rec = await validateAppend(req.params.collection, req.body, { actor: actorOf(res), store, roles: rolesOf(roles, actorOf(res)) });
+      const rec = await validateAppend(req.params.collection, req.body, { actor, store, roles: rolesOf(roles, actor), signing, signers, reauthed, now: new Date() });
       store.append(req.params.collection, rec);
     });
     res.json({ ok: true });
