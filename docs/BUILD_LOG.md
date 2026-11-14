@@ -70,3 +70,8 @@ telemetry, which conflicts with the no-invented-metrics rule. It remains in git 
 - `OPS-CEO-01` drafts an operations review with `[src:ops.*]` tags (service agent, OPQ-028).
 - Connections: signed calendar feed (.ics), HMAC inbound webhook, outgoing digest. OAuth connectors not built (OPQ-027).
 - Visually checked in the dark theme at 1440 px with sample data; not tested against a live multi-user server.
+
+## 2026-11-14: outbound requests rebuilt from the allow-list (CodeQL js/request-forgery)
+- `checkTarget` now builds the request URL from the operator's own allow-list host string plus a validated path, so typed text never becomes the hostname. The path is checked as typed: no `.`/`..` segments (plain or percent-encoded), no encoded or raw slashes or backslashes inside a segment, no control characters, at most 512 characters. Query and fragment are dropped (webhook keys live in the path).
+- Applies to both artefact send and the CEO digest. Address checks, https-only, no redirects and the private-IP test are unchanged.
+- Still open: a hostname could change its address between the check and the connection (DNS rebinding). Closing it means connecting to the checked IP; not done here.

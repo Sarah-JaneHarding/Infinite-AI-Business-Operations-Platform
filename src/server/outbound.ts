@@ -2,6 +2,7 @@
  * Outbound integration: send a ratified artefact to a host the operator has explicitly allowed.
  * Off unless OPS_OUTBOUND_ALLOWLIST names at least one host. Only https, only exact host matches, never an IP or an internal name,
  * and the resolved address is checked again before connecting (see isPrivateIp).
+ * The request URL is rebuilt from the allow-list's own host string and a validated path, so typed text never becomes the hostname.
  */
 import { createHmac } from 'node:crypto';
 import { isIP } from 'node:net';
@@ -19,8 +20,26 @@ export function checkTarget(raw: string, allow: string[]): Target {
   if (u.port && u.port !== '443') return { ok: false, why: 'Only the standard https port is allowed.' };
   const host = u.hostname.toLowerCase().replace(/\.$/, '');
   if (isIP(host) || host.startsWith('[') || !host.includes('.') || /(^|\.)(localhost|local|internal|lan|home|corp)$/.test(host)) return { ok: false, why: 'Internal and numeric addresses are not allowed.' };
-  if (!allow.includes(host)) return { ok: false, why: `${host} is not on the allowed list.` };
-  return { ok: true, url: u };
+  // The hostname of the request is the operator's own allow-list entry, never the typed text.
+  const allowed = allow.find((h) => h === host);
+  if (allowed === undefined) return { ok: false, why: `${host} is not on the allowed list.` };
+  // The URL parser resolves dot segments silently, so the path is checked as it was typed.
+  const typed = /^[a-z][a-z0-9+.-]*:\/\/[^/?#]*([^?#]*)/i.exec(raw.trim())?.[1] ?? '';
+  const path = safePath(typed === '' ? '/' : typed);
+  if (path === undefined) return { ok: false, why: 'That path is not allowed: no "..", encoded slashes, backslashes or control characters.' };
+  // Query and fragment are dropped: incoming-webhook addresses (Slack, Teams, Zapier) carry their key in the path.
+  return { ok: true, url: new URL(`https://${allowed}${path}`) };
+}
+
+/** A path made only of ordinary segments. Refuses traversal ("." / ".."), encoded or raw backslashes and slashes inside a segment, and control characters. */
+export function safePath(pathname: string): string | undefined {
+  if (pathname.length > 512 || /[\\\u0000-\u001f\u007f]/.test(pathname)) return undefined;
+  for (const seg of pathname.split('/')) {
+    let d: string;
+    try { d = decodeURIComponent(seg); } catch { return undefined; }
+    if (d === '.' || d === '..' || /[\\/\u0000-\u001f]/.test(d)) return undefined;
+  }
+  return pathname.startsWith('/') ? pathname : `/${pathname}`;
 }
 
 /** True for loopback, private, link-local, unique-local and other non-public addresses. */
