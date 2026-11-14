@@ -37,6 +37,13 @@ export interface Artefact {
   revisionOf?: string;
 }
 
+/** A copy of the artefact with no `signing` key at all (not even undefined): the marker is part of the signature state. */
+function withoutSigning(a: Artefact): Artefact {
+  const { signing: _dropped, ...rest } = a;
+  void _dropped;
+  return rest;
+}
+
 /** Autonomous actors are named `auto:<order>`. They can draft and submit, and can never approve, countersign or ratify. */
 export const isAutonomous = (id: string) => id.startsWith('auto:');
 
@@ -312,7 +319,7 @@ export class Platform {
     if (editor.kind !== 'human') throw new Error('Only a human can edit an artefact.');
     if (cur.status === 'RATIFIED' || cur.status === 'INGESTED') throw new RunRefused('hitl', 'A ratified artefact is final. Start a revision instead.');
     const clean = JSON.parse(JSON.stringify(doc)) as Doc;
-    const next: Artefact = { ...cur, id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: 'DRAFT', approvedBy: undefined, at: new Date().toISOString() };
+    const next: Artefact = { ...withoutSigning(cur), id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: 'DRAFT', approvedBy: undefined, at: new Date().toISOString() };
     // learner identifiers can never be saved via an edit either
     try {
       deidentify(JSON.stringify(clean), ['edit']);
@@ -349,7 +356,7 @@ export class Platform {
       if (decision === 'APPROVED') mark = { signing: SINGLE_SIGNER };
     }
     if (decision === 'REJECTED' && !note.trim()) throw new RunRefused('hitl', 'A rejection needs a reason.');
-    const next: Artefact = { ...cur, id: artefactId, status: decision, approvedBy: approver.id, note, at: new Date().toISOString(), ...mark };
+    const next: Artefact = { ...withoutSigning(cur), id: artefactId, status: decision, approvedBy: approver.id, note, at: new Date().toISOString(), ...mark };
     await this.warehouse.put('artefact_versions', { ...next, editedBy: approver.id });
     await this.warehouse.put('approvals', { id: newId('apr'), artefactId, decision, approver: approver.id, note, at: next.at, ...mark });
     await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'hitl.' + decision.toLowerCase(), subject: artefactId, detail: { note, ...mark } });
@@ -384,7 +391,8 @@ export class Platform {
     if (n.length > 300) throw new RunRefused('hitl', 'Keep the countersignature note to 300 characters.');
     const docHash = cur.docHash ?? (await sha256Hex(canonical(cur.doc)));
     const at = new Date().toISOString();
-    const next: Artefact = { ...cur, id: artefactId, docHash, status: 'RATIFIED', countersignedBy: signer.id, ratifiedAt: at, at, ...mark };
+    const inherited = cur.signing ? { signing: SINGLE_SIGNER } : {}; // set at a solo author self-approval
+    const next: Artefact = { ...withoutSigning(cur), id: artefactId, docHash, status: 'RATIFIED', countersignedBy: signer.id, ratifiedAt: at, at, ...inherited, ...mark };
     await this.warehouse.put('artefact_versions', { ...next, editedBy: signer.id });
     await this.warehouse.put('countersignatures', { id: newId('sig'), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at, ...mark, ...prof });
     await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.countersigned', subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy, ...mark, ...prof } });

@@ -406,6 +406,36 @@ describe('professional review and two-person agents', () => {
     expect((await refused(p.decide(a.id, sarah, 'APPROVED', '', legalStrict)))?.message).toMatch(/second person/);
   });
 
+  it('a stale single-signer marker does not survive an edit and a different person approving', async () => {
+    const p = await new Platform(solo).init();
+    const s1 = await p.runAgent(strict, inputsFor(strict), sarah);
+    await p.submitForReview(s1.id, sarah);
+    const self = await p.decide(s1.id, sarah, 'APPROVED', 'mine', strict);
+    expect(self.signing).toBe('single-signer');
+    const draft = await p.edit(s1.id, self.doc, sarah);
+    expect('signing' in draft).toBe(false);
+    await p.submitForReview(s1.id, sarah);
+    const other = await p.decide(s1.id, dan, 'APPROVED', 'ok', strict);
+    expect('signing' in other).toBe(false);
+    const done = await p.countersign(s1.id, eve, '', strict, after(other, 0));
+    expect('signing' in done).toBe(false);
+    expect(JSON.stringify(p.warehouse.list('countersignatures'))).not.toMatch(/signing/);
+    expect(JSON.stringify(p.ledger.all.filter((x) => x.action === 'artefact.countersigned' || x.action === 'artefact.ratified'))).not.toMatch(/single-signer|"signing"/);
+  });
+
+  it('a marker set at a solo self-approval stays on the artefact when a different person countersigns, but not on the countersignature or its ledger entries', async () => {
+    const p = await new Platform(solo).init();
+    const s1 = await p.runAgent(strict, inputsFor(strict), sarah);
+    await p.submitForReview(s1.id, sarah);
+    const self = await p.decide(s1.id, sarah, 'APPROVED', 'mine', strict);
+    const done = await p.countersign(s1.id, eve, '', strict, after(self, 0));
+    expect(done).toMatchObject({ status: 'INGESTED', approvedBy: 'sarah', countersignedBy: 'eve', signing: 'single-signer' });
+    expect(JSON.stringify(p.warehouse.list('countersignatures'))).not.toMatch(/signing/);
+    for (const action of ['artefact.countersigned', 'artefact.ratified']) {
+      expect(p.ledger.all.find((x) => x.action === action)?.detail && 'signing' in p.ledger.all.find((x) => x.action === action)!.detail!, action).toBe(false);
+    }
+  });
+
   it('drafting is open: a legal agent runs and submits for review in solo', async () => {
     const p = await new Platform({ ...solo, signers }).init();
     const lg = AGENTS.find((a) => a.dept === 'legal' && a.professionalReview)!;
