@@ -79,6 +79,10 @@ signer that rule makes the platform unusable, and the owner has said they sign e
   show it. A report lists all single-signer ratifications for later second review.
 - Setting the mode to `dual` (default for any registry with two or more signers) restores the existing rule with no
   code change. Agents and `auto:` actors still can never sign, ratify, ingest or merge.
+- **Drafting is never gated, and two-person is a hard rule for legal documents and policies** (owner, 2026-11-14).
+  Agents draft them in every mode, solo included. An agent contract with `twoPerson` (implied by `professionalReview`)
+  can only be ratified by a different person from the approver, in every mode. If no second registered signer exists
+  it stays approved and unratified; it never falls back to solo.
 - **Professional review is never solo.** Owner decision 2026-11-14: solo applies "unless it needs a registered lawyer,
   accountant or tax consultant to countersign it". An agent contract may set `professionalReview` (`attorney`,
   `accountant` or `tax_practitioner`). Such an artefact is only ratified by a different person registered in the signer
