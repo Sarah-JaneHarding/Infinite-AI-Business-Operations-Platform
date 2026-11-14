@@ -163,7 +163,14 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
       // Solo mode only: the one signer countersigns their own approval after signing in again and waiting.
       if (policy.mode !== 'solo') bad('a different person from the approver must countersign', 403);
       if (ctx.reauthed !== true) bad('solo signing: sign in again before you countersign your own approval', 403);
-      const left = soloWaitRemainingMs(String(cur.at), ctx.now ?? new Date(), policy);
+      // The wait is timed from the server-authored ledger entry for the current approval, never from the client-supplied
+      // `at` on the artefact version. The latest hitl.approved entry governs, it must be by the current approver, and
+      // there must be at least one per approval, so a re-approval that was never ledgered cannot borrow an earlier entry.
+      const entries = ctx.store.list('ledger').filter((e) => e.action === 'hitl.approved' && e.subject === cur.id);
+      const approvals = ctx.store.list('artefact_versions').filter((r) => r.id === cur.id && r.status === 'APPROVED').length;
+      const entry = entries.at(-1);
+      if (!entry || entry.actor !== cur.approvedBy || entries.length < approvals) return bad('solo signing: the approval has not been recorded in the ledger yet', 409);
+      const left = soloWaitRemainingMs(String(entry.at), ctx.now ?? new Date(), policy);
       if (left !== 0) {
         const mins = Math.max(1, Math.ceil((Number.isFinite(left) ? left : policy.waitMs) / 60_000));
         bad(`solo signing: ${mins} minute${mins === 1 ? '' : 's'} left to wait after approval before you can countersign your own approval`, 409);

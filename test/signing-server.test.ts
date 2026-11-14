@@ -47,6 +47,9 @@ const ratifiedRows = (agentId: string, approvedBy: string, countersignedBy: stri
   artefact_versions: [art({ agentId, status: 'RATIFIED', approvedBy, countersignedBy, ratifiedAt: 't', at: 't', ...o })],
   custom_defs: customDefs,
 });
+/** The server-authored ledger entry for an approval: its `at` is the server's clock, so the solo wait is timed from it. */
+const approvalEntry = (at: string, actor = 'dan', subject = 'art_1'): Row => ({ id: `L_${at}_${actor}`, action: 'hitl.approved', subject, actor, at, detail: {} });
+const ledgered = (rows: Record<string, Row[]>, ...entries: Row[]): Record<string, Row[]> => ({ ...rows, ledger: entries });
 const V = (rows: Record<string, Row[]>, rec: Rec, actor: string | null, extra: Partial<AppendCtx> = {}, c = 'artefact_versions') => validateAppend(c, rec, { actor, store: store(rows), ...extra });
 const decision = (agentId: string, approvedBy: string, o: Row = {}) => art({ agentId, status: 'APPROVED', approvedBy, at: APPROVED_AT, ...o });
 const ratify = (agentId: string, approvedBy: string, countersignedBy: string, o: Row = {}) => art({ agentId, status: 'RATIFIED', approvedBy, countersignedBy, ratifiedAt: 't', at: 't', ...o });
@@ -221,29 +224,78 @@ describe('ratifying (APPROVED -> RATIFIED)', () => {
   });
 
   it('solo, same person: the wait must have elapsed since approval (409 with the minutes left)', async () => {
-    const e = await rej(V(approvedRows(PLAIN.id, 'dan'), ratify(PLAIN.id, 'dan', 'dan', { signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now: plus(9) }));
+    const e = await rej(V(ledgered(approvedRows(PLAIN.id, 'dan'), approvalEntry(APPROVED_AT)), ratify(PLAIN.id, 'dan', 'dan', { signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now: plus(9) }));
     expect(e?.status).toBe(409);
     expect(e?.message).toMatch(/1 minute left/);
   });
 
   it('solo, same person: an unreadable approval time never shortens the wait', async () => {
-    const e = await rej(V(approvedRows(PLAIN.id, 'dan', { at: 'not a date' }), ratify(PLAIN.id, 'dan', 'dan', { signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now: plus(600) }));
+    const e = await rej(V(ledgered(approvedRows(PLAIN.id, 'dan'), approvalEntry('not a date')), ratify(PLAIN.id, 'dan', 'dan', { signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now: plus(600) }));
     expect(e?.status).toBe(409);
-    const badClock = await rej(V(approvedRows(PLAIN.id, 'dan'), ratify(PLAIN.id, 'dan', 'dan', { signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now: new Date(NaN) }));
+    expect(e?.message).toMatch(/left to wait/);
+    const badClock = await rej(V(ledgered(approvedRows(PLAIN.id, 'dan'), approvalEntry(APPROVED_AT)), ratify(PLAIN.id, 'dan', 'dan', { signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now: new Date(NaN) }));
     expect(badClock?.status).toBe(409);
   });
 
   it('solo, same person, elapsed, reauthed, flagged: accepted as sent', async () => {
     const rec = ratify(PLAIN.id, 'dan', 'dan', { signing: 'single-signer' });
-    const ok = await V(approvedRows(PLAIN.id, 'dan'), rec, 'dan', { signing: SOLO, reauthed: true, now: plus(10) });
+    const ok = await V(ledgered(approvedRows(PLAIN.id, 'dan'), approvalEntry(APPROVED_AT)), rec, 'dan', { signing: SOLO, reauthed: true, now: plus(10) });
     expect(ok).toEqual(rec);
     expect(ok).toMatchObject({ status: 'RATIFIED', approvedBy: 'dan', countersignedBy: 'dan', signing: 'single-signer' });
   });
 
   it('solo, same person: a record missing the marker is 400', async () => {
-    const e = await rej(V(approvedRows(PLAIN.id, 'dan'), ratify(PLAIN.id, 'dan', 'dan'), 'dan', { signing: SOLO, reauthed: true, now: plus(10) }));
+    const e = await rej(V(ledgered(approvedRows(PLAIN.id, 'dan'), approvalEntry(APPROVED_AT)), ratify(PLAIN.id, 'dan', 'dan'), 'dan', { signing: SOLO, reauthed: true, now: plus(10) }));
     expect(e?.status).toBe(400);
     expect(e?.message).toMatch(/must carry the single-signer marker/);
+  });
+
+  describe('the solo wait is timed from the server-authored ledger entry, never the client-supplied at', () => {
+    const ctx = { signing: SOLO, reauthed: true, now: plus(30) };
+    const rec = () => ratify(PLAIN.id, 'dan', 'dan', { signing: 'single-signer' });
+    const iso = (m: number) => plus(m).toISOString();
+    // The approved version claims it was approved at plus(19): 11 minutes before now. Only the ledger tells the truth.
+    const backdated = () => approvedRows(PLAIN.id, 'dan', { at: iso(19) });
+
+    it('a backdated approved version with a ledger entry only 1 minute old is refused 409', async () => {
+      const e = await rej(V(ledgered(backdated(), approvalEntry(iso(29))), rec(), 'dan', ctx));
+      expect(e?.status).toBe(409);
+      expect(e?.message).toMatch(/9 minutes left/);
+    });
+
+    it('the same with a ledger entry 11 minutes old is accepted', async () => {
+      await expect(V(ledgered(backdated(), approvalEntry(iso(19))), rec(), 'dan', ctx)).resolves.toEqual(rec());
+    });
+
+    it('no hitl.approved ledger entry for the artefact (or only one for another artefact) is refused 409', async () => {
+      for (const rows of [backdated(), ledgered(backdated(), approvalEntry(iso(0), 'dan', 'art_other'), { ...approvalEntry(iso(0)), action: 'hitl.rejected' })]) {
+        const e = await rej(V(rows, rec(), 'dan', ctx));
+        expect(e?.status).toBe(409);
+        expect(e?.message).toMatch(/approval has not been recorded in the ledger yet/);
+      }
+    });
+
+    it('an entry from an earlier approval voided by an edit does not count: the latest entry governs', async () => {
+      const history = {
+        artefact_versions: [
+          art(), art({ status: 'IN_REVIEW' }), art({ status: 'APPROVED', approvedBy: 'dan', at: iso(0) }),
+          art({ version: 2 }), art({ version: 2, status: 'IN_REVIEW' }), art({ version: 2, status: 'APPROVED', approvedBy: 'dan', at: iso(0) }),
+        ],
+      };
+      const e = await rej(V(ledgered(history, approvalEntry(iso(0)), approvalEntry(iso(29))), ratify(PLAIN.id, 'dan', 'dan', { version: 2, signing: 'single-signer' }), 'dan', ctx));
+      expect(e?.status).toBe(409);
+      expect(e?.message).toMatch(/minutes left/);
+      // and a re-approval that was never ledgered cannot borrow the earlier, voided entry
+      const unledgered = await rej(V(ledgered(history, approvalEntry(iso(0))), ratify(PLAIN.id, 'dan', 'dan', { version: 2, signing: 'single-signer' }), 'dan', ctx));
+      expect(unledgered?.status).toBe(409);
+      expect(unledgered?.message).toMatch(/not been recorded in the ledger/);
+    });
+
+    it('the latest entry must be by the current approver', async () => {
+      const e = await rej(V(ledgered(backdated(), approvalEntry(iso(0), 'eve')), rec(), 'dan', ctx));
+      expect(e?.status).toBe(409);
+      expect(e?.message).toMatch(/not been recorded in the ledger/);
+    });
   });
 
   it('a different person: the marker must equal the approval (no forging, no dropping)', async () => {
