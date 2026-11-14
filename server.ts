@@ -165,7 +165,9 @@ app.get('/api/whoami', (_q, res) => {
     actor,
     mode: auth.mode,
     signing: { mode: signing.mode, waitMinutes: signing.waitMs / 60_000 },
-    signer: actor !== null && signers.some((s) => s.id === actor)
+    signer: actor !== null && signers.some((s) => s.id === actor),
+    // Only the caller's own profession: never the registration text and never anyone else's entry.
+    profession: actor !== null ? signers.find((s) => s.id === actor)?.profession : undefined
   });
 });
 

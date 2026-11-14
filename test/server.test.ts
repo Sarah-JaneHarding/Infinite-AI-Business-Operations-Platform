@@ -650,6 +650,21 @@ describe('server: signing registry and solo mode', () => {
     expect((await call(solo, '/api/whoami', { token: T_SARAH })).json).toMatchObject({ actor: 'sarah', mode: 'users', signing: { mode: 'solo', waitMinutes: 1 }, signer: true });
   });
 
+  it('signing: whoami shows the caller their own profession only, never the registration text', async () => {
+    const REG = 'REG-SECRET-12345';
+    const pro = await boot(3433, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: `sarah|Sarah Harding|legal|attorney|${REG};dan|Dan Roe|*`, ANTHROPIC_API_KEY: 'sk-ant-not-real-key-for-tests' });
+    const sarah = await call(pro, '/api/whoami', { token: T_SARAH });
+    expect(sarah.json).toMatchObject({ actor: 'sarah', signer: true, profession: 'attorney' });
+    const dan = await call(pro, '/api/whoami', { token: T_DAN });
+    expect(dan.json).toMatchObject({ actor: 'dan', signer: true });
+    expect(dan.json).not.toHaveProperty('profession');
+    expect(JSON.stringify(sarah.json)).not.toContain(REG);
+    expect(JSON.stringify(dan.json)).not.toContain(REG);
+    expect(await call(base, '/api/whoami', { token: T_DAN })).toHaveProperty('json.signer', false);
+    expect((await call(base, '/api/whoami', { token: T_DAN })).json).not.toHaveProperty('profession');
+    expect((await call(open, '/api/whoami')).json).not.toHaveProperty('profession');
+  });
+
   it('signing: a solo countersign needs a fresh sign-in; a wrong one is refused and counts against the bad-token limit', async () => {
     const agent = AGENTS.find((a) => !a.secondApprover)!;
     const inputs = Object.fromEntries(agent.inputs.map((i) => [i.key, i.kind === 'number' ? '5' : i.kind === 'select' ? i.options![0] : 'Pilot school onboarding process']));
