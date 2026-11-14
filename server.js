@@ -98,8 +98,25 @@ function checkTarget(raw, allow) {
   if (u.port && u.port !== "443") return { ok: false, why: "Only the standard https port is allowed." };
   const host = u.hostname.toLowerCase().replace(/\.$/, "");
   if (isIP(host) || host.startsWith("[") || !host.includes(".") || /(^|\.)(localhost|local|internal|lan|home|corp)$/.test(host)) return { ok: false, why: "Internal and numeric addresses are not allowed." };
-  if (!allow.includes(host)) return { ok: false, why: `${host} is not on the allowed list.` };
-  return { ok: true, url: u };
+  const allowed = allow.find((h) => h === host);
+  if (allowed === void 0) return { ok: false, why: `${host} is not on the allowed list.` };
+  const typed = /^[a-z][a-z0-9+.-]*:\/\/[^/?#]*([^?#]*)/i.exec(raw.trim())?.[1] ?? "";
+  const path2 = safePath(typed === "" ? "/" : typed);
+  if (path2 === void 0) return { ok: false, why: 'That path is not allowed: no "..", encoded slashes, backslashes or control characters.' };
+  return { ok: true, url: new URL(`https://${allowed}${path2}`) };
+}
+function safePath(pathname) {
+  if (pathname.length > 512 || /[\\\u0000-\u001f\u007f]/.test(pathname)) return void 0;
+  for (const seg of pathname.split("/")) {
+    let d;
+    try {
+      d = decodeURIComponent(seg);
+    } catch {
+      return void 0;
+    }
+    if (d === "." || d === ".." || /[\\/\u0000-\u001f]/.test(d)) return void 0;
+  }
+  return pathname.startsWith("/") ? pathname : `/${pathname}`;
 }
 function isPrivateIp(ip) {
   const v2 = isIP(ip);
@@ -314,6 +331,8 @@ function defineAgent(dept, code, d) {
     inputs: d.inputs,
     requiresApproval: true,
     secondApprover: d.secondApprover,
+    twoPerson: d.twoPerson,
+    professionalReview: d.professionalReview,
     budget: { maxPromptChars: 6e3 },
     evalRef: "test/departments.test.ts",
     narrativeFacts: d.narrative,
@@ -817,6 +836,7 @@ var security = {
       framework: "POPIA eight conditions",
       purpose: "compliance_review",
       secondApprover: true,
+      twoPerson: true,
       formats: ["md", "docx", "xlsx", "html", "pdf"],
       warning: "This is a working assessment, not legal advice. The Information Officer and counsel decide.",
       inputs: [txt("process", "Process or system assessed", true), long("data", "Categories of personal information involved (categories only, no real data)", true), long("purpose", "Purpose of processing"), txt("basis", "Lawful basis you rely on")],
@@ -912,6 +932,7 @@ var legal = {
       summary: "Clause-by-clause review sheet for a counterparty contract you paste in.",
       framework: "Clause playbook with fall-backs",
       purpose: "contract_review",
+      professionalReview: "attorney",
       secondApprover: true,
       warning: "Not legal advice. A qualified South African attorney must review before signature.",
       inputs: [txt("counterparty", "Counterparty (organisation)", true), pick("kind", "Contract type", ["School agreement", "Operator agreement", "NDA", "Supplier", "Partnership"], true), long("text", "Contract text or key clauses (no personal data)", true)],
@@ -923,6 +944,7 @@ var legal = {
       summary: "Outline of the terms a school (responsible party) and Infinite-AI (operator) should settle in writing.",
       framework: "POPIA operator obligations",
       purpose: "contract_review",
+      professionalReview: "attorney",
       secondApprover: true,
       warning: "Outline for counsel to turn into a contract. Not legal advice.",
       inputs: [txt("party", "School / responsible party (organisation)", true), long("processing", "Processing the operator will do")],
@@ -934,6 +956,7 @@ var legal = {
       summary: "Quick triage of an incoming NDA against a standard position.",
       framework: "Clause playbook",
       purpose: "contract_review",
+      professionalReview: "attorney",
       warning: "Triage only. Counsel decides.",
       inputs: [txt("counterparty", "Counterparty", true), long("text", "NDA text", true)],
       sections: (c) => [{ h: "Text", input: c.input.text ?? "" }, { h: "Triage", table: { headers: ["Point", "Standard position", "This NDA", "Flag"], rows: [["Mutual or one-way", "Mutual", "", ""], ["Definition of confidential information", "Reasonably narrow", "", ""], ["Term and survival", "Fixed, with defined survival", "", ""], ["Permitted disclosures", "Advisers, law, regulators", "", ""], ["Return / destruction", "On request", "", ""], ["Governing law", "South Africa", "", ""]] } }]
@@ -944,6 +967,7 @@ var legal = {
       summary: "Term sheet for a school agreement, for counsel to turn into a contract.",
       framework: "Term sheet",
       purpose: "contract_review",
+      professionalReview: "attorney",
       secondApprover: true,
       formats: ["md", "docx"],
       warning: "Outline only. A lawyer drafts the agreement. Price comes from an approved price card or quote, never from this agent.",
@@ -956,6 +980,7 @@ var legal = {
       summary: "Outline of a notice for counsel to finalise.",
       framework: "POPIA openness and notification",
       purpose: "contract_review",
+      professionalReview: "attorney",
       secondApprover: true,
       formats: ["md", "docx"],
       warning: "Outline only. Counsel confirms what POPIA requires the notice to say.",
@@ -1676,6 +1701,7 @@ var people = {
       framework: "Offer review",
       purpose: "people_ops",
       secondApprover: true,
+      twoPerson: true,
       formats: ["md", "docx"],
       warning: "Employment terms are checked by a labour lawyer. This agent sets none of them.",
       inputs: [txt("role", "Role", true), long("terms", "Terms you propose (you set every one)", true)],
@@ -2315,6 +2341,113 @@ function runAcceptance(c, agent) {
 }
 var failedChecks = (a) => a.results.filter((r) => !r.pass);
 
+// src/core/signing.ts
+var SINGLE_SIGNER = "single-signer";
+var DEFAULT_SIGNING = { mode: "dual", waitMs: 6e5 };
+var PROFESSIONS = ["attorney", "accountant", "tax_practitioner"];
+function soloWaitRemainingMs(approvedAt, now, policy) {
+  const start2 = Date.parse(approvedAt);
+  if (Number.isNaN(start2)) return policy.waitMs;
+  const nowMs = now.getTime();
+  if (Number.isNaN(nowMs)) return policy.waitMs;
+  const left = Math.max(0, start2 + policy.waitMs - nowMs);
+  return Number.isFinite(left) ? left : Number.MAX_SAFE_INTEGER;
+}
+var requiresTwoPerson = (a) => a.twoPerson === true || a.professionalReview !== void 0;
+function holdsProfession(signers2, personId, required) {
+  return signers2.some((s) => s.id === personId && s.profession === required);
+}
+
+// src/server/signing.ts
+var isProfession = (v2) => PROFESSIONS.includes(v2);
+function parseSigners(raw, auth2, knownDepartments) {
+  const entries = (raw ?? "").split(";").map((s) => s.trim()).filter(Boolean);
+  if (!entries.length) return [];
+  if (auth2.mode === "open") throw new Error("OPS_SIGNERS: signers need named users; set OPS_USERS (open mode has no identities)");
+  const signers2 = [];
+  for (const entry of entries) {
+    const parts = entry.split("|").map((s) => s.trim());
+    if (parts.length !== 3 && parts.length !== 5) {
+      throw new Error("OPS_SIGNERS: entries look like id|Display Name|scope or id|Display Name|scope|profession|registration");
+    }
+    const [id, name, scopeRaw, profession, registration] = parts;
+    if (!id || !name || !scopeRaw) throw new Error(`OPS_SIGNERS: entry "${entry}" has an empty field`);
+    if (!auth2.users.some((u) => u.id === id)) throw new Error(`OPS_SIGNERS: "${id}" is not a user in OPS_USERS`);
+    if (signers2.some((s) => s.id === id)) throw new Error(`OPS_SIGNERS: duplicate signer "${id}"`);
+    let scope;
+    if (scopeRaw === "*") scope = "*";
+    else {
+      scope = scopeRaw.split("+").map((d) => d.trim());
+      if (scope.includes("*")) throw new Error(`OPS_SIGNERS: "*" cannot be combined with departments for "${id}"`);
+      if (scope.some((d) => !d)) throw new Error(`OPS_SIGNERS: empty department in the scope for "${id}"`);
+      if (new Set(scope).size !== scope.length) throw new Error(`OPS_SIGNERS: duplicate department in the scope for "${id}"`);
+      for (const d of scope) {
+        if (!knownDepartments.includes(d)) throw new Error(`OPS_SIGNERS: unknown department "${d}" for "${id}"`);
+      }
+    }
+    const signer = { id, name, scope };
+    if (parts.length === 5) {
+      if (!profession || !isProfession(profession)) {
+        throw new Error(`OPS_SIGNERS: unknown profession "${profession}" for "${id}" (use ${PROFESSIONS.join(", ")})`);
+      }
+      if (scope === "*") throw new Error(`OPS_SIGNERS: professional "${id}" needs a department scope, not "*"`);
+      if (!registration) throw new Error(`OPS_SIGNERS: professional "${id}" needs registration text`);
+      signer.profession = profession;
+      signer.registration = registration;
+    }
+    signers2.push(signer);
+  }
+  return signers2;
+}
+var setting = (v2) => v2 === void 0 || v2.trim() === "" ? void 0 : v2.trim();
+function parseSigningPolicy(env2, signers2, auth2) {
+  const modeRaw = setting(env2.OPS_SIGNING_MODE) ?? DEFAULT_SIGNING.mode;
+  if (modeRaw !== "solo" && modeRaw !== "dual") throw new Error(`OPS_SIGNING_MODE: unknown mode "${modeRaw}" (use solo or dual)`);
+  let waitMs = DEFAULT_SIGNING.waitMs;
+  const t = setting(env2.OPS_SOLO_WAIT_MINUTES);
+  if (t !== void 0) {
+    const minutes = /^\d+$/.test(t) ? Number(t) : NaN;
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
+      throw new Error("OPS_SOLO_WAIT_MINUTES: must be a whole number from 1 to 1440");
+    }
+    waitMs = minutes * 6e4;
+  }
+  if (modeRaw === "solo") {
+    if (auth2.mode === "open") throw new Error("OPS_SIGNING_MODE: solo needs named users (OPS_USERS), not open mode");
+    const plain = signers2.filter((s) => s.profession === void 0).length;
+    if (plain !== 1) {
+      throw new Error(`OPS_SIGNING_MODE: solo needs exactly one non-professional signer in OPS_SIGNERS (found ${plain}); professional signers (attorney, accountant, tax_practitioner) may be added beside them`);
+    }
+  }
+  return { mode: modeRaw, waitMs };
+}
+function maySignFor(signers2, personId, department) {
+  const s = signers2.find((x) => x.id === personId);
+  if (!s) return false;
+  if (s.scope === "*") return true;
+  return department !== void 0 && s.scope.includes(department);
+}
+function singleSignerReport(store2) {
+  const latest = /* @__PURE__ */ new Map();
+  for (const r of store2.list("artefact_versions")) latest.set(String(r.id), r);
+  const items = [];
+  for (const [id, r] of latest) {
+    if (r.status !== "RATIFIED" && r.status !== "INGESTED" || r.signing !== "single-signer") continue;
+    const selfCounter = r.approvedBy === r.countersignedBy;
+    items.push({
+      artefactId: id,
+      title: String(r.title ?? ""),
+      agentId: String(r.agentId ?? ""),
+      kind: selfCounter ? "self-countersign" : "self-approval",
+      signer: String(selfCounter ? r.approvedBy : r.requestedBy),
+      ratifiedAt: String(r.ratifiedAt ?? ""),
+      docHash: String(r.docHash ?? "")
+    });
+  }
+  items.sort((a, b) => a.ratifiedAt < b.ratifiedAt ? -1 : a.ratifiedAt > b.ratifiedAt ? 1 : 0);
+  return { count: items.length, items };
+}
+
 // src/core/guardrails/claims.ts
 var NUMBER = /(?<![A-Za-z0-9_.\-/])(?:R\s?|\$|US\$)?\d[\d,\s]*(?:\.\d+)?\s?(?:%|[kKmMbB]\b|bn\b)?(?![A-Za-z0-9_\-/])/g;
 function isExempt(raw, before, after) {
@@ -2449,6 +2582,9 @@ var Rejected = class extends Error {
 var bad = (message, status = 400) => {
   throw new Rejected(status, message);
 };
+function checkRegistry(ctx, personId, department) {
+  if (ctx.signers?.length && !maySignFor(ctx.signers, personId, department)) bad("you are not a registered signer for this department", 403);
+}
 var latestById = (rows2, id) => rows2.filter((r) => r.id === id).at(-1);
 var isHash = (v2) => typeof v2 === "string" && /^[0-9a-f]{64}$/.test(v2);
 async function validateAppend(collection, body, ctx) {
@@ -2527,6 +2663,8 @@ async function artefact(rec, ctx) {
   if (typeof rec.agentId !== "string" || !(agentById(rec.agentId) || customIds.has(rec.agentId))) bad("unknown agent");
   if (status !== "APPROVED" && status !== "REJECTED" && status !== "RATIFIED" && status !== "INGESTED" && rec.approvedBy !== void 0) bad("only a decision carries approvedBy");
   if (status !== "RATIFIED" && status !== "INGESTED" && rec.countersignedBy !== void 0) bad("only a ratified artefact carries countersignedBy");
+  if (rec.signing !== void 0 && rec.signing !== SINGLE_SIGNER) bad("the only signing marker is single-signer");
+  if (status !== "APPROVED" && status !== "RATIFIED" && status !== "INGESTED" && rec.signing !== void 0) bad("only an approved or ratified artefact carries the single-signer marker");
   const cur = latestById(ctx.store.list("artefact_versions"), rec.id);
   if (!cur) {
     if (status !== "DRAFT" || rec.version !== 1) bad("a new artefact starts as DRAFT v1");
@@ -2546,6 +2684,9 @@ async function artefact(rec, ctx) {
     return;
   }
   if (rec.requestedBy !== cur.requestedBy || rec.agentId !== cur.agentId || rec.orgId !== cur.orgId) bad("requestedBy, agent and org cannot change");
+  const contract = agentById(String(cur.agentId));
+  const custom = !contract && customIds.has(String(cur.agentId));
+  const policy = ctx.signing ?? DEFAULT_SIGNING;
   const sameDoc = rec.docHash === cur.docHash && rec.version === cur.version;
   if (status === "DRAFT") {
     if (cur.status === "RATIFIED" || cur.status === "INGESTED") bad("a ratified artefact is final: start a revision instead", 409);
@@ -2562,7 +2703,14 @@ async function artefact(rec, ctx) {
     if (typeof approver !== "string" || !approver) bad("a decision needs approvedBy");
     if (String(approver).startsWith("auto:")) bad("an autonomous actor can never approve", 403);
     if (ctx.actor && approver !== ctx.actor) bad("approvedBy is not you", 403);
-    if ((agentById(String(cur.agentId))?.secondApprover || customIds.has(String(cur.agentId))) && approver === cur.requestedBy) bad("this agent requires a second person to approve", 403);
+    checkRegistry(ctx, String(approver), contract?.dept);
+    let single = false;
+    if ((contract?.secondApprover || custom) && approver === cur.requestedBy) {
+      if (policy.mode !== "solo" || contract && requiresTwoPerson(contract)) bad("this agent requires a second person to approve", 403);
+      single = status === "APPROVED";
+    }
+    if (single && rec.signing !== SINGLE_SIGNER) bad("a solo self-approval must carry the single-signer marker");
+    if (!single && rec.signing !== void 0) bad("only a solo self-approval carries the single-signer marker");
     if (status === "REJECTED" && !String(rec.note ?? "").trim()) bad("a rejection needs a reason");
   } else if (cur.status === "APPROVED" && status === "RATIFIED") {
     if (!sameDoc) bad("a countersignature cannot change the document");
@@ -2570,12 +2718,36 @@ async function artefact(rec, ctx) {
     if (typeof signer !== "string" || !signer) bad("ratifying needs countersignedBy");
     if (String(signer).startsWith("auto:")) bad("an autonomous actor can never countersign", 403);
     if (ctx.actor && signer !== ctx.actor) bad("countersignedBy is not you", 403);
-    if (signer === cur.approvedBy) bad("a different person from the approver must countersign", 403);
+    checkRegistry(ctx, String(signer), contract?.dept);
+    const single = signer === cur.approvedBy;
+    const twoPerson = contract !== void 0 && requiresTwoPerson(contract);
+    if (single && twoPerson) bad("a different person from the approver must countersign", 403);
+    const required = contract?.professionalReview;
+    if (required && !holdsProfession(ctx.signers ?? [], String(signer), required)) bad(`only a registered ${required.replace("_", " ")} can countersign this artefact`, 403);
+    if (single) {
+      if (policy.mode !== "solo") bad("a different person from the approver must countersign", 403);
+      if (ctx.reauthed !== true) bad("solo signing: sign in again before you countersign your own approval", 403);
+      const entry = ctx.store.list("ledger").filter((e) => {
+        const d = e.detail;
+        return e.action === "hitl.approved" && e.subject === cur.id && e.actor === cur.approvedBy && d?.version === cur.version && (cur.docHash === void 0 || d?.docHash === cur.docHash);
+      }).at(-1);
+      if (!entry) return bad("solo signing: the approval was saved but is not recorded in the ledger for this version; if it does not appear after a reload, edit the artefact and approve it again", 409);
+      const left = soloWaitRemainingMs(String(entry.at), ctx.now ?? /* @__PURE__ */ new Date(), policy);
+      if (left !== 0) {
+        const mins = Math.max(1, Math.ceil((Number.isFinite(left) ? left : policy.waitMs) / 6e4));
+        bad(`solo signing: ${mins} minute${mins === 1 ? "" : "s"} left to wait after approval before you can countersign your own approval`, 409);
+      }
+      if (rec.signing !== SINGLE_SIGNER) bad("a solo countersignature must carry the single-signer marker");
+    } else {
+      if (twoPerson && rec.signing !== void 0) bad("a two-person artefact never carries the single-signer marker");
+      if (rec.signing !== cur.signing) bad("the single-signer marker must match the approval");
+    }
     if (rec.approvedBy !== cur.approvedBy) bad("approvedBy cannot change");
     if (typeof rec.ratifiedAt !== "string") bad("ratifying needs ratifiedAt");
   } else if (cur.status === "RATIFIED" && status === "INGESTED") {
     if (!sameDoc) bad("ingesting cannot change the document");
     if (rec.approvedBy !== cur.approvedBy || rec.countersignedBy !== cur.countersignedBy) bad("signers cannot change");
+    if (rec.signing !== cur.signing) bad("the single-signer marker cannot change");
     if (agentById(String(cur.agentId))?.ingestion === "none") bad("this agent's contract says its output is not ingested", 409);
     const doc = latestById(ctx.store.list("documents"), `rat_${String(cur.id)}_v${String(cur.version)}`);
     if (!doc || doc.origin !== "ratified" || doc.ratifiedFrom?.docHash !== cur.docHash) bad("the ratified document is not in the library yet", 409);
@@ -2586,9 +2758,12 @@ async function artefact(rec, ctx) {
 }
 function countersignature(rec, ctx) {
   const art = latestById(ctx.store.list("artefact_versions"), rec.artefactId);
-  if (!art || art.status !== "RATIFIED" || art.countersignedBy !== rec.signer || art.docHash !== rec.docHash || art.version !== rec.version) bad("countersignature does not match a ratified artefact", 409);
+  if (!art || art.status !== "RATIFIED" || art.countersignedBy !== rec.signer || art.docHash !== rec.docHash || art.version !== rec.version) return bad("countersignature does not match a ratified artefact", 409);
   if (ctx.actor && rec.signer !== ctx.actor) bad("signer is not you", 403);
+  if (rec.signing !== countersignMarker(art)) bad("countersignature single-signer marker does not match the artefact", 409);
+  if (rec.profession !== agentById(String(art.agentId))?.professionalReview) bad("countersignature profession does not match the agent contract", 409);
 }
+var countersignMarker = (art) => art.approvedBy === art.countersignedBy && art.signing === SINGLE_SIGNER ? SINGLE_SIGNER : void 0;
 async function document(rec, ctx) {
   if (latestById(ctx.store.list("documents"), rec.id)?.origin === "ratified") bad("a ratified document is immutable", 409);
   if (rec.origin !== "ratified") return;
@@ -2600,8 +2775,12 @@ async function document(rec, ctx) {
 }
 function approval(rec, ctx) {
   const art = latestById(ctx.store.list("artefact_versions"), rec.artefactId);
-  if (!art || art.status !== rec.decision || art.approvedBy !== rec.approver) bad("approval does not match a recorded decision", 409);
+  if (!art || art.status !== rec.decision || art.approvedBy !== rec.approver || art.signing !== rec.signing) bad("approval does not match a recorded decision", 409);
   if (ctx.actor && rec.approver !== ctx.actor) bad("approver is not you", 403);
+  if (rec.decision === "APPROVED") {
+    if (rec.version !== art?.version) bad("approval does not name the approved version", 409);
+    if (ctx.store.list("approvals").some((r) => r.artefactId === rec.artefactId && r.decision === "APPROVED" && r.version === rec.version)) bad("this approval is already recorded", 409);
+  }
 }
 function brain(rec, ctx) {
   const tier = rec.tier;
@@ -2706,8 +2885,18 @@ async function write(store2, input, knownSeq, actor, now = () => (/* @__PURE__ *
   if (actor && /^(hitl|artefact|subject|erasure)\./.test(action) && who !== actor) bad2("ledger actor is not you", 403);
   const art = store2.list("artefact_versions").filter((r) => r.id === subject).at(-1);
   if (/^hitl\.(approved|rejected)$/.test(action) && (art?.status !== action.slice(5).toUpperCase() || art.approvedBy !== who)) bad2("no recorded decision matches this ledger entry", 409);
+  const d = detail;
+  if (/^hitl\.(approved|rejected)$/.test(action) && d.signing !== art?.signing) bad2("the single-signer marker does not match the recorded decision", 409);
+  if (action === "hitl.approved") {
+    if (typeof d.version !== "number" || d.version !== art?.version) bad2("the approved version does not match the recorded decision", 409);
+    if (store2.list("ledger").some((e) => e.action === "hitl.approved" && e.subject === subject && e.detail?.version === d.version)) bad2("this approval is already in the ledger", 409);
+  }
   if (action === "artefact.submit" && art?.status !== "IN_REVIEW") bad2("artefact is not in review", 409);
-  if (/^artefact\.(countersigned|ratified)$/.test(action) && (art?.status !== "RATIFIED" && art?.status !== "INGESTED" || art?.countersignedBy !== who)) bad2("no recorded countersignature matches this ledger entry", 409);
+  if (/^artefact\.(countersigned|ratified)$/.test(action)) {
+    if (!art || art.status !== "RATIFIED" && art.status !== "INGESTED" || art.countersignedBy !== who) return bad2("no recorded countersignature matches this ledger entry", 409);
+    if (d.signing !== countersignMarker(art)) bad2("the single-signer marker does not match the recorded countersignature", 409);
+    if (d.profession !== agentById(String(art.agentId))?.professionalReview) bad2("the profession does not match the agent contract", 409);
+  }
   if (action === "artefact.ingested" && art?.status !== "INGESTED") bad2("artefact is not ingested", 409);
   const er = store2.list("erasure_requests").filter((r) => r.id === subject).at(-1);
   if (action === "erasure.requested" && (er?.status !== "REQUESTED" || er.requestedBy !== who)) bad2("no recorded erasure request matches this ledger entry", 409);
@@ -2731,10 +2920,17 @@ async function write(store2, input, knownSeq, actor, now = () => (/* @__PURE__ *
 function ratifiedProblem(store2, art) {
   if (!art) return "unknown artefact";
   if (art.status !== "RATIFIED" && art.status !== "INGESTED") return "Only a ratified artefact (approved and countersigned) can leave the platform.";
-  if (!art.approvedBy || !art.countersignedBy || art.approvedBy === art.countersignedBy) return "The artefact does not carry two different signers.";
+  const contract = agentById(String(art.agentId));
+  const twoPerson = contract !== void 0 && requiresTwoPerson(contract);
+  if (art.signing !== void 0 && (art.signing !== SINGLE_SIGNER || twoPerson)) return "This artefact needs two different people and cannot carry the single-signer marker.";
+  if (!art.approvedBy || !art.countersignedBy || art.approvedBy === art.countersignedBy && art.signing !== SINGLE_SIGNER) return "The artefact does not carry two different signers.";
   const approved = store2.list("approvals").some((r) => r.artefactId === art.id && r.decision === "APPROVED" && r.approver === art.approvedBy);
   const countersigned = store2.list("countersignatures").some((r) => r.artefactId === art.id && r.signer === art.countersignedBy && r.docHash === art.docHash);
   if (!approved || !countersigned) return "No recorded approval and countersignature for this artefact.";
+  const required = contract?.professionalReview;
+  if (required && !store2.list("countersignatures").some((r) => r.artefactId === art.id && r.signer === art.countersignedBy && r.docHash === art.docHash && r.profession === required)) {
+    return `No recorded countersignature by a registered ${required.replace("_", " ")} for this artefact.`;
+  }
   return null;
 }
 
@@ -3268,7 +3464,112 @@ var Gateway = class {
   }
 };
 
+// src/core/contract.ts
+var CONTRACT_MAX_PROMPT_CHARS = 2e4;
+var KNOWN_PROVIDERS = ["anthropic", "gemini"];
+var TIERS = ["L0", "L1", "L2", "L3", "L4"];
+var FORMATS = ["md", "html", "pdf", "csv", "json", "docx", "xlsx"];
+var CEILINGS = ["public", "internal", "confidential", "personal"];
+function checkContract(a, env2) {
+  const out = [];
+  const bad2 = (rule, message) => out.push({ rule, message });
+  const str = (x2, min, max) => typeof x2 === "string" && x2.trim().length >= min && x2.length <= max;
+  const x = a;
+  if (typeof a.id !== "string" || !/^(OPS-[A-Z]+-\d{2}|CUS-[A-Z]+-\d{2}|agt-[a-z0-9]+)$/.test(a.id)) bad2("C1", "id must look like OPS-DEPT-nn or agt-xxxx");
+  if (typeof a.version !== "string" || !/^\d+\.\d+\.\d+$/.test(a.version)) bad2("C1", "version must be semver (1.0.0)");
+  if (!str(a.name, 3, 80)) bad2("C1", "name must be 3 to 80 characters");
+  if (!str(a.summary, 5, 400)) bad2("C1", "summary must be 5 to 400 characters");
+  if (!str(a.framework, 3, 200)) bad2("C1", "the method (framework) must be named");
+  if (!env2.departments.includes(a.dept)) bad2("C1", `department "${String(a.dept)}" is not registered`);
+  if (!str(x.owner, 3, 60)) bad2("C2", "an owner role is required (3 to 60 characters)");
+  else if (detectPii(String(x.owner)).length) bad2("C2", "the owner must be a role, not personal data");
+  if (!PURPOSES.includes(a.purpose)) bad2("C3", "purpose is not on the closed purpose list");
+  if (!Array.isArray(a.allowedPurposes) || !a.allowedPurposes.length) bad2("C3", "allowedPurposes must not be empty");
+  else {
+    if (a.allowedPurposes.some((p) => !PURPOSES.includes(p))) bad2("C3", "allowedPurposes holds a purpose that is not on the list");
+    if (new Set(a.allowedPurposes).size !== a.allowedPurposes.length) bad2("C3", "allowedPurposes has a duplicate");
+    if (!a.allowedPurposes.includes(a.purpose)) bad2("C3", "purpose must be one of allowedPurposes");
+  }
+  if (!CEILINGS.includes(a.dataClass)) bad2("C4", a.dataClass === "learner" ? "learner data is never admitted to this platform" : "unknown data class");
+  if (a.dataClass === "personal" && !(a.lawfulBasis && LAWFUL_BASES.includes(a.lawfulBasis))) bad2("C4", "personal data needs a lawful basis (POPIA s11)");
+  if (a.requiresApproval !== true) bad2("C5", "requiresApproval must be true: no agent skips the human");
+  if (/^(agt-|CUS-)/.test(String(a.id)) && a.secondApprover !== true) bad2("C5", "a custom agent needs a second approver");
+  if (x.models !== void 0) {
+    const known = env2.providers ?? KNOWN_PROVIDERS;
+    if (!Array.isArray(x.models) || !x.models.length) bad2("C6", "models, when present, must be a non-empty list of providers");
+    else if (x.models.some((m) => typeof m !== "string" || !known.includes(m))) bad2("C6", "models names a provider that is not known");
+    else if (new Set(x.models).size !== x.models.length) bad2("C6", "models has a duplicate");
+  }
+  const budget = a.budget?.maxPromptChars;
+  if (typeof budget !== "number" || !Number.isInteger(budget) || budget < 100 || budget > CONTRACT_MAX_PROMPT_CHARS) bad2("C7", `budget.maxPromptChars must be a whole number from 100 to ${CONTRACT_MAX_PROMPT_CHARS}`);
+  if (typeof a.evalRef !== "string" || !/^test\/[A-Za-z0-9._/-]+\.test\.ts$/.test(a.evalRef) || a.evalRef.includes("..")) bad2("C8", "evalRef must point at a test file under test/");
+  if (!Array.isArray(a.inputs) || a.inputs.length > 12) bad2("C9", "an agent has at most 12 inputs");
+  else {
+    const keys = a.inputs.map((i) => i?.key);
+    if (keys.some((k) => typeof k !== "string" || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k))) bad2("C9", "every input needs a simple key");
+    if (new Set(keys).size !== keys.length) bad2("C9", "two inputs share a key");
+    if (a.inputs.some((i) => !str(i?.label, 1, 120))) bad2("C9", "every input needs a label");
+    if (a.inputs.some((i) => i?.kind === "select" && !i.options?.length)) bad2("C9", "a choice input needs options");
+    if (a.inputs.some((i) => !["text", "longtext", "number", "select"].includes(String(i?.kind)))) bad2("C9", "an input has an unknown kind");
+  }
+  if (!Array.isArray(a.reads) || a.reads.some((t) => !TIERS.includes(t))) bad2("C10", "reads holds an unknown Brain tier");
+  if (!Array.isArray(a.formats) || !a.formats.length || a.formats.some((f) => !FORMATS.includes(f))) bad2("C10", "formats must be a non-empty list of known formats");
+  if (a.ingestion !== void 0 && a.ingestion !== "library" && a.ingestion !== "none") bad2("C10", "ingestion must be library or none");
+  if (typeof a.build !== "function") bad2("C10", "build must be a function");
+  if (x.twoPerson !== void 0 && x.twoPerson !== true) bad2("C11", "twoPerson, when present, must be true");
+  if (x.professionalReview !== void 0 && !(typeof x.professionalReview === "string" && PROFESSIONS.includes(x.professionalReview))) bad2("C11", `professionalReview must be one of ${PROFESSIONS.join(", ")}`);
+  return out;
+}
+function checkRegistry2(agents, env2) {
+  const out = {};
+  const seen = /* @__PURE__ */ new Set();
+  for (const a of agents) {
+    const p = checkContract(a, env2);
+    if (seen.has(a.id)) p.push({ rule: "C1", message: "duplicate id" });
+    seen.add(a.id);
+    if (p.length) out[String(a.id)] = p;
+  }
+  return out;
+}
+var formatProblems = (r) => Object.entries(r).map(([id, ps]) => `${id}: ${ps.map((p) => `${p.rule} ${p.message}`).join("; ")}`).join("\n");
+
+// src/departments/custom.ts
+var DEPT_CODE = { executive: "EXEC", product: "PROD", curriculum: "CURR", ai: "AI", security: "SEC", legal: "LEG", finance: "FIN", sales: "SALES", marketing: "MKT", success: "CS", support: "SUP", government: "GOV", people: "PPL", devops: "SRE", procurement: "PRO", research: "RES" };
+function buildCustomAgent(d, n) {
+  const a = defineAgent(d.dept, `CUS-${DEPT_CODE[d.dept]}`, {
+    n,
+    name: d.name,
+    summary: d.summary,
+    framework: "Custom agent defined in this platform",
+    purpose: d.purpose,
+    inputs: d.inputs,
+    secondApprover: true,
+    warning: "Custom agent. Its sections were written by a person in this organisation. Treat it as a draft until a second person has approved it.",
+    sections: (ctx) => d.sections.map((s) => s.kind === "text" ? { h: s.h, p: s.text } : s.kind === "input" ? { h: s.h, input: v(ctx, s.ref) === "\u2014 to complete \u2014" ? "" : ctx.input[s.ref] } : s.kind === "bullets" ? { h: s.h, bullets: s.items.filter(Boolean) } : s.kind === "steps" ? { h: s.h, ol: s.items.filter(Boolean) } : s.kind === "checks" ? { h: s.h, checks: s.items.filter(Boolean) } : { h: s.h, table: { headers: s.headers, rows: Array.from({ length: s.blankRows }, () => s.headers.map(() => "")) } })
+  });
+  return { ...a, id: d.id };
+}
+function customAgents(s, dept) {
+  const seen = {};
+  const out = [];
+  for (const d of s.latest("custom_defs", "id").filter((x) => x.kind === "agent" && !x.deleted).sort((x, y) => x.at.localeCompare(y.at) || x.id.localeCompare(y.id))) {
+    seen[d.dept] = (seen[d.dept] ?? 0) + 1;
+    if (dept && d.dept !== dept) continue;
+    const a = buildCustomAgent(d, seen[d.dept]);
+    if (!checkContract(a, { departments: DEPARTMENTS.map((x) => x.id) }).length) out.push(a);
+  }
+  return out;
+}
+function contractFor(id, s) {
+  return agentById(id) ?? customAgents(s).find((a) => a.id === id);
+}
+
 // src/core/platform.ts
+function withoutSigning(a) {
+  const { signing: _dropped, ...rest } = a;
+  void _dropped;
+  return rest;
+}
 var isAutonomous = (id) => id.startsWith("auto:");
 var erasureFields = (r) => ({ id: r.id, subjectHash: r.subjectHash, category: r.category, note: r.note, status: r.status, requestedBy: r.requestedBy, decidedBy: r.decidedBy, decisionNote: r.decisionNote, version: r.version });
 var RunRefused = class extends Error {
@@ -3286,6 +3587,8 @@ var Platform = class {
     this.warehouse = new Warehouse(o.adapter ?? new MemoryAdapter());
     this.engine = o.engine;
     this.sequencer = o.sequencer;
+    this.signingPolicy = o.signing ?? DEFAULT_SIGNING;
+    this.signers = o.signers ?? [];
     this.wire([], []);
     this.factsFn = o.facts ?? (() => ({}));
     this.knownNames = o.knownNames ?? [];
@@ -3470,7 +3773,7 @@ ${Object.entries(nf).map(([k, v2]) => `${k}: ${v2}`).join("\n")}`;
     if (editor.kind !== "human") throw new Error("Only a human can edit an artefact.");
     if (cur.status === "RATIFIED" || cur.status === "INGESTED") throw new RunRefused("hitl", "A ratified artefact is final. Start a revision instead.");
     const clean = JSON.parse(JSON.stringify(doc));
-    const next = { ...cur, id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: "DRAFT", approvedBy: void 0, at: (/* @__PURE__ */ new Date()).toISOString() };
+    const next = { ...withoutSigning(cur), id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: "DRAFT", approvedBy: void 0, at: (/* @__PURE__ */ new Date()).toISOString() };
     try {
       deidentify(JSON.stringify(clean), ["edit"]);
     } catch (e) {
@@ -3490,39 +3793,65 @@ ${Object.entries(nf).map(([k, v2]) => `${k}: ${v2}`).join("\n")}`;
     await this.ledger.append({ orgId: this.orgId, actor: by.id, action: "artefact.submit", subject: artefactId });
     return next;
   }
-  /** HITL. No agent, no self-approval where the contract demands a second person, no skip flag. */
-  async decide(artefactId, approver, decision, note, agent) {
+  /**
+   * HITL. No agent, no self-approval where the contract demands a second person, no skip flag. When the caller does not
+   * pass the agent, its contract is resolved from the artefact (built-in, else a custom definition in this warehouse), so
+   * the gates always run.
+   */
+  async decide(artefactId, approver, decision, note, given) {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error("Unknown artefact.");
+    const agent = given ?? contractFor(cur.agentId, this.warehouse);
     if (approver.kind !== "human" || isAutonomous(approver.id)) throw new RunRefused("hitl", "Only a named human can approve or reject.");
     if (cur.status !== "IN_REVIEW") throw new RunRefused("hitl", "Artefact must be submitted for review first.");
-    if (agent?.secondApprover && approver.id === cur.requestedBy) throw new RunRefused("hitl", "This agent requires a second person to approve.");
+    let mark = {};
+    if (agent?.secondApprover && approver.id === cur.requestedBy) {
+      if (requiresTwoPerson(agent) || this.signingPolicy.mode !== "solo") throw new RunRefused("hitl", "This agent requires a second person to approve.");
+      if (decision === "APPROVED") mark = { signing: SINGLE_SIGNER };
+    }
     if (decision === "REJECTED" && !note.trim()) throw new RunRefused("hitl", "A rejection needs a reason.");
-    const next = { ...cur, id: artefactId, status: decision, approvedBy: approver.id, note, at: (/* @__PURE__ */ new Date()).toISOString() };
+    const next = { ...withoutSigning(cur), id: artefactId, status: decision, approvedBy: approver.id, note, at: (/* @__PURE__ */ new Date()).toISOString(), ...mark };
     await this.warehouse.put("artefact_versions", { ...next, editedBy: approver.id });
-    await this.warehouse.put("approvals", { id: newId("apr"), artefactId, decision, approver: approver.id, note, at: next.at });
-    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: "hitl." + decision.toLowerCase(), subject: artefactId, detail: { note } });
+    await this.warehouse.put("approvals", { id: newId("apr"), artefactId, decision, approver: approver.id, version: cur.version, note, at: next.at, ...mark });
+    const bound = decision === "APPROVED" ? { version: cur.version, docHash: cur.docHash ?? await sha256Hex(canonical(cur.doc)) } : {};
+    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: "hitl." + decision.toLowerCase(), subject: artefactId, detail: { note, ...mark, ...bound } });
     return next;
   }
   /**
    * Second signature. A different human from the approver countersigns the exact content that was approved; that
    * ratifies it, and then (unless the agent's contract says it is not relevant) it is ingested.
    */
-  async countersign(artefactId, signer, note, agent) {
+  async countersign(artefactId, signer, note, given, now = /* @__PURE__ */ new Date()) {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error("Unknown artefact.");
+    const agent = given ?? contractFor(cur.agentId, this.warehouse);
     if (signer.kind !== "human" || isAutonomous(signer.id)) throw new RunRefused("hitl", "Only a named human can countersign.");
     if (cur.status !== "APPROVED") throw new RunRefused("hitl", "Only an approved artefact can be countersigned.");
-    if (signer.id === cur.approvedBy) throw new RunRefused("hitl", "A different person from the approver must countersign.");
+    const single = signer.id === cur.approvedBy;
+    const twoPerson = agent !== void 0 && requiresTwoPerson(agent);
+    if (single && twoPerson) throw new RunRefused("hitl", "A different person from the approver must countersign.");
+    const required = agent?.professionalReview;
+    if (required && !holdsProfession(this.signers, signer.id, required)) throw new RunRefused("hitl", `Only a registered ${required.replace("_", " ")} can countersign this artefact.`);
+    const prof = required ? { profession: required } : {};
+    if (single) {
+      if (this.signingPolicy.mode !== "solo") throw new RunRefused("hitl", "A different person from the approver must countersign.");
+      const left = soloWaitRemainingMs(cur.at, now, this.signingPolicy);
+      if (!(left <= 0)) {
+        const mins = Number.isFinite(left) ? Math.ceil(left / 6e4) : Math.ceil(this.signingPolicy.waitMs / 6e4);
+        throw new RunRefused("hitl", `Solo signing: ${mins} minute${mins === 1 ? "" : "s"} left to wait after approval before you can countersign your own approval.`);
+      }
+    }
+    const mark = single ? { signing: SINGLE_SIGNER } : {};
     const n = (note ?? "").trim();
     if (n.length > 300) throw new RunRefused("hitl", "Keep the countersignature note to 300 characters.");
     const docHash = cur.docHash ?? await sha256Hex(canonical(cur.doc));
     const at = (/* @__PURE__ */ new Date()).toISOString();
-    const next = { ...cur, id: artefactId, docHash, status: "RATIFIED", countersignedBy: signer.id, ratifiedAt: at, at };
+    const inherited = cur.signing ? { signing: SINGLE_SIGNER } : {};
+    const next = { ...withoutSigning(cur), id: artefactId, docHash, status: "RATIFIED", countersignedBy: signer.id, ratifiedAt: at, at, ...inherited, ...mark };
     await this.warehouse.put("artefact_versions", { ...next, editedBy: signer.id });
-    await this.warehouse.put("countersignatures", { id: newId("sig"), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at });
-    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: "artefact.countersigned", subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy } });
-    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: "artefact.ratified", subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id } });
+    await this.warehouse.put("countersignatures", { id: newId("sig"), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at, ...mark, ...prof });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: "artefact.countersigned", subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy, ...mark, ...prof } });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: "artefact.ratified", subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id, ...mark, ...prof } });
     if (agent?.ingestion === "none") return next;
     return this.ingest(artefactId, signer);
   }
@@ -4902,7 +5231,7 @@ function deptHealth(departments, tasks, collections, now) {
 }
 
 // src/core/ceo/ics.ts
-var esc2 = (s) => s.replace(/\\/g, "\\\\").replace(/;/g, ";").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+var esc2 = (s) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 var stamp = (iso) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 function fold(line) {
   const enc = new TextEncoder();
@@ -5796,73 +6125,6 @@ Reply with a JSON object: {"strategicRecommendations": string[], "recommendedInp
   }
 };
 
-// src/core/contract.ts
-var CONTRACT_MAX_PROMPT_CHARS = 2e4;
-var KNOWN_PROVIDERS = ["anthropic", "gemini"];
-var TIERS = ["L0", "L1", "L2", "L3", "L4"];
-var FORMATS = ["md", "html", "pdf", "csv", "json", "docx", "xlsx"];
-var CEILINGS = ["public", "internal", "confidential", "personal"];
-function checkContract(a, env2) {
-  const out = [];
-  const bad2 = (rule, message) => out.push({ rule, message });
-  const str = (x2, min, max) => typeof x2 === "string" && x2.trim().length >= min && x2.length <= max;
-  const x = a;
-  if (typeof a.id !== "string" || !/^(OPS-[A-Z]+-\d{2}|CUS-[A-Z]+-\d{2}|agt-[a-z0-9]+)$/.test(a.id)) bad2("C1", "id must look like OPS-DEPT-nn or agt-xxxx");
-  if (typeof a.version !== "string" || !/^\d+\.\d+\.\d+$/.test(a.version)) bad2("C1", "version must be semver (1.0.0)");
-  if (!str(a.name, 3, 80)) bad2("C1", "name must be 3 to 80 characters");
-  if (!str(a.summary, 5, 400)) bad2("C1", "summary must be 5 to 400 characters");
-  if (!str(a.framework, 3, 200)) bad2("C1", "the method (framework) must be named");
-  if (!env2.departments.includes(a.dept)) bad2("C1", `department "${String(a.dept)}" is not registered`);
-  if (!str(x.owner, 3, 60)) bad2("C2", "an owner role is required (3 to 60 characters)");
-  else if (detectPii(String(x.owner)).length) bad2("C2", "the owner must be a role, not personal data");
-  if (!PURPOSES.includes(a.purpose)) bad2("C3", "purpose is not on the closed purpose list");
-  if (!Array.isArray(a.allowedPurposes) || !a.allowedPurposes.length) bad2("C3", "allowedPurposes must not be empty");
-  else {
-    if (a.allowedPurposes.some((p) => !PURPOSES.includes(p))) bad2("C3", "allowedPurposes holds a purpose that is not on the list");
-    if (new Set(a.allowedPurposes).size !== a.allowedPurposes.length) bad2("C3", "allowedPurposes has a duplicate");
-    if (!a.allowedPurposes.includes(a.purpose)) bad2("C3", "purpose must be one of allowedPurposes");
-  }
-  if (!CEILINGS.includes(a.dataClass)) bad2("C4", a.dataClass === "learner" ? "learner data is never admitted to this platform" : "unknown data class");
-  if (a.dataClass === "personal" && !(a.lawfulBasis && LAWFUL_BASES.includes(a.lawfulBasis))) bad2("C4", "personal data needs a lawful basis (POPIA s11)");
-  if (a.requiresApproval !== true) bad2("C5", "requiresApproval must be true: no agent skips the human");
-  if (/^(agt-|CUS-)/.test(String(a.id)) && a.secondApprover !== true) bad2("C5", "a custom agent needs a second approver");
-  if (x.models !== void 0) {
-    const known = env2.providers ?? KNOWN_PROVIDERS;
-    if (!Array.isArray(x.models) || !x.models.length) bad2("C6", "models, when present, must be a non-empty list of providers");
-    else if (x.models.some((m) => typeof m !== "string" || !known.includes(m))) bad2("C6", "models names a provider that is not known");
-    else if (new Set(x.models).size !== x.models.length) bad2("C6", "models has a duplicate");
-  }
-  const budget = a.budget?.maxPromptChars;
-  if (typeof budget !== "number" || !Number.isInteger(budget) || budget < 100 || budget > CONTRACT_MAX_PROMPT_CHARS) bad2("C7", `budget.maxPromptChars must be a whole number from 100 to ${CONTRACT_MAX_PROMPT_CHARS}`);
-  if (typeof a.evalRef !== "string" || !/^test\/[A-Za-z0-9._/-]+\.test\.ts$/.test(a.evalRef) || a.evalRef.includes("..")) bad2("C8", "evalRef must point at a test file under test/");
-  if (!Array.isArray(a.inputs) || a.inputs.length > 12) bad2("C9", "an agent has at most 12 inputs");
-  else {
-    const keys = a.inputs.map((i) => i?.key);
-    if (keys.some((k) => typeof k !== "string" || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k))) bad2("C9", "every input needs a simple key");
-    if (new Set(keys).size !== keys.length) bad2("C9", "two inputs share a key");
-    if (a.inputs.some((i) => !str(i?.label, 1, 120))) bad2("C9", "every input needs a label");
-    if (a.inputs.some((i) => i?.kind === "select" && !i.options?.length)) bad2("C9", "a choice input needs options");
-    if (a.inputs.some((i) => !["text", "longtext", "number", "select"].includes(String(i?.kind)))) bad2("C9", "an input has an unknown kind");
-  }
-  if (!Array.isArray(a.reads) || a.reads.some((t) => !TIERS.includes(t))) bad2("C10", "reads holds an unknown Brain tier");
-  if (!Array.isArray(a.formats) || !a.formats.length || a.formats.some((f) => !FORMATS.includes(f))) bad2("C10", "formats must be a non-empty list of known formats");
-  if (a.ingestion !== void 0 && a.ingestion !== "library" && a.ingestion !== "none") bad2("C10", "ingestion must be library or none");
-  if (typeof a.build !== "function") bad2("C10", "build must be a function");
-  return out;
-}
-function checkRegistry(agents, env2) {
-  const out = {};
-  const seen = /* @__PURE__ */ new Set();
-  for (const a of agents) {
-    const p = checkContract(a, env2);
-    if (seen.has(a.id)) p.push({ rule: "C1", message: "duplicate id" });
-    seen.add(a.id);
-    if (p.length) out[String(a.id)] = p;
-  }
-  return out;
-}
-var formatProblems = (r) => Object.entries(r).map(([id, ps]) => `${id}: ${ps.map((p) => `${p.rule} ${p.message}`).join("; ")}`).join("\n");
-
 // src/server/modelRoutes.ts
 import { Router as Router2 } from "express";
 function modelRoutes(hub2) {
@@ -5920,7 +6182,16 @@ try {
   console.error(`FATAL: ${err.message}`);
   process.exit(1);
 }
-var contractProblems = checkRegistry(AGENTS, { departments: DEPARTMENTS.map((d) => d.id) });
+var signers;
+var signing;
+try {
+  signers = parseSigners(env.OPS_SIGNERS, auth, DEPARTMENTS.map((d) => d.id));
+  signing = parseSigningPolicy(env, signers, auth);
+} catch (err) {
+  console.error(`FATAL: ${err.message}`);
+  process.exit(1);
+}
+var contractProblems = checkRegistry2(AGENTS, { departments: DEPARTMENTS.map((d) => d.id) });
 if (Object.keys(contractProblems).length) {
   console.error(`FATAL: agent contracts do not hold:
 ${formatProblems(contractProblems)}`);
@@ -5936,8 +6207,9 @@ try {
   console.error(`FATAL: model hub configuration: ${err.message}`);
   process.exit(1);
 }
+var signingCtx = (actor, reauthed) => ({ actor, store, roles: rolesOf(roles, actor), signing, signers, reauthed, now: /* @__PURE__ */ new Date() });
 var appendValidated = (collection, rec, actor) => serial(async () => {
-  const v2 = await validateAppend(collection, rec, { actor, store });
+  const v2 = await validateAppend(collection, rec, signingCtx(actor, false));
   store.append(collection, v2);
 });
 var autonomy;
@@ -6039,7 +6311,18 @@ app.use("/api", (req, res, next) => {
   res.locals.actor = actor;
   next();
 });
-app.get("/api/whoami", (_q, res) => res.json({ actor: actorOf(res), mode: auth.mode }));
+app.get("/api/whoami", (_q, res) => {
+  const actor = actorOf(res);
+  res.json({
+    actor,
+    mode: auth.mode,
+    signing: { mode: signing.mode, waitMinutes: signing.waitMs / 6e4 },
+    signer: actor !== null && signers.some((s) => s.id === actor),
+    // Only the caller's own profession: never the registration text and never anyone else's entry.
+    profession: actor !== null ? signers.find((s) => s.id === actor)?.profession : void 0
+  });
+});
+app.get("/api/signing/report", (_q, res) => res.json(singleSignerReport(store)));
 var cache = null;
 app.get("/api/connector/status", wrap(async (_q, res) => {
   if (!cache || Date.now() - cache.at > 6e4) cache = { at: Date.now(), status: await reader.status() };
@@ -6127,8 +6410,15 @@ app.get("/api/warehouse", (req, res) => {
 });
 app.post("/api/warehouse/:collection", wrap(async (req, res) => {
   try {
+    const actor = actorOf(res);
+    let reauthed = false;
+    const again = req.header("x-ops-reauth");
+    if (auth.mode === "users" && actor && again !== void 0) {
+      reauthed = authenticate(auth, again) === actor;
+      if (!reauthed && limits.failure(req, res)) return;
+    }
     await serial(async () => {
-      const rec = await validateAppend(req.params.collection, req.body, { actor: actorOf(res), store, roles: rolesOf(roles, actorOf(res)) });
+      const rec = await validateAppend(req.params.collection, req.body, signingCtx(actor, reauthed));
       store.append(req.params.collection, rec);
     });
     res.json({ ok: true });
