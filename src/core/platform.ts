@@ -7,7 +7,7 @@ import { checkInput, checkOutput, runGates } from './guardrails/engine';
 import type { AgentContract, RunContext } from './agent';
 import type { Actor, Doc, LedgerEntry, Status } from './types';
 import { deidentify, detectPii, LearnerDataRefused } from './guardrails/pii';
-import { DEFAULT_SIGNING, SINGLE_SIGNER, soloWaitRemainingMs, type SigningPolicy } from './signing';
+import { DEFAULT_SIGNING, SINGLE_SIGNER, holdsProfession, requiresTwoPerson, soloWaitRemainingMs, type Profession, type SigningPolicy } from './signing';
 import { ERASURE_CATEGORIES, normalizeSubject, type ErasureCategory, type ErasureRequest } from './erasure';
 
 export interface Artefact {
@@ -62,6 +62,8 @@ export interface PlatformOptions {
   sequencer?: Sequencer;
   /** Who may countersign. Default: dual (a different person from the approver). */
   signing?: SigningPolicy;
+  /** Who holds which profession. The browser needs only this; the server stays authoritative for who may sign. */
+  signers?: readonly { id: string; profession?: Profession }[];
 }
 
 /** One object wiring departments → guardrails → brain → gateway → warehouse → ledger → HITL → learning. */
@@ -79,6 +81,7 @@ export class Platform {
   private onPersistError: (e: Error) => void;
   private sequencer?: Sequencer;
   private signingPolicy: SigningPolicy;
+  private signers: readonly { id: string; profession?: Profession }[];
   private persistTail: Promise<void> = Promise.resolve();
 
   constructor(o: PlatformOptions = {}) {
@@ -87,6 +90,7 @@ export class Platform {
     this.engine = o.engine;
     this.sequencer = o.sequencer;
     this.signingPolicy = o.signing ?? DEFAULT_SIGNING;
+    this.signers = o.signers ?? [];
     this.wire([], []);
     this.factsFn = o.facts ?? (() => ({}));
     this.knownNames = o.knownNames ?? [];
@@ -337,12 +341,18 @@ export class Platform {
     if (!cur) throw new Error('Unknown artefact.');
     if (approver.kind !== 'human' || isAutonomous(approver.id)) throw new RunRefused('hitl', 'Only a named human can approve or reject.');
     if (cur.status !== 'IN_REVIEW') throw new RunRefused('hitl', 'Artefact must be submitted for review first.');
-    if (agent?.secondApprover && approver.id === cur.requestedBy) throw new RunRefused('hitl', 'This agent requires a second person to approve.');
+    // Solo mode relaxes only a plain secondApprover agent; twoPerson and professionalReview agents never relax.
+    let mark: { signing?: typeof SINGLE_SIGNER } = {};
+    if ((agent?.secondApprover || (agent && requiresTwoPerson(agent))) && approver.id === cur.requestedBy) {
+      if (agent && requiresTwoPerson(agent)) throw new RunRefused('hitl', 'This agent requires a second person to approve.');
+      if (this.signingPolicy.mode !== 'solo') throw new RunRefused('hitl', 'This agent requires a second person to approve.');
+      if (decision === 'APPROVED') mark = { signing: SINGLE_SIGNER };
+    }
     if (decision === 'REJECTED' && !note.trim()) throw new RunRefused('hitl', 'A rejection needs a reason.');
-    const next: Artefact = { ...cur, id: artefactId, status: decision, approvedBy: approver.id, note, at: new Date().toISOString() };
+    const next: Artefact = { ...cur, id: artefactId, status: decision, approvedBy: approver.id, note, at: new Date().toISOString(), ...mark };
     await this.warehouse.put('artefact_versions', { ...next, editedBy: approver.id });
-    await this.warehouse.put('approvals', { id: newId('apr'), artefactId, decision, approver: approver.id, note, at: next.at });
-    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'hitl.' + decision.toLowerCase(), subject: artefactId, detail: { note } });
+    await this.warehouse.put('approvals', { id: newId('apr'), artefactId, decision, approver: approver.id, note, at: next.at, ...mark });
+    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'hitl.' + decision.toLowerCase(), subject: artefactId, detail: { note, ...mark } });
     return next;
   }
 
@@ -356,6 +366,11 @@ export class Platform {
     if (signer.kind !== 'human' || isAutonomous(signer.id)) throw new RunRefused('hitl', 'Only a named human can countersign.');
     if (cur.status !== 'APPROVED') throw new RunRefused('hitl', 'Only an approved artefact can be countersigned.');
     const single = signer.id === cur.approvedBy;
+    const twoPerson = agent !== undefined && requiresTwoPerson(agent);
+    if (single && twoPerson) throw new RunRefused('hitl', 'A different person from the approver must countersign.');
+    const required = agent?.professionalReview;
+    if (required && !holdsProfession(this.signers, signer.id, required)) throw new RunRefused('hitl', `Only a registered ${required.replace('_', ' ')} can countersign this artefact.`);
+    const prof = required ? { profession: required } : {};
     if (single) {
       if (this.signingPolicy.mode !== 'solo') throw new RunRefused('hitl', 'A different person from the approver must countersign.');
       const left = soloWaitRemainingMs(cur.at, now, this.signingPolicy);
@@ -371,9 +386,9 @@ export class Platform {
     const at = new Date().toISOString();
     const next: Artefact = { ...cur, id: artefactId, docHash, status: 'RATIFIED', countersignedBy: signer.id, ratifiedAt: at, at, ...mark };
     await this.warehouse.put('artefact_versions', { ...next, editedBy: signer.id });
-    await this.warehouse.put('countersignatures', { id: newId('sig'), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at, ...mark });
-    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.countersigned', subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy, ...mark } });
-    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.ratified', subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id, ...mark } });
+    await this.warehouse.put('countersignatures', { id: newId('sig'), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at, ...mark, ...prof });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.countersigned', subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy, ...mark, ...prof } });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.ratified', subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id, ...mark, ...prof } });
     if (agent?.ingestion === 'none') return next;
     return this.ingest(artefactId, signer);
   }

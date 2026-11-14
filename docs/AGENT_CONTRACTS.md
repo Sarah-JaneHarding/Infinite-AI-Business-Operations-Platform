@@ -18,6 +18,7 @@ Every agent is a contract: data a machine can check. `src/core/contract.ts` hold
 | **C8** Evaluation | `evalRef` names a test file under `test/` (the tests check it exists). |
 | **C9** Inputs | At most 12, unique keys, labels, options for a choice. |
 | **C10** Reads and outputs | Known Brain tiers and formats; `ingestion` is `library` or `none`. |
+| **C11** Two people and professional review | `twoPerson`, when present, is `true`. `professionalReview`, when present, is `attorney`, `accountant` or `tax_practitioner`, and implies two people. Neither is ever relaxed by solo signing: the countersigner differs from the approver and, for `professionalReview`, holds that profession in the signer list. Drafting is never gated. |
 
 What the contract does **not** do: it does not stop a person using the browser to call `/api/gateway/complete` without an
 `agentId`. Purpose and provider limits bind only when the call names a built-in agent, and always bind autonomous runs and

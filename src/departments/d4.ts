@@ -22,7 +22,7 @@ export const people: Department = {
     A('people', 'PPL', { n: 3, name: '30-60-90 onboarding plan', summary: 'First three months with outcomes and check-ins.', framework: '30-60-90 plan', purpose: 'people_ops',
       inputs: [txt('role', 'Role', true), long('priorities', 'Priorities for the first three months')],
       sections: (c) => [{ h: 'Priorities', input: c.input.priorities ?? '' }, { h: 'Plan', table: { headers: ['Period', 'Learn', 'Contribute', 'Check-in'], rows: [['First month', '', '', ''], ['Second month', '', '', ''], ['Third month', '', '', '']] } }] }),
-    A('people', 'PPL', { n: 4, name: 'Offer and contract checklist', summary: 'Checklist for a labour lawyer to review before an offer goes out.', framework: 'Offer review', purpose: 'people_ops', secondApprover: true, formats: ['md', 'docx'],
+    A('people', 'PPL', { n: 4, name: 'Offer and contract checklist', summary: 'Checklist for a labour lawyer to review before an offer goes out.', framework: 'Offer review', purpose: 'people_ops', secondApprover: true, twoPerson: true, formats: ['md', 'docx'],
       warning: 'Employment terms are checked by a labour lawyer. This agent sets none of them.',
       inputs: [txt('role', 'Role', true), long('terms', 'Terms you propose (you set every one)', true)],
       sections: (c) => [{ h: 'Role', input: c.input.role ?? '' }, { h: 'Proposed terms', input: c.input.terms ?? '' }, { h: 'For the labour lawyer', checks: ['Written particulars of employment complete', 'Probation, notice and leave terms checked against the law', 'Restraint or confidentiality clauses reviewed', 'Consent and notice for the employee’s personal information', 'Role description matches the job'] }] }),

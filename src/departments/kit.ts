@@ -1,4 +1,5 @@
 import type { AgentContract, InputField, RunContext } from '../core/agent';
+import type { Profession } from '../core/signing';
 import type { Block, Doc, Purpose, ArtefactFormat } from '../core/types';
 
 export const TBC = '— to complete —';
@@ -27,6 +28,8 @@ export interface AgentDef {
   formats?: ArtefactFormat[];
   inputs: InputField[];
   secondApprover?: boolean;
+  twoPerson?: true;
+  professionalReview?: Profession;
   /** Accountable role. Defaults to the department head (a placeholder role until the organisation names owners: OPQ-022). */
   owner?: string;
   models?: string[];
@@ -74,6 +77,8 @@ export function defineAgent(dept: string, code: string, d: AgentDef): AgentContr
     inputs: d.inputs,
     requiresApproval: true,
     secondApprover: d.secondApprover,
+    twoPerson: d.twoPerson,
+    professionalReview: d.professionalReview,
     budget: { maxPromptChars: 6000 },
     evalRef: 'test/departments.test.ts',
     narrativeFacts: d.narrative,

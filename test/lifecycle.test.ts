@@ -316,3 +316,95 @@ describe('the server enforces the board', () => {
     await expect(appendLedger(ingested, l('artefact.ingested', 'eve'), 0, 'eve')).resolves.toBeDefined();
   });
 });
+
+describe('professional review and two-person agents', () => {
+  const solo = { signing: { mode: 'solo' as const, waitMs: 600000 } };
+  const lerato = human('lerato');
+  const signers = [{ id: 'dan' }, { id: 'lerato', profession: 'attorney' as const }];
+  const after = (a: Artefact, minutes: number) => new Date(Date.parse(a.at) + minutes * 60000);
+  const legal: typeof plain = { ...plain, professionalReview: 'attorney' };
+  const twoOnly: typeof plain = { ...plain, twoPerson: true };
+
+  it('an attorney countersigns a professional artefact: ratified, no signing marker, profession recorded', async () => {
+    const p = await new Platform({ ...solo, signers }).init();
+    const a = await approved(p, legal, sarah, dan);
+    expect((await refused(p.countersign(a.id, dan, '', legal, after(a, 60))))?.kind).toBe('hitl');
+    expect(p.artefact(a.id)?.status).toBe('APPROVED');
+    const done = await p.countersign(a.id, lerato, 'Reviewed', legal, after(a, 0));
+    expect(done.status).toBe('INGESTED');
+    expect('signing' in done).toBe(false);
+    expect(p.warehouse.list<{ profession?: string }>('countersignatures')[0]?.profession).toBe('attorney');
+    for (const action of ['artefact.countersigned', 'artefact.ratified']) expect(p.ledger.all.find((x) => x.action === action)?.detail?.profession, action).toBe('attorney');
+  });
+
+  it('the owner (no profession) cannot countersign a professional artefact, in dual or solo', async () => {
+    for (const opts of [{ signers }, { ...solo, signers }]) {
+      const p = await new Platform(opts).init();
+      const a = await approved(p, legal, sarah, lerato);
+      expect((await refused(p.countersign(a.id, dan, '', legal, after(a, 60))))?.kind).toBe('hitl');
+      expect((await refused(p.countersign(a.id, sarah, '', legal, after(a, 60))))?.kind).toBe('hitl');
+      expect(p.artefact(a.id)?.status).toBe('APPROVED');
+    }
+  });
+
+  it('the professional cannot approve and then countersign herself, even in solo after the wait', async () => {
+    const p = await new Platform({ ...solo, signers }).init();
+    const a = await approved(p, legal, sarah, lerato);
+    expect((await refused(p.countersign(a.id, lerato, '', legal, after(a, 60))))?.kind).toBe('hitl');
+    expect(p.artefact(a.id)?.status).toBe('APPROVED');
+  });
+
+  it('solo: a secondApprover agent may be approved by its author, flagged single-signer; dual still refuses', async () => {
+    const p = await new Platform(solo).init();
+    const s = await p.runAgent(strict, inputsFor(strict), sarah);
+    await p.submitForReview(s.id, sarah);
+    const done = await p.decide(s.id, sarah, 'APPROVED', 'mine', strict);
+    expect(done).toMatchObject({ status: 'APPROVED', approvedBy: 'sarah', signing: 'single-signer' });
+    expect(p.warehouse.list<{ signing?: string }>('approvals')[0]?.signing).toBe('single-signer');
+    expect(p.ledger.all.find((x) => x.action === 'hitl.approved')?.detail?.signing).toBe('single-signer');
+    const d = await new Platform().init();
+    const t = await d.runAgent(strict, inputsFor(strict), sarah);
+    await d.submitForReview(t.id, sarah);
+    expect((await refused(d.decide(t.id, sarah, 'APPROVED', '', strict)))?.message).toMatch(/second person/);
+  });
+
+  it('solo: an ordinary approval carries no signing key at all', async () => {
+    const p = await new Platform(solo).init();
+    const a = await approved(p, strict, sarah, dan);
+    expect('signing' in a).toBe(false);
+    expect(JSON.stringify(p.warehouse.list('approvals'))).not.toMatch(/signing/);
+  });
+
+  it('solo: the author cannot approve own work for a professionalReview or twoPerson agent', async () => {
+    const p = await new Platform({ ...solo, signers }).init();
+    for (const agent of [legal, twoOnly]) {
+      const a = await p.runAgent(agent, inputsFor(agent), sarah);
+      await p.submitForReview(a.id, sarah);
+      expect((await refused(p.decide(a.id, sarah, 'APPROVED', '', agent)))?.message).toMatch(/second person/);
+    }
+  });
+
+  it('drafting is open: a legal agent runs and submits for review in solo', async () => {
+    const p = await new Platform({ ...solo, signers }).init();
+    const lg = AGENTS.find((a) => a.dept === 'legal' && a.professionalReview)!;
+    const a = await p.runAgent(lg, inputsFor(lg), sarah);
+    expect((await p.submitForReview(a.id, sarah)).status).toBe('IN_REVIEW');
+  });
+
+  it('twoPerson (no profession): the owner cannot countersign own approval; a second signer can; no marker', async () => {
+    const p = await new Platform({ ...solo, signers: [{ id: 'dan' }, { id: 'eve' }] }).init();
+    const a = await approved(p, twoOnly, sarah, dan);
+    expect((await refused(p.countersign(a.id, dan, '', twoOnly, after(a, 60))))?.kind).toBe('hitl');
+    expect(p.artefact(a.id)?.status).toBe('APPROVED');
+    const done = await p.countersign(a.id, eve, '', twoOnly, after(a, 60));
+    expect(done.status).toBe('INGESTED');
+    expect('signing' in done).toBe(false);
+  });
+
+  it('twoPerson with only the owner registered: stays APPROVED after every attempt', async () => {
+    const p = await new Platform({ ...solo, signers: [{ id: 'dan' }] }).init();
+    const a = await approved(p, twoOnly, sarah, dan);
+    for (const m of [0, 11, 600]) expect((await refused(p.countersign(a.id, dan, '', twoOnly, after(a, m))))?.kind).toBe('hitl');
+    expect(p.artefact(a.id)?.status).toBe('APPROVED');
+  });
+});

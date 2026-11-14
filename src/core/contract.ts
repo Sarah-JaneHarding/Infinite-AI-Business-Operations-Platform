@@ -5,6 +5,7 @@
  */
 import type { AgentContract } from './agent';
 import { detectPii } from './guardrails/pii';
+import { PROFESSIONS } from './signing';
 import { PURPOSES, LAWFUL_BASES, type BrainTier, type ArtefactFormat } from './types';
 
 export const CONTRACT_RULES = [
@@ -18,6 +19,7 @@ export const CONTRACT_RULES = [
   { id: 'C8', title: 'Evaluation', text: 'The contract points at a test file that exercises it (the tests check the file exists and names the agent family).' },
   { id: 'C9', title: 'Inputs', text: 'Up to 12 inputs with unique keys and labels; a choice has options.' },
   { id: 'C10', title: 'Reads and outputs', text: 'Brain tiers and output formats are from the known lists; ingestion is library or none.' },
+  { id: 'C11', title: 'Two people and professional review', text: 'twoPerson, when present, is true. professionalReview, when present, is a known profession (attorney, accountant or tax_practitioner) and implies two people.' },
 ] as const;
 export type ContractRuleId = (typeof CONTRACT_RULES)[number]['id'];
 
@@ -99,6 +101,10 @@ export function checkContract(a: AgentContract, env: ContractEnv): ContractProbl
   if (!Array.isArray(a.formats) || !a.formats.length || a.formats.some((f) => !FORMATS.includes(f))) bad('C10', 'formats must be a non-empty list of known formats');
   if (a.ingestion !== undefined && a.ingestion !== 'library' && a.ingestion !== 'none') bad('C10', 'ingestion must be library or none');
   if (typeof a.build !== 'function') bad('C10', 'build must be a function');
+
+  // C11
+  if (x.twoPerson !== undefined && x.twoPerson !== true) bad('C11', 'twoPerson, when present, must be true');
+  if (x.professionalReview !== undefined && !(typeof x.professionalReview === 'string' && (PROFESSIONS as readonly string[]).includes(x.professionalReview))) bad('C11', `professionalReview must be one of ${PROFESSIONS.join(', ')}`);
   return out;
 }
 

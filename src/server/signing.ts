@@ -1,7 +1,11 @@
 import type { Auth } from './auth';
-import { DEFAULT_SIGNING, PROFESSIONS, type Profession, type SigningPolicy } from '../core/signing';
+import { DEFAULT_SIGNING, PROFESSIONS, holdsProfession, type Profession, type SigningPolicy } from '../core/signing';
 
-/** People who may sign for the business, and for which departments. Configured, never client-supplied. */
+/**
+ * People who may sign for the business, and for which departments. Configured, never client-supplied.
+ * `|` and `;` cannot appear in a registration (they are the field and entry separators). An empty OPS_SIGNERS means
+ * unset (no registry), while an empty OPS_SIGNING_MODE or OPS_SOLO_WAIT_MINUTES value throws.
+ */
 export interface Signer {
   id: string;
   name: string;
@@ -32,6 +36,9 @@ export function parseSigners(raw: string | undefined, auth: Auth, knownDepartmen
     if (scopeRaw === '*') scope = '*';
     else {
       scope = scopeRaw.split('+').map((d) => d.trim());
+      if (scope.includes('*')) throw new Error(`OPS_SIGNERS: "*" cannot be combined with departments for "${id}"`);
+      if (scope.some((d) => !d)) throw new Error(`OPS_SIGNERS: empty department in the scope for "${id}"`);
+      if (new Set(scope).size !== scope.length) throw new Error(`OPS_SIGNERS: duplicate department in the scope for "${id}"`);
       for (const d of scope) {
         if (!knownDepartments.includes(d)) throw new Error(`OPS_SIGNERS: unknown department "${d}" for "${id}"`);
       }
@@ -60,7 +67,7 @@ export function parseSigningPolicy(env: SigningEnv, signers: readonly Signer[], 
     const t = env.OPS_SOLO_WAIT_MINUTES.trim();
     const minutes = /^\d+$/.test(t) ? Number(t) : NaN;
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
-      throw new Error('OPS_SIGNING_MODE: OPS_SOLO_WAIT_MINUTES must be a whole number from 1 to 1440');
+      throw new Error('OPS_SOLO_WAIT_MINUTES: must be a whole number from 1 to 1440');
     }
     waitMs = minutes * 60_000;
   }
@@ -80,5 +87,5 @@ export function maySignFor(signers: readonly Signer[], personId: string, departm
 
 /** True only if this person is registered with exactly the required profession. */
 export function maySignProfessional(signers: readonly Signer[], personId: string, required: Profession): boolean {
-  return signers.some((s) => s.id === personId && s.profession === required);
+  return holdsProfession(signers, personId, required);
 }

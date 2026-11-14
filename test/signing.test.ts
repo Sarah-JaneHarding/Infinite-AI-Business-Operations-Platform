@@ -29,7 +29,7 @@ describe('parseSigners', () => {
   });
 
   it('throws on unknown user, duplicate, unknown department, malformed, open auth', () => {
-    expect(() => parseSigners('nobody|Nobody|*', auth, depts)).toThrow(/^OPS_SIGNERS:/);
+    expect(() => parseSigners('nobody|Nobody|*', auth, depts)).toThrow(/^OPS_SIGNERS: "nobody" is not a user in OPS_USERS/);
     expect(() => parseSigners('sarah|A|*;sarah|B|*', auth, depts)).toThrow(/^OPS_SIGNERS:.*duplicate/);
     expect(() => parseSigners('dan|Dan|hr', auth, depts)).toThrow(/^OPS_SIGNERS:.*department/);
     expect(() => parseSigners('dan|Dan', auth, depts)).toThrow(/^OPS_SIGNERS:/);
@@ -37,6 +37,13 @@ describe('parseSigners', () => {
     expect(() => parseSigners('dan|Dan|finance|attorney', auth, depts)).toThrow(/^OPS_SIGNERS:/);
     expect(() => parseSigners('dan|Dan|finance|attorney|R|extra', auth, depts)).toThrow(/^OPS_SIGNERS:/);
     expect(() => parseSigners('dan|Dan|*', open, depts)).toThrow(/^OPS_SIGNERS:.*OPS_USERS/);
+  });
+
+  it('throws on a duplicate department, an empty department segment, and * combined with others', () => {
+    expect(() => parseSigners('dan|Dan|finance+finance', auth, depts)).toThrow(/^OPS_SIGNERS:.*duplicate department/);
+    expect(() => parseSigners('dan|Dan|finance+', auth, depts)).toThrow(/^OPS_SIGNERS:.*empty department/);
+    expect(() => parseSigners('dan|Dan|+finance', auth, depts)).toThrow(/^OPS_SIGNERS:.*empty department/);
+    expect(() => parseSigners('dan|Dan|*+legal', auth, depts)).toThrow(/^OPS_SIGNERS:.*"\*" cannot be combined/);
   });
 
   it('parses professional entries and rejects bad ones', () => {
@@ -63,13 +70,17 @@ describe('parseSigningPolicy', () => {
     expect(parseSigningPolicy({ OPS_SIGNING_MODE: 'solo', OPS_SOLO_WAIT_MINUTES: '15' }, one, auth).waitMs).toBe(900000);
   });
 
+  it('accepts a padded mode value', () => {
+    expect(parseSigningPolicy({ OPS_SIGNING_MODE: ' solo ' }, one, auth).mode).toBe('solo');
+  });
+
   it('fails closed on bad configuration', () => {
     expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, [], auth)).toThrow(/^OPS_SIGNING_MODE:/);
     expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, two, auth)).toThrow(/^OPS_SIGNING_MODE:/);
     expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, one, open)).toThrow(/^OPS_SIGNING_MODE:/);
     expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'triple' }, one, auth)).toThrow(/^OPS_SIGNING_MODE:/);
     for (const w of ['0', '1441', '1.5', 'abc', '']) {
-      expect(() => parseSigningPolicy({ OPS_SOLO_WAIT_MINUTES: w }, one, auth)).toThrow(/^OPS_SIGNING_MODE:/);
+      expect(() => parseSigningPolicy({ OPS_SOLO_WAIT_MINUTES: w }, one, auth)).toThrow(/^OPS_SOLO_WAIT_MINUTES:/);
     }
   });
 
@@ -81,6 +92,11 @@ describe('parseSigningPolicy', () => {
 
 describe('maySignFor', () => {
   const signers = parseSigners('sarah|Sarah|*;dan|Dan|finance+legal', auth, depts);
+  it('an empty registry signs for nobody', () => {
+    expect(maySignFor([], 'sarah', 'finance')).toBe(false);
+    expect(maySignFor([], 'sarah', undefined)).toBe(false);
+  });
+
   it('applies scope', () => {
     expect(maySignFor(signers, 'sarah', 'sales')).toBe(true);
     expect(maySignFor(signers, 'sarah', undefined)).toBe(true);

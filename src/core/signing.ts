@@ -16,5 +16,12 @@ export function soloWaitRemainingMs(approvedAt: string, now: Date, policy: Signi
   if (Number.isNaN(nowMs)) return policy.waitMs; // fail closed: an invalid clock never shortens the wait
   const left = Math.max(0, start + policy.waitMs - nowMs);
   return Number.isFinite(left) ? left : Number.MAX_SAFE_INTEGER; // never NaN or Infinity
+}
 
+/** An agent whose output always needs two different people, whatever the signing mode. professionalReview implies it. */
+export const requiresTwoPerson = (a: { twoPerson?: boolean; professionalReview?: Profession }): boolean => a.twoPerson === true || a.professionalReview !== undefined;
+
+/** True only if this person is in the list with exactly the required profession. Pure, so the browser Platform can use it. */
+export function holdsProfession(signers: readonly { id: string; profession?: Profession }[], personId: string, required: Profession): boolean {
+  return signers.some((s) => s.id === personId && s.profession === required);
 }
