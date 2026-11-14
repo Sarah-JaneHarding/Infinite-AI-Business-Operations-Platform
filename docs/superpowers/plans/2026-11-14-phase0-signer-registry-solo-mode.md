@@ -19,7 +19,8 @@
 - Ledger/record marker is exactly `signing: "single-signer"`.
 - Agents and `auto:` actors can never approve, countersign, ratify, ingest or merge. Not relaxed anywhere.
 - An edit after approval still voids both signatures. A ratified artefact is still final.
-- Agents whose contract has `secondApprover` keep needing someone other than the author to approve (not relaxed here; see Task 7 open item).
+- Owner decision 2026-11-14: "not in the beginning unless it needs a registered lawyer, accountant or tax consultant to countersign it." So in solo mode the `secondApprover` rule (approver must differ from author) is also relaxed, **except** for an artefact whose agent contract sets `professionalReview`. Those always need a countersigner who is a registered professional of that profession (`attorney`, `accountant` or `tax_practitioner`) and is a different person from the approver, in every mode. Solo never ratifies them, and the owner cannot countersign them unless the owner is registered in that profession.
+- Professional registration numbers are stored as free text for the owner's own record and are **not** validated or invented by the platform; the owner verifies them with the relevant body.
 - No new dependency. Commit style: Conventional Commits, one logical change per commit. One PR per group below, each at most ~400 changed lines, opened as a **draft**; the owner reviews and merges.
 - Unregistered setups (`OPS_SIGNERS` unset) behave exactly as today.
 
@@ -31,6 +32,8 @@
 - A client forging `signing: "single-signer"` on a different-person countersign, or omitting it on a same-person one: refuse.
 - `solo` with two or more signers, a signer not in `OPS_USERS`, or `OPS_SIGNING_MODE=solo` without `OPS_USERS`: the server refuses to start with a `FATAL`-style message.
 - A signer scoped to one department approving or countersigning another department's artefact: refuse 403.
+- A `professionalReview` artefact countersigned by the owner (no profession), by the wrong profession, by the same person who approved it, or in solo mode: refuse 403 every time.
+- A `professionalReview` artefact ratified correctly by a registered professional: succeeds, carries no `single-signer` marker, and names the profession and registration text in the ledger detail.
 
 ---
 
@@ -49,14 +52,16 @@
   `export const DEFAULT_SIGNING: SigningPolicy` (`{ mode: 'dual', waitMs: 600_000 }`)
   `export function soloWaitRemainingMs(approvedAt: string, now: Date, policy: SigningPolicy): number` (0 when elapsed, never negative)
 - Produces (`src/server/signing.ts`):
-  `export interface Signer { id: string; name: string; scope: '*' | readonly string[] }`
+  `export interface Signer { id: string; name: string; scope: '*' | readonly string[]; profession?: Profession; registration?: string }`
+  (`Profession` and `PROFESSIONS = ['attorney', 'accountant', 'tax_practitioner'] as const` are exported from `src/core/signing.ts`)
   `export interface SigningEnv { OPS_SIGNERS?: string; OPS_SIGNING_MODE?: string; OPS_SOLO_WAIT_MINUTES?: string }`
   `export function parseSigners(raw: string | undefined, auth: Auth, knownDepartments: readonly string[]): Signer[]`
   `export function parseSigningPolicy(env: SigningEnv, signers: readonly Signer[], auth: Auth): SigningPolicy`
   `export function maySignFor(signers: readonly Signer[], personId: string, department: string | undefined): boolean`
 - Consumes: `Auth` from `src/server/auth.ts`.
 
-`OPS_SIGNERS` format: entries separated by `;`, each `id|Display Name|scope`, scope is `*` or department ids joined by `+` (example: `sarah|Sarah-Jane Harding|*`).
+`OPS_SIGNERS` format: entries separated by `;`, each `id|Display Name|scope` with two optional trailing fields `|profession|registration`. Scope is `*` or department ids joined by `+`. Examples: `sarah|Sarah-Jane Harding|*` and `lerato|Lerato Mokoena|legal|attorney|<registration text>`. A professional entry must have a department scope, never `*`.
+  Also produced here: `maySignProfessional(signers: readonly Signer[], personId: string, required: Profession): boolean` (true only if that person is registered with exactly that profession).
 
 - [ ] **Step 1: Write failing tests** in `test/signing.test.ts` (use `parseAuth({ OPS_USERS: 'sarah:<20+ char token>,dan:<token>' })` for `auth`):
   - `parseSigners` returns `[]` for undefined or empty (legacy: no registry).
@@ -66,6 +71,8 @@
   - throws on: `solo` with 0 or 2+ signers, `solo` with open auth, unknown mode string, wait outside 1 to 1440 or non-integer.
   - `maySignFor`: `'*'` scope allows any department and `undefined`; a department-scoped signer allows only its departments and refuses `undefined`; unlisted person refused.
   - `soloWaitRemainingMs('2026-11-14T10:00:00Z', new Date('2026-11-14T10:04:00Z'), policy)` is `360000`; at 10:10 and after it is `0`.
+  - parses `lerato|Lerato Mokoena|legal|attorney|REG-TEXT` to `profession: 'attorney'`, `registration: 'REG-TEXT'`; throws on an unknown profession, a profession with scope `*`, or a profession with no registration text.
+  - `maySignProfessional`: true for the matching profession only; false for the owner (no profession), for a different profession, and for an unknown person.
 - [ ] **Step 2: Run** `npx vitest run test/signing.test.ts`. Expected: FAIL (modules missing).
 - [ ] **Step 3: Implement** both files to the signatures above. Error messages start with `OPS_SIGNERS:` / `OPS_SIGNING_MODE:` like the existing `OPS_USERS:` ones.
 - [ ] **Step 4: Run** the same command. Expected: PASS. Then `npm run lint`.
@@ -93,6 +100,26 @@
 - [ ] **Step 4: Run** `npx vitest run test/lifecycle.test.ts` and `npm run lint`. Expected: PASS, no type errors.
 - [ ] **Step 5: Commit** `feat(board): solo countersign in the platform, flagged single-signer`.
 
+### Task 2b: `professionalReview` on the agent contract, and the professional countersign
+
+**Files:**
+- Modify: `src/core/contract.ts` (add the field and a validity check, next to the existing C-codes at ~48-69), `src/departments/types.ts` (the `AgentContract` type), `src/core/platform.ts` (`decide` ~328-340 and `countersign`), the legal-department agents' contract data
+- Test: `test/contracts.test.ts` and `test/lifecycle.test.ts`
+
+**Interfaces:**
+- Consumes: `Profession`, `PROFESSIONS`.
+- Produces: `AgentContract.professionalReview?: Profession`; `PlatformOptions.signers?: readonly { id: string; profession?: Profession }[]` (the browser Platform needs only who holds which profession; the server remains authoritative); `countersign` records `profession` on the countersignature row and in both ledger `detail`s when `professionalReview` applies.
+
+- [ ] **Step 1: Write failing tests**:
+  - contract check: a contract with `professionalReview: 'barrister'` fails with a new code `C9`; each of the three valid values passes; absent passes.
+  - platform, an agent with `professionalReview: 'attorney'`, `signers` includes `lerato` (attorney): the owner approves, then `countersign` by the owner is refused (`hitl`), also in solo after the wait; `countersign` by `lerato` succeeds, status `INGESTED`, **no** `signing` marker, and `detail.profession === 'attorney'`; `lerato` approving then countersigning herself is refused.
+  - platform, solo, agent with `secondApprover: true` and **no** `professionalReview`: the author approving their own run succeeds and the artefact carries `signing: 'single-signer'`; in dual it is still refused (existing test unchanged).
+  - platform, solo, `professionalReview` agent, author approves own run: refused (the `secondApprover` relaxation does not apply).
+- [ ] **Step 2: Run** `npx vitest run test/contracts.test.ts test/lifecycle.test.ts`. Expected: FAIL.
+- [ ] **Step 3: Implement.** Default mapping: every agent whose department is `legal` gets `professionalReview: 'attorney'`. No other agent gets one until the owner decides (OPQ-028). Library documents are seeded and already immutable; their `review` text is not changed here.
+- [ ] **Step 4: Run** the same command plus `npm run lint`. Expected: PASS.
+- [ ] **Step 5: Commit** `feat(contracts): professionalReview and professional countersign`.
+
 ---
 
 ## PR 2: Server authority (Tasks 3 and 4)
@@ -113,6 +140,9 @@
   - solo, same person, `reauthed: false`: 403; `reauthed: true` but wait not elapsed (`now` = approval `at` + 9 minutes): 409; elapsed + reauthed + `signing: 'single-signer'`: accepted.
   - solo, same person, record **missing** `signing`: 400; different person **with** `signing`: 400.
   - `appendLedger` for `artefact.countersigned` with `detail.signing` that differs from the artefact's `signing`: 409.
+  - `professionalReview: 'attorney'` agent: RATIFIED append by the owner: 403; by a signer registered as `accountant`: 403; by the approver even if registered as attorney: 403; by a different registered attorney whose scope covers the department: accepted with no `signing` field and `profession` recorded; in solo mode the same results (solo never applies).
+  - solo, `secondApprover` agent without `professionalReview`, approver equals author: accepted and the record carries `signing: 'single-signer'`; without the marker: 400; in dual: 403.
+  - `ratifiedProblem` on a `professionalReview` artefact rejects a record flagged `single-signer`.
   - `ratifiedProblem`: flagged single-signer artefact with both records passes (even when mode is now dual); unflagged equal signers fails; flag without a recorded approval and countersignature fails.
 - [ ] **Step 2: Run** `npx vitest run test/signing-server.test.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement** the checks. Order in the RATIFIED branch: registry scope, then (if signer equals approver) mode, reauth, wait, flag consistency; keep existing checks. Registry scope also applies in the APPROVED branch. When `ctx.signers` is empty or undefined the registry check is skipped (legacy).
@@ -187,7 +217,8 @@
   - `PR_POLICY.md`: draft PR only, owner reviews, no agent merges, CI green, size and body rules from the Ecosystem `CLAUDE.md`.
   - `REVIEW_BOARD.md`: add the solo section (what it is, the wait, the token, the flag, how to return to dual by adding a second signer and removing `OPS_SIGNING_MODE=solo`).
   - `OPEN_QUESTIONS.md`: record the temporary relaxation against OPQ-017 and OPQ-019 (owner approved on 2026-11-14), and **OPQ-027**: GitHub does not let a PR author approve their own PR; PRs opened through the owner's account cannot satisfy "require code-owner review" without admin bypass or a separate bot identity. Owner to decide.
-  - Design doc: hosting is **IONOS** (not Cloudflare Pages); payments not finalised so no pricing page and no price anywhere; company and VAT numbers not yet available, so footers omit them rather than invent them.
+  - `OPEN_QUESTIONS.md` **OPQ-028**: which agents beyond `legal` need a registered attorney, accountant or tax practitioner to countersign (finance, tax, contracts, procurement)? Who are those professionals and how will the owner verify their registration? Default until answered: legal-department agents need an attorney, nothing else does. Library `review` text names the reviewer for 65 of 120 documents (about 44 an attorney, 4 a registered tax practitioner or the accountant); those drafts are not yet gated by the platform.
+  - Design doc section 5.1: add the professional-review rule. Hosting: **IONOS** (not Cloudflare Pages); payments not finalised so no pricing page and no price anywhere; company and VAT numbers not yet available, so footers omit them rather than invent them.
 - [ ] **Step 4: Run** `npx vitest run`, lint and build. Expected: PASS.
 - [ ] **Step 5: Commit** `docs: solo signing, PR policy, CODEOWNERS, design corrections (IONOS, no prices)`.
 
@@ -195,4 +226,5 @@
 
 - Spec 5.1 coverage: registry (Tasks 1, 3, 4), opt-in visible mode (4, 5), two separate actions with re-auth and wait (2, 3, 5), `single-signer` flag (2, 3), report (6), return to dual (1, 7), OPEN_QUESTIONS note (7), agents never sign (2, 3 tests). Hosting/pricing/registration-number corrections (7).
 - Names are consistent across tasks: `SigningPolicy`, `Signer`, `SINGLE_SIGNER`, `soloWaitRemainingMs`, `maySignFor`, `withReauth`, header `x-ops-reauth`.
-- Open item for the owner: `secondApprover` agents (finance, security) still need approver different from author; solo does not relax that. Autonomous drafts are unaffected (their author is `auto:`).
+- Owner's rule (solo unless a registered lawyer, accountant or tax consultant must countersign): Task 2b (contract field, platform), Task 3 (server), Task 1 (registry and `maySignProfessional`), Task 7 (OPQ-028). The `secondApprover` relaxation is in Tasks 2b and 3.
+- Open for the owner: which agents beyond legal need a professional (OPQ-028), who the professionals are, and how their registration is verified. The platform stores registration text but cannot check it.
