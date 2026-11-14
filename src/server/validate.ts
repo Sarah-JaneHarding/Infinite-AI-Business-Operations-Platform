@@ -163,13 +163,13 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
       // Solo mode only: the one signer countersigns their own approval after signing in again and waiting.
       if (policy.mode !== 'solo') bad('a different person from the approver must countersign', 403);
       if (ctx.reauthed !== true) bad('solo signing: sign in again before you countersign your own approval', 403);
-      // The wait is timed from the server-authored ledger entry for the current approval, never from the client-supplied
-      // `at` on the artefact version. The latest hitl.approved entry governs, it must be by the current approver, and
-      // there must be at least one per approval, so a re-approval that was never ledgered cannot borrow an earlier entry.
-      const entries = ctx.store.list('ledger').filter((e) => e.action === 'hitl.approved' && e.subject === cur.id);
-      const approvals = ctx.store.list('artefact_versions').filter((r) => r.id === cur.id && r.status === 'APPROVED').length;
-      const entry = entries.at(-1);
-      if (!entry || entry.actor !== cur.approvedBy || entries.length < approvals) return bad('solo signing: the approval has not been recorded in the ledger yet', 409);
+      // The wait is timed from the server-authored ledger entry for THIS approval (same approver, version and content),
+      // never from the client-supplied `at` on the artefact version, and never from an entry for an earlier version.
+      const entry = ctx.store.list('ledger').filter((e) => {
+        const d = e.detail as { version?: unknown; docHash?: unknown } | undefined;
+        return e.action === 'hitl.approved' && e.subject === cur.id && e.actor === cur.approvedBy && d?.version === cur.version && (cur.docHash === undefined || d?.docHash === cur.docHash);
+      }).at(-1);
+      if (!entry) return bad('solo signing: the approval has not been recorded in the ledger yet for this version', 409);
       const left = soloWaitRemainingMs(String(entry.at), ctx.now ?? new Date(), policy);
       if (left !== 0) {
         const mins = Math.max(1, Math.ceil((Number.isFinite(left) ? left : policy.waitMs) / 60_000));
@@ -221,6 +221,11 @@ function approval(rec: Rec, ctx: AppendCtx) {
   const art = latestById(ctx.store.list('artefact_versions'), rec.artefactId);
   if (!art || art.status !== rec.decision || art.approvedBy !== rec.approver || art.signing !== rec.signing) bad('approval does not match a recorded decision', 409);
   if (ctx.actor && rec.approver !== ctx.actor) bad('approver is not you', 403);
+  if (rec.decision === 'APPROVED') {
+    // One APPROVED row per version, naming the version it approves.
+    if (rec.version !== art?.version) bad('approval does not name the approved version', 409);
+    if (ctx.store.list('approvals').some((r) => r.artefactId === rec.artefactId && r.decision === 'APPROVED' && r.version === rec.version)) bad('this approval is already recorded', 409);
+  }
 }
 
 function brain(rec: Rec, ctx: AppendCtx) {

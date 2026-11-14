@@ -358,8 +358,10 @@ export class Platform {
     if (decision === 'REJECTED' && !note.trim()) throw new RunRefused('hitl', 'A rejection needs a reason.');
     const next: Artefact = { ...withoutSigning(cur), id: artefactId, status: decision, approvedBy: approver.id, note, at: new Date().toISOString(), ...mark };
     await this.warehouse.put('artefact_versions', { ...next, editedBy: approver.id });
-    await this.warehouse.put('approvals', { id: newId('apr'), artefactId, decision, approver: approver.id, note, at: next.at, ...mark });
-    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'hitl.' + decision.toLowerCase(), subject: artefactId, detail: { note, ...mark } });
+    await this.warehouse.put('approvals', { id: newId('apr'), artefactId, decision, approver: approver.id, version: cur.version, note, at: next.at, ...mark });
+    // An approval names the version and content it approves, so the server can bind the solo wait to this exact approval.
+    const bound = decision === 'APPROVED' ? { version: cur.version, docHash: cur.docHash ?? (await sha256Hex(canonical(cur.doc))) } : {};
+    await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: 'hitl.' + decision.toLowerCase(), subject: artefactId, detail: { note, ...mark, ...bound } });
     return next;
   }
 

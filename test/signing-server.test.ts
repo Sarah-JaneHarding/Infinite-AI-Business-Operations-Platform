@@ -48,7 +48,7 @@ const ratifiedRows = (agentId: string, approvedBy: string, countersignedBy: stri
   custom_defs: customDefs,
 });
 /** The server-authored ledger entry for an approval: its `at` is the server's clock, so the solo wait is timed from it. */
-const approvalEntry = (at: string, actor = 'dan', subject = 'art_1'): Row => ({ id: `L_${at}_${actor}`, action: 'hitl.approved', subject, actor, at, detail: {} });
+const approvalEntry = (at: string, actor = 'dan', subject = 'art_1', version = 1, docHash = H): Row => ({ id: `L_${at}_${actor}_${version}`, action: 'hitl.approved', subject, actor, at, detail: { note: '', version, docHash } });
 const ledgered = (rows: Record<string, Row[]>, ...entries: Row[]): Record<string, Row[]> => ({ ...rows, ledger: entries });
 const V = (rows: Record<string, Row[]>, rec: Rec, actor: string | null, extra: Partial<AppendCtx> = {}, c = 'artefact_versions') => validateAppend(c, rec, { actor, store: store(rows), ...extra });
 const decision = (agentId: string, approvedBy: string, o: Row = {}) => art({ agentId, status: 'APPROVED', approvedBy, at: APPROVED_AT, ...o });
@@ -177,9 +177,8 @@ describe('where the marker may appear', () => {
 });
 
 describe('the approvals row and hitl ledger entry follow the artefact', () => {
-  const row = (o: Row = {}) => ({ id: 'apr_1', artefactId: 'art_1', decision: 'APPROVED', approver: 'sarah', ...o }) as Rec;
-  const approvalRow = { id: 'apr_1', artefactId: 'art_1', decision: 'APPROVED', approver: 'sarah' };
-  const flagged = () => ({ ...approvedRows(SA.id, 'sarah', { signing: 'single-signer' }), approvals: [{ ...approvalRow, signing: 'single-signer' }] });
+  const row = (o: Row = {}) => ({ id: 'apr_1', artefactId: 'art_1', decision: 'APPROVED', approver: 'sarah', version: 1, ...o }) as Rec;
+  const flagged = () => approvedRows(SA.id, 'sarah', { signing: 'single-signer' });
 
   it('an approvals row must carry the marker exactly when the artefact does', async () => {
     await expect(V(flagged(), row({ signing: 'single-signer' }), 'sarah', {}, 'approvals')).resolves.toBeDefined();
@@ -188,62 +187,98 @@ describe('the approvals row and hitl ledger entry follow the artefact', () => {
   });
 
   it('a hitl.approved entry must carry detail.signing exactly when the artefact does', async () => {
-    const l = (detail: Row) => ({ orgId: 'o', actor: 'sarah', action: 'hitl.approved', subject: 'art_1', detail });
+    const l = (detail: Row) => ({ orgId: 'o', actor: 'sarah', action: 'hitl.approved', subject: 'art_1', detail: { version: 1, docHash: H, ...detail } });
     await expect(appendLedger(store(flagged()), l({ note: '', signing: 'single-signer' }), 0, 'sarah')).resolves.toBeDefined();
     const missing = await rej(appendLedger(store(flagged()), l({ note: '' }), 0, 'sarah'));
     expect(missing?.status).toBe(409);
     expect(missing?.message).toMatch(/marker/);
-    expect((await rej(appendLedger(store({ ...approvedRows(SA.id, 'sarah'), approvals: [approvalRow] }), l({ signing: 'single-signer' }), 0, 'sarah')))?.status).toBe(409);
+    expect((await rej(appendLedger(store(approvedRows(SA.id, 'sarah')), l({ signing: 'single-signer' }), 0, 'sarah')))?.status).toBe(409);
   });
 });
 
-describe('hitl.approved entries never outnumber approvals', () => {
+describe('hitl.approved entries and approvals rows are bound to the approved version', () => {
   const iso = (m: number) => plus(m).toISOString();
-  const entry = { orgId: 'o', actor: 'dan', action: 'hitl.approved', subject: 'art_1', detail: { note: '' } };
-  const approvalRow = (id: string) => ({ id, artefactId: 'art_1', decision: 'APPROVED', approver: 'dan' });
-  const ledgerOf = (rows: Record<string, Row[]>) => (rows.ledger ?? []).length;
-  /** Re-approval after an edit: a new DRAFT, review and APPROVED version, as the Platform writes them. */
+  const entry = (version: unknown, detail: Row = {}) => ({ orgId: 'o', actor: 'dan', action: 'hitl.approved', subject: 'art_1', detail: { note: '', version, docHash: H, ...detail } });
+  const approvalRow = (id: string, version: number) => ({ id, artefactId: 'art_1', decision: 'APPROVED', approver: 'dan', version }) as Rec;
+  /** Append through the server's validators, as POST /api/warehouse does. */
+  const post = async (rows: Record<string, Row[]>, c: string, rec: Rec) => { (rows[c] ??= []).push(await V(rows, rec, 'dan', {}, c)); };
+  /** Edit and re-approve: a new DRAFT, review and APPROVED version (the client may claim any `at`). */
   const reapprove = (rows: Record<string, Row[]>, at: string) => rows.artefact_versions!.push(art({ version: 2 }), art({ version: 2, status: 'IN_REVIEW' }), art({ version: 2, status: 'APPROVED', approvedBy: 'dan', at }));
-  const countersignV2 = (rows: Record<string, Row[]>) => V(rows, ratify(PLAIN.id, 'dan', 'dan', { version: 2, signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now: plus(30) });
+  const countersign = (rows: Record<string, Row[]>, version: number, now: Date) => V(rows, ratify(PLAIN.id, 'dan', 'dan', { version, signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now });
+  const v1 = (): Record<string, Row[]> => approvedRows(PLAIN.id, 'dan', { at: iso(0) });
 
-  it('a second hitl.approved entry for the same approval is refused 409', async () => {
-    const rows = { ...approvedRows(PLAIN.id, 'dan'), approvals: [approvalRow('apr_1')] };
-    await expect(appendLedger(store(rows), entry, 0, 'dan')).resolves.toBeDefined();
-    const again = await rej(appendLedger(store(rows), entry, 1, 'dan'));
+  it('a hitl.approved entry with the wrong or no version is refused 409', async () => {
+    for (const version of [2, 0, '1', undefined]) {
+      const e = await rej(appendLedger(store(v1()), entry(version), 0, 'dan'));
+      expect(e?.status).toBe(409);
+      expect(e?.message).toMatch(/version/);
+    }
+  });
+
+  it('a duplicate hitl.approved entry for the same version is refused 409', async () => {
+    const rows = v1();
+    await expect(appendLedger(store(rows), entry(1), 0, 'dan')).resolves.toBeDefined();
+    const again = await rej(appendLedger(store(rows), entry(1), 1, 'dan'));
     expect(again?.status).toBe(409);
     expect(again?.message).toMatch(/already in the ledger/);
-    expect(ledgerOf(rows)).toBe(1);
+    expect(rows.ledger).toHaveLength(1);
   });
 
-  it('an entry written ahead of its approvals row is refused 409', async () => {
-    const e = await rej(appendLedger(store(approvedRows(PLAIN.id, 'dan')), entry, 0, 'dan'));
-    expect(e?.status).toBe(409);
-    expect(e?.message).toMatch(/already in the ledger/);
+  it('a duplicate APPROVED approvals row for the same version is refused 409, and the row must name the current version', async () => {
+    const rows = v1();
+    await post(rows, 'approvals', approvalRow('apr_1', 1));
+    const dup = await rej(post(rows, 'approvals', approvalRow('apr_2', 1)));
+    expect(dup?.status).toBe(409);
+    expect(dup?.message).toMatch(/already recorded/);
+    const same = await rej(post(rows, 'approvals', approvalRow('apr_1', 1)));
+    expect(same?.status).toBe(409);
+    expect((await rej(post(v1(), 'approvals', approvalRow('apr_1', 2))))?.status).toBe(409);
+    expect(rows.approvals).toHaveLength(1);
   });
 
-  it('the attack: pad entries while approved, edit, re-approve unledgered: the padding is refused and the solo countersign is refused', async () => {
-    const rows: Record<string, Row[]> = { ...approvedRows(PLAIN.id, 'dan', { at: iso(0) }), approvals: [approvalRow('apr_1')] };
-    await expect(appendLedger(store(rows), entry, 0, 'dan', () => iso(0))).resolves.toBeDefined();
-    for (let i = 0; i < 2; i++) expect((await rej(appendLedger(store(rows), entry, 1, 'dan', () => iso(1))))?.status).toBe(409);
-    expect(ledgerOf(rows)).toBe(1);
-    reapprove(rows, iso(0)); // the client backdates the re-approval and never ledgers it
-    rows.approvals!.push(approvalRow('apr_2'));
-    const e = await rej(countersignV2(rows));
+  it("the reviewer's attack: pad approvals rows and ledger entries, edit, re-approve v2 unledgered: the solo countersign is refused 409", async () => {
+    const rows = v1();
+    await post(rows, 'approvals', approvalRow('apr_1', 1));
+    expect((await rej(post(rows, 'approvals', approvalRow('apr_pad', 1))))?.status).toBe(409);
+    await expect(appendLedger(store(rows), entry(1), 0, 'dan', () => iso(0))).resolves.toBeDefined();
+    expect((await rej(appendLedger(store(rows), entry(1), 1, 'dan', () => iso(0))))?.status).toBe(409);
+    reapprove(rows, iso(60));
+    await post(rows, 'approvals', approvalRow('apr_2', 2));
+    const e = await rej(countersign(rows, 2, plus(61)));
     expect(e?.status).toBe(409);
     expect(e?.message).toMatch(/not been recorded in the ledger/);
   });
 
-  it('the normal flow: approvals row then entry, again after an edit, and the solo countersign uses the second entry', async () => {
-    const flow = async (secondAt: string) => {
-      const rows: Record<string, Row[]> = { ...approvedRows(PLAIN.id, 'dan', { at: iso(0) }), approvals: [approvalRow('apr_1')] };
-      await expect(appendLedger(store(rows), entry, 0, 'dan', () => iso(0))).resolves.toBeDefined();
-      reapprove(rows, iso(0));
-      rows.approvals!.push(approvalRow('apr_2'));
-      await expect(appendLedger(store(rows), entry, 1, 'dan', () => secondAt)).resolves.toBeDefined();
-      return rows;
-    };
-    expect((await rej(countersignV2(await flow(iso(25)))))?.message).toMatch(/5 minutes left/); // timed from the second entry, not the first
-    await expect(countersignV2(await flow(iso(19)))).resolves.toMatchObject({ status: 'RATIFIED', version: 2, signing: 'single-signer' });
+  it('an entry for an old version is never accepted for the current version, even a forged one in the store', async () => {
+    const rows = v1();
+    reapprove(rows, iso(0));
+    rows.ledger = [approvalEntry(iso(0), 'dan', 'art_1', 1), approvalEntry(iso(0), 'dan', 'art_1', 1)];
+    const e = await rej(countersign(rows, 2, plus(60)));
+    expect(e?.status).toBe(409);
+    expect(e?.message).toMatch(/not been recorded in the ledger/);
+  });
+
+  it('an entry whose docHash differs from the artefact is not accepted', async () => {
+    const rows = ledgered(v1(), approvalEntry(iso(0), 'dan', 'art_1', 1, 'f'.repeat(64)));
+    const e = await rej(countersign(rows, 1, plus(60)));
+    expect(e?.status).toBe(409);
+    expect(e?.message).toMatch(/not been recorded in the ledger/);
+  });
+
+  it('the normal flow: approve, entry, countersign after the wait; and again after an edit with its own entry', async () => {
+    const rows = v1();
+    await post(rows, 'approvals', approvalRow('apr_1', 1));
+    await expect(appendLedger(store(rows), entry(1), 0, 'dan', () => iso(0))).resolves.toBeDefined();
+    await expect(countersign(rows, 1, plus(10))).resolves.toMatchObject({ status: 'RATIFIED', version: 1 });
+
+    const again = v1();
+    await post(again, 'approvals', approvalRow('apr_1', 1));
+    await expect(appendLedger(store(again), entry(1), 0, 'dan', () => iso(0))).resolves.toBeDefined();
+    reapprove(again, iso(0));
+    await post(again, 'approvals', approvalRow('apr_2', 2));
+    await expect(appendLedger(store(again), entry(2), 1, 'dan', () => iso(20))).resolves.toBeDefined();
+    expect((await rej(countersign(again, 2, plus(25))))?.message).toMatch(/5 minutes left/); // timed from the v2 entry, not the v1 one
+    await expect(countersign(again, 2, plus(30))).resolves.toMatchObject({ status: 'RATIFIED', version: 2, signing: 'single-signer' });
   });
 });
 
@@ -333,7 +368,7 @@ describe('ratifying (APPROVED -> RATIFIED)', () => {
           art({ version: 2 }), art({ version: 2, status: 'IN_REVIEW' }), art({ version: 2, status: 'APPROVED', approvedBy: 'dan', at: iso(0) }),
         ],
       };
-      const e = await rej(V(ledgered(history, approvalEntry(iso(0)), approvalEntry(iso(29))), ratify(PLAIN.id, 'dan', 'dan', { version: 2, signing: 'single-signer' }), 'dan', ctx));
+      const e = await rej(V(ledgered(history, approvalEntry(iso(0)), approvalEntry(iso(29), 'dan', 'art_1', 2)), ratify(PLAIN.id, 'dan', 'dan', { version: 2, signing: 'single-signer' }), 'dan', ctx));
       expect(e?.status).toBe(409);
       expect(e?.message).toMatch(/minutes left/);
       // and a re-approval that was never ledgered cannot borrow the earlier, voided entry
