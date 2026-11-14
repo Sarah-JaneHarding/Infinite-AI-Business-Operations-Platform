@@ -38,6 +38,7 @@ import { BrainView, ConnectorView, Dept, GuardrailLab, LedgerView, Overview, War
 import { DEPARTMENTS } from './departments';
 import { BRAND } from './brand';
 import { BrandView } from './ui/BrandView';
+import { CeoCentre } from './ui/CeoCentre';
 
 function Shell() {
   const { view, go, p, mode, actor, setActor, llm, setLlm, health, authNeeded, authError, signIn, syncError } = useOps();
@@ -70,7 +71,7 @@ function Shell() {
       <aside className={`nav fixed inset-y-0 left-0 z-20 w-64 overflow-y-auto p-3 lg:static lg:block flex flex-col justify-between ${navOpen ? 'block' : 'hidden'}`} style={{ background: '#0e0b24' }}>
         <div>
           {/* Logo & Brand Header */}
-          <div className="mb-4 px-2 pt-2 border-b border-indigo-900/40 pb-3 cursor-pointer" onClick={() => go({ name: 'overview' })}>
+          <div className="mb-4 px-2 pt-2 border-b border-indigo-900/40 pb-3 cursor-pointer" onClick={() => go({ name: 'ceo' })}>
             <div className="flex items-center gap-2">
               <img src={BRAND.assets.logoSmall} alt={BRAND.name} width={34} height={34} className="rounded-lg" />
               <div>
@@ -86,7 +87,8 @@ function Shell() {
 
           {/* Navigation Items */}
           <div className="space-y-1">
-            {item({ name: 'overview' }, 'Command Centre', <Gauge size={16} />, view.name === 'overview')}
+            {item({ name: 'ceo' }, 'CEO Command Centre', <Gauge size={16} />, view.name === 'ceo')}
+            {item({ name: 'overview' }, 'Ecosystem status', <Gauge size={16} />, view.name === 'overview')}
             {item({ name: 'studio' }, 'Document Studio', <BookOpen size={16} className="text-purple-300" />, view.name === 'studio')}
             {item({ name: 'warehouse' }, 'Data Warehouse', <Database size={16} className="text-cyan-400" />, view.name === 'warehouse')}
 
@@ -163,7 +165,8 @@ function Shell() {
               <input className="input" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Your name" />
               <button className="btn primary" disabled={!name.trim()} onClick={() => setActor(name.trim(), 'Founder')}>Continue</button>
             </div>
-          ) : view.name === 'overview' ? <Overview />
+          ) : view.name === 'ceo' ? <CeoCentre />
+          : view.name === 'overview' ? <Overview />
             : view.name === 'dept' ? <Dept id={view.id} />
             : view.name === 'studio' ? <DocumentStudio initialArtefactId={view.id} initialDocId={view.docId} />
             : view.name === 'brand' ? <BrandView />
@@ -172,7 +175,7 @@ function Shell() {
             : view.name === 'ledger' ? <LedgerView />
             : view.name === 'warehouse' ? <WarehouseView />
             : view.name === 'cost' ? <CloudAndFinance />
-            : view.name === 'showcase' ? <EducationEcosystemWebsite onSwitchToOps={() => go({ name: 'overview' })} />
+            : view.name === 'showcase' ? <EducationEcosystemWebsite onSwitchToOps={() => go({ name: 'ceo' })} />
             : view.name === 'connector' ? <ConnectorView />
             : view.name === 'erasure' ? <ErasureView />
             : view.name === 'models' ? <ModelHub />

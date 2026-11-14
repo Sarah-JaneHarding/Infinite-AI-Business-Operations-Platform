@@ -76,7 +76,7 @@ The platform stores them and cannot verify them.
   flag never appears on these.
 
 Default mapping today: OPS-LEG-01 to OPS-LEG-05 need an attorney; OPS-SEC-01 and OPS-PPL-04 are `twoPerson`; nothing else is
-gated. Which other agents should be is OPQ-028. The contract rule is C11 in `docs/AGENT_CONTRACTS.md`.
+gated. Which other agents should be is OPQ-033. The contract rule is C11 in `docs/AGENT_CONTRACTS.md`.
 
 These rules hold in every mode and whether or not `OPS_SIGNERS` is set. With no registry nobody holds a profession, so a
 `professionalReview` artefact stays APPROVED and cannot be ratified until a professional is registered.
@@ -100,7 +100,7 @@ solo the solo rules (wait, token re-entry, flag) apply to them there too. The si
 - A professional countersignature records the person and their `profession` on the countersignature row and in the
   `artefact.countersigned` and `artefact.ratified` ledger entries. It does **not** record the registration text: the ledger
   is readable by everyone signed in, and registration text stays in the registry (`OPS_SIGNERS`), like whoami. The owner can
-  look it up there for any countersignature (OPQ-028).
+  look it up there for any countersignature (OPQ-033).
 
 ### Returning to dual
 

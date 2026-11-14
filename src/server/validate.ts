@@ -6,12 +6,16 @@ import { failedChecks, runAcceptance } from '../core/acceptance';
 import type { Doc } from '../core/types';
 import { DEFAULT_SIGNING, SINGLE_SIGNER, holdsProfession, requiresTwoPerson, soloWaitRemainingMs, type SigningPolicy } from '../core/signing';
 import { maySignFor, type Signer } from './signing';
+import { checkTaskText, MAX_NOTES, MAX_TITLE } from '../core/ceo/guard';
+import { isDate } from '../core/ceo/time';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
 const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'countersignatures', 'tombstones', 'erasure_requests'];
 /** Document library, builder definitions, chat history and integration settings (no secrets are ever stored here). */
 const LIBRARY = ['documents', 'document_chunks', 'custom_defs', 'chat_log', 'integration_settings'];
+/** CEO command centre: tasks added by hand, a person's override of one task, and calendar events. */
+const CEO = ['ceo_tasks', 'ceo_task_state', 'ceo_events'];
 /** Collections behind widgets made in the widget builder. */
 export const CUSTOM_WIDGET_COLLECTION = /^cw_[a-z0-9_]{1,40}$/;
 
@@ -19,6 +23,7 @@ export const CUSTOM_WIDGET_COLLECTION = /^cw_[a-z0-9_]{1,40}$/;
 export const CLIENT_COLLECTIONS: ReadonlySet<string> = new Set([
   ...CORE,
   ...LIBRARY,
+  ...CEO,
   ...DEPARTMENTS.flatMap((d) => d.widgets).flatMap((w) => ('collection' in w ? [w.collection] : [])),
 ]);
 
@@ -81,8 +86,34 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
     case 'brain': brain(rec, ctx); break;
     case 'erasure_requests': erasure(rec, ctx); break;
     case 'tombstones': tombstone(rec, ctx); break;
+    case 'ceo_tasks': ceoTask(rec); break;
+    case 'ceo_events': ceoEvent(rec); break;
+    case 'ceo_task_state': ceoState(rec); break;
   }
   return rec;
+}
+
+function ceoTask(rec: Rec) {
+  if (typeof rec.title !== 'string' || !rec.title.trim() || rec.title.length > MAX_TITLE) bad(`title is required (up to ${MAX_TITLE} characters)`);
+  if (rec.notes !== undefined && (typeof rec.notes !== 'string' || rec.notes.length > MAX_NOTES)) bad('notes too long');
+  if (rec.due !== undefined && rec.due !== '' && !isDate(rec.due)) bad('due must be YYYY-MM-DD');
+  if (typeof rec.dept !== 'string' || !DEPARTMENTS.some((d) => d.id === rec.dept)) bad('dept is not a department id');
+  const refused = checkTaskText(rec.title as string, (rec.notes ?? undefined) as string | undefined);
+  if (refused) bad(refused);
+}
+function ceoEvent(rec: Rec) {
+  if (typeof rec.title !== 'string' || !rec.title.trim() || rec.title.length > MAX_TITLE) bad('title is required');
+  const s = Date.parse(String(rec.start));
+  const e = Date.parse(String(rec.end));
+  if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s || e - s > 24 * 3_600_000) bad('start and end must be times, end after start, within one day');
+  const refused = checkTaskText(rec.title as string);
+  if (refused) bad(refused);
+}
+function ceoState(rec: Rec) {
+  if (rec.status !== undefined && !['open', 'in_progress', 'blocked', 'done'].includes(String(rec.status))) bad('bad status');
+  if (rec.scheduledStart !== undefined && !Number.isFinite(Date.parse(String(rec.scheduledStart)))) bad('scheduledStart must be a time');
+  if (rec.minutes !== undefined && !(typeof rec.minutes === 'number' && rec.minutes >= 5 && rec.minutes <= 480)) bad('minutes must be 5-480');
+  if (rec.note !== undefined) { if (typeof rec.note !== 'string' || rec.note.length > MAX_NOTES) bad('note too long'); const refused = checkTaskText(rec.note as string); if (refused) bad(refused); }
 }
 
 async function artefact(rec: Rec, ctx: AppendCtx) {

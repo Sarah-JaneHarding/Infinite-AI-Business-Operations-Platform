@@ -119,7 +119,7 @@
   - drafting is open: in solo mode a legal-department agent runs and submits for review normally (`runAgent` and `submitForReview` succeed, status `IN_REVIEW`).
   - `twoPerson: true` agent (no profession), solo, one registered signer: the owner approves, and `countersign` by the owner is refused even after the wait; a second registered signer (no profession) countersigns and it ratifies with no `single-signer` marker; with only the owner registered the artefact stays `APPROVED` after every attempt.
 - [ ] **Step 2: Run** `npx vitest run test/contracts.test.ts test/lifecycle.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement.** Default mapping (my call, to confirm in OPQ-028): every agent whose department is `legal` (OPS-LEG-01 to 05) gets `professionalReview: 'attorney'`; OPS-SEC-01 (POPIA conditions assessment) and OPS-PPL-04 (offer and contract checklist) get `twoPerson: true`. No other agent is gated until the owner decides. `solo` with exactly one signer means a `twoPerson` artefact can be drafted and approved but not ratified until a second signer is registered. Library documents are seeded and already immutable; their `review` text is not changed here.
+- [ ] **Step 3: Implement.** Default mapping (my call, to confirm in OPQ-033): every agent whose department is `legal` (OPS-LEG-01 to 05) gets `professionalReview: 'attorney'`; OPS-SEC-01 (POPIA conditions assessment) and OPS-PPL-04 (offer and contract checklist) get `twoPerson: true`. No other agent is gated until the owner decides. `solo` with exactly one signer means a `twoPerson` artefact can be drafted and approved but not ratified until a second signer is registered. Library documents are seeded and already immutable; their `review` text is not changed here.
 - [ ] **Step 4: Run** the same command plus `npm run lint`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(contracts): professionalReview and professional countersign`.
 
@@ -211,7 +211,7 @@
 
 **Files:**
 - Create: `.github/CODEOWNERS`, `docs/PR_POLICY.md`
-- Modify: `docs/REVIEW_BOARD.md`, `docs/OPEN_QUESTIONS.md` (OPQ-017, OPQ-019 notes plus new OPQ-027), `docs/superpowers/specs/2026-11-14-integrated-platform-design.md` (sections 5.6, 8, 9), `README.md` env list, `docs/BUILD_LOG.md`
+- Modify: `docs/REVIEW_BOARD.md`, `docs/OPEN_QUESTIONS.md` (OPQ-017, OPQ-019 notes plus new OPQ-032), `docs/superpowers/specs/2026-11-14-integrated-platform-design.md` (sections 5.6, 8, 9), `README.md` env list, `docs/BUILD_LOG.md`
 - Test: `test/docs.test.ts` asserting `.env.example` names every `OPS_SIGNING*`/`OPS_SOLO*`/`OPS_SIGNERS` key and `.github/CODEOWNERS` exists and names `@Sarah-JaneHarding`.
 
 - [ ] **Step 1: Write the failing docs test** above.
@@ -220,8 +220,8 @@
   - `CODEOWNERS`: `* @Sarah-JaneHarding`.
   - `PR_POLICY.md`: draft PR only, owner reviews, no agent merges, CI green, size and body rules from the Ecosystem `CLAUDE.md`.
   - `REVIEW_BOARD.md`: add the solo section (what it is, the wait, the token, the flag, how to return to dual by adding a second signer and removing `OPS_SIGNING_MODE=solo`).
-  - `OPEN_QUESTIONS.md`: record the temporary relaxation against OPQ-017 and OPQ-019 (owner approved on 2026-11-14), and **OPQ-027**: GitHub does not let a PR author approve their own PR; PRs opened through the owner's account cannot satisfy "require code-owner review" without admin bypass or a separate bot identity. Owner to decide.
-  - `OPEN_QUESTIONS.md` **OPQ-028**: which agents beyond `legal` need a registered attorney, accountant or tax practitioner to countersign (finance, tax, contracts, procurement)? Who are those professionals and how will the owner verify their registration? Default until answered: legal-department agents need an attorney (OPS-LEG-01 to 05); OPS-SEC-01 and OPS-PPL-04 are `twoPerson` (any different registered signer); nothing else is gated. Candidates the owner may add: finance, tax and procurement agents, and the policy documents in the library. Library `review` text names the reviewer for 65 of 120 documents (about 44 an attorney, 4 a registered tax practitioner or the accountant); those drafts are not yet gated by the platform.
+  - `OPEN_QUESTIONS.md`: record the temporary relaxation against OPQ-017 and OPQ-019 (owner approved on 2026-11-14), and **OPQ-032**: GitHub does not let a PR author approve their own PR; PRs opened through the owner's account cannot satisfy "require code-owner review" without admin bypass or a separate bot identity. Owner to decide.
+  - `OPEN_QUESTIONS.md` **OPQ-033**: which agents beyond `legal` need a registered attorney, accountant or tax practitioner to countersign (finance, tax, contracts, procurement)? Who are those professionals and how will the owner verify their registration? Default until answered: legal-department agents need an attorney (OPS-LEG-01 to 05); OPS-SEC-01 and OPS-PPL-04 are `twoPerson` (any different registered signer); nothing else is gated. Candidates the owner may add: finance, tax and procurement agents, and the policy documents in the library. Library `review` text names the reviewer for 65 of 120 documents (about 44 an attorney, 4 a registered tax practitioner or the accountant); those drafts are not yet gated by the platform.
   - Design doc section 5.1: add the professional-review rule. Hosting: **IONOS** (not Cloudflare Pages); payments not finalised so no pricing page and no price anywhere; company and VAT numbers not yet available, so footers omit them rather than invent them.
 - [ ] **Step 4: Run** `npx vitest run`, lint and build. Expected: PASS.
 - [ ] **Step 5: Commit** `docs: solo signing, PR policy, CODEOWNERS, design corrections (IONOS, no prices)`.
@@ -230,5 +230,5 @@
 
 - Spec 5.1 coverage: registry (Tasks 1, 3, 4), opt-in visible mode (4, 5), two separate actions with re-auth and wait (2, 3, 5), `single-signer` flag (2, 3), report (6), return to dual (1, 7), OPEN_QUESTIONS note (7), agents never sign (2, 3 tests). Hosting/pricing/registration-number corrections (7).
 - Names are consistent across tasks: `SigningPolicy`, `Signer`, `SINGLE_SIGNER`, `soloWaitRemainingMs`, `maySignFor`, `withReauth`, header `x-ops-reauth`.
-- Owner's rule (solo unless a registered lawyer, accountant or tax consultant must countersign): Task 2b (contract field, platform), Task 3 (server), Task 1 (registry and `maySignProfessional`), Task 7 (OPQ-028). The `secondApprover` relaxation is in Tasks 2b and 3.
-- Open for the owner: which agents beyond legal need a professional (OPQ-028), who the professionals are, and how their registration is verified. The platform stores registration text but cannot check it.
+- Owner's rule (solo unless a registered lawyer, accountant or tax consultant must countersign): Task 2b (contract field, platform), Task 3 (server), Task 1 (registry and `maySignProfessional`), Task 7 (OPQ-033). The `secondApprover` relaxation is in Tasks 2b and 3.
+- Open for the owner: which agents beyond legal need a professional (OPQ-033), who the professionals are, and how their registration is verified. The platform stores registration text but cannot check it.

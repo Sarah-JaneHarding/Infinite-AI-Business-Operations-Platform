@@ -8,9 +8,15 @@ import { apiFetch, loadToken, setToken } from '../core/api';
 import { snapshotFacts } from '../connector/snapshot';
 import type { LiveStatus } from '../connector/github';
 import type { Actor } from '../core/types';
+import type { Rec } from '../core/warehouse';
+import { buildCeoState, mergeCollections, type CeoState } from '../core/ceo';
+import { agentById, DEPARTMENTS } from '../departments';
 
-export interface Health { ok: boolean; repo: string; auth: 'users' | 'open'; githubToken: boolean; llm: boolean; ecosystemWrites: boolean; webhook: boolean; outbound?: boolean }
-export type View = { name: 'overview' } | { name: 'dept'; id: string } | { name: 'studio'; id?: string; docId?: string } | { name: 'brain' } | { name: 'ledger' } | { name: 'warehouse' } | { name: 'connector' } | { name: 'guardrails' } | { name: 'copilot' } | { name: 'cost' } | { name: 'showcase' } | { name: 'erasure' } | { name: 'models' } | { name: 'board' } | { name: 'autonomy' } | { name: 'contracts' } | { name: 'brand' };
+/** How often the CEO command centre re-reads the data and recomputes: the monitor is a loop, not a button. */
+export const MONITOR_SECONDS = 30;
+
+export interface Health { ok: boolean; repo: string; auth: 'users' | 'open'; githubToken: boolean; llm: boolean; ecosystemWrites: boolean; webhook: boolean; outbound?: boolean; inbound?: boolean; calendarFeed?: boolean }
+export type View = { name: 'overview' } | { name: 'dept'; id: string } | { name: 'studio'; id?: string; docId?: string } | { name: 'brain' } | { name: 'ledger' } | { name: 'warehouse' } | { name: 'connector' } | { name: 'guardrails' } | { name: 'copilot' } | { name: 'cost' } | { name: 'showcase' } | { name: 'erasure' } | { name: 'models' } | { name: 'board' } | { name: 'autonomy' } | { name: 'contracts' } | { name: 'brand' } | { name: 'ceo' };
 
 interface Ctx {
   p: Platform | null;
@@ -37,6 +43,11 @@ interface Ctx {
   signing: SigningPolicy;
   /** True when the signed-in person is on the server's signer registry. */
   signer: boolean;
+  /** The monitor's latest pass over every department. Recomputed on every change and every MONITOR_SECONDS. */
+  ceo: CeoState | null;
+  /** When the monitor last read the data (ISO). */
+  ceoAt: string | null;
+  refreshCeo: () => Promise<void>;
 }
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useOps = () => useContext(C);
@@ -56,7 +67,7 @@ export function OpsProvider({ children }: { children: ReactNode }) {
   const [live, setLive] = useState<Ctx['live']>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const [view, go] = useState<View>({ name: 'overview' });
+  const [view, go] = useState<View>({ name: 'ceo' });
   const [llm, setGem] = useState(false);
   const [authNeeded, setAuthNeeded] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -68,6 +79,9 @@ export function OpsProvider({ children }: { children: ReactNode }) {
   const [actorName, setActorName] = useState(read('ops.actor', ''));
   const [actorRole, setActorRole] = useState(read('ops.role', 'Founder'));
   const liveFacts = useRef<Record<string, string | number>>({});
+  /** The server's copy of the dashboard collections, so other people's edits show up here. */
+  const remote = useRef<Record<string, Rec[]>>({});
+  const [clock, setClock] = useState(0);
   const bump = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
@@ -105,7 +119,8 @@ export function OpsProvider({ children }: { children: ReactNode }) {
           m = 'server';
         }
       } catch { /* static hosting: browser storage */ }
-      const plat = new Platform({ adapter, facts: () => ({ ...snapshotFacts(), ...liveFacts.current }), onPersistError: (e) => setSyncError(e.message), sequencer: m === 'server' ? serverSequencer() : undefined, signing: m === 'server' ? policy : DEFAULT_SIGNING, signers: m === 'server' ? signers : [] });
+      const ceoNow = () => buildCeoState({ departments: DEPARTMENTS, collections: mergeCollections(plat.warehouse.all(), remote.current), agentSecondApprover: (id) => Boolean(agentById(id)?.secondApprover), now: Date.now() });
+      const plat: Platform = new Platform({ adapter, facts: () => ({ ...snapshotFacts(), ...liveFacts.current, ...ceoNow().facts }), onPersistError: (e) => setSyncError(e.message), sequencer: m === 'server' ? serverSequencer() : undefined, signing: m === 'server' ? policy : DEFAULT_SIGNING, signers: m === 'server' ? signers : [] });
       await plat.init();
       setSigning(m === 'server' ? policy : DEFAULT_SIGNING);
       setSigner(m === 'server' && isSigner);
@@ -136,6 +151,26 @@ export function OpsProvider({ children }: { children: ReactNode }) {
     if (mode === 'server') void refreshLive();
   }, [mode, refreshLive]);
 
+  const refreshCeo = useCallback(async () => {
+    if (mode === 'server') {
+      try {
+        const r = await apiFetch('/api/warehouse?only=ceo');
+        if (r.ok) remote.current = (await r.json()) as Record<string, Rec[]>;
+      } catch { /* keep the last copy; the local data still counts */ }
+    }
+    setClock((c) => c + 1);
+  }, [mode]);
+  useEffect(() => {
+    if (!p) return;
+    void refreshCeo();
+    const id = setInterval(() => void refreshCeo(), MONITOR_SECONDS * 1000);
+    return () => clearInterval(id);
+  }, [p, refreshCeo]);
+  const ceo = useMemo(
+    () => (p ? buildCeoState({ departments: DEPARTMENTS, collections: mergeCollections(p.warehouse.all(), remote.current), agentSecondApprover: (id) => Boolean(agentById(id)?.secondApprover), now: Date.now() }) : null),
+    [p, tick, clock], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   const setLlm = useCallback((on: boolean) => {
     if (!p) return;
     p.useEngine(on ? remoteEngine() : undefined);
@@ -147,6 +182,6 @@ export function OpsProvider({ children }: { children: ReactNode }) {
     setActorName(n); setActorRole(role); write('ops.actor', n); write('ops.role', role);
   };
 
-  const value: Ctx = { p, mode, health, live, liveError, refreshLive, actor, setActor, tick, bump, view, go, llm, setLlm, authNeeded, authError, signIn, syncError, signing, signer };
+  const value: Ctx = { p, mode, health, live, liveError, refreshLive, actor, setActor, tick, bump, view, go, llm, setLlm, authNeeded, authError, signIn, syncError, signing, signer, ceo, ceoAt: ceo?.at ?? null, refreshCeo };
   return <C.Provider value={value}>{children}</C.Provider>;
 }

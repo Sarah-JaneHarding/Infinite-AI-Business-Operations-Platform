@@ -72,7 +72,7 @@ Built:
 - Server wiring (`src/server/signing.ts`): `OPS_SIGNERS`, `OPS_SIGNING_MODE`, `OPS_SOLO_WAIT_MINUTES`; `/api/whoami` reports `signing`, `signer` and own `profession`.
 - UI: solo banner, token prompt for re-authentication, single-signer badge on the Board.
 - `GET /api/signing/report`: single-signer ratifications for later second review.
-- Docs and policy: `docs/REVIEW_BOARD.md` section, `docs/PR_POLICY.md`, `.github/CODEOWNERS`, OPQ-017/019 notes, OPQ-027 resolved, OPQ-028 raised, design doc corrections (IONOS, no prices, no registration numbers yet), `test/docs.test.ts`.
+- Docs and policy: `docs/REVIEW_BOARD.md` section, `docs/PR_POLICY.md`, `.github/CODEOWNERS`, OPQ-017/019 notes, OPQ-032 resolved, OPQ-033 raised, design doc corrections (IONOS, no prices, no registration numbers yet), `test/docs.test.ts`.
 
 Tests: `npx vitest run`: 37 files, 1212 tests passed (before the final review fixes).
 
@@ -81,7 +81,7 @@ Final review fixes (2026-11-14): blank signing keys mean unset; solo allows regi
 Not verified / known limits:
 - The solo countersign success path is not driven end to end with a real wait; it is covered at validator level with an injected clock.
 - Registration numbers are free text and unverified.
-- The second signer and the professionals are not registered (OPQ-028), so two-person and professional artefacts stay approved and unratified.
+- The second signer and the professionals are not registered (OPQ-033), so two-person and professional artefacts stay approved and unratified.
 - With `OPS_SIGNERS` unset, behaviour is as before except that `professionalReview` agents (OPS-LEG-01 to 05) can never be ratified and `twoPerson` agents need a second person, in every mode. Legal artefacts approved but not countersigned stay approved until an attorney is registered; legal artefacts ratified before this change lack `profession` on the countersignature and will not pass the outbound gate without a revision through the board.
 - The ledger names the professional and their profession, not their registration text (kept in the registry).
 - Re-authentication is token re-entry (the token the browser already holds), proof of a deliberate act, not a second factor.
@@ -96,3 +96,15 @@ Not verified / known limits:
 - The single-signer report trusts stored fields that write-time validation enforces.
 - The `server.js` bundle was not regenerated.
 - The Dependabot `uuid` alert via exceljs remains an open owner decision.
+
+## 2026-11-14: CEO Command Centre and v1.4 alignment
+- New first screen, `CEO Command Centre`: 16 department lights, one consolidated task list with status badges, a human-flag marker, and a SAST calendar of flagged tasks. Recomputed every 30 seconds from recorded data. See `docs/CEO_COMMAND_CENTRE.md`.
+- v1.4 package (HTML, Word) and library index stored in `docs/business-plan/` and seeded by `npm run seed:business`; plan figures in `src/core/ceo/plan.ts` are checked against `SCHOOL_PRICING`.
+- `OPS-CEO-01` drafts an operations review with `[src:ops.*]` tags (service agent, OPQ-028).
+- Connections: signed calendar feed (.ics), HMAC inbound webhook, outgoing digest. OAuth connectors not built (OPQ-027).
+- Visually checked in the dark theme at 1440 px with sample data; not tested against a live multi-user server.
+
+## 2026-11-14: outbound requests rebuilt from the allow-list (CodeQL js/request-forgery)
+- `checkTarget` now builds the request URL from the operator's own allow-list host string plus a validated path, so typed text never becomes the hostname. The path is checked as typed: no `.`/`..` segments (plain or percent-encoded), no encoded or raw slashes or backslashes inside a segment, no control characters, at most 512 characters. Query and fragment are dropped (webhook keys live in the path).
+- Applies to both artefact send and the CEO digest. Address checks, https-only, no redirects and the private-IP test are unchanged.
+- Still open: a hostname could change its address between the check and the connection (DNS rebinding). Closing it means connecting to the checked IP; not done here.

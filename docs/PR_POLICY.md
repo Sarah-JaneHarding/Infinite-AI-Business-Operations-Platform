@@ -12,7 +12,7 @@ How code changes reach `main` in this repository.
 - Keep PRs small: a guideline of about 400 changed lines, excluding generated files and lockfiles. One logical change per commit.
 - Commits follow Conventional Commits, for example `docs: solo signing, PR policy`.
 
-## OPQ-027: who approves the owner's own pull requests (resolved 2026-11-14)
+## OPQ-032: who approves the owner's own pull requests (resolved 2026-11-14)
 
 GitHub does not let an author approve their own pull request. Pull requests opened through the owner's account have the owner
 as author, and the owner is the sole code owner. A "require code-owner review" rule alone would therefore block every such PR.

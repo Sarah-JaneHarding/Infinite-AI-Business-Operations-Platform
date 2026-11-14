@@ -88,7 +88,7 @@ signer that rule makes the platform unusable, and the owner has said they sign e
   `accountant` or `tax_practitioner`). Such an artefact is only ratified by a different person registered in the signer
   registry with that profession; the owner cannot countersign it unless registered in it, and the solo `single-signer`
   path and the author-approves-own-work relaxation never apply. Registration numbers are recorded as text for the owner's
-  own record; the platform does not validate or invent them. Which agents need this is OPQ-028 (default: legal agents need
+  own record; the platform does not validate or invent them. Which agents need this is OPQ-033 (default: legal agents need
   an attorney).
 - This is a temporary relaxation of a control: record it in `docs/OPEN_QUESTIONS.md` against OPQ-017 and OPQ-019.
 
@@ -171,7 +171,7 @@ how to generate the font manifest; page copy drafts (they go through the Board);
 ## 9. Open items needing the owner (not guessed)
 
 - Approve solo-signer mode (5.1).
-- Branch protection and code-owner review were switched on by the owner; OPQ-027 (the owner approving their own PRs) is resolved in `docs/PR_POLICY.md`.
+- Branch protection and code-owner review were switched on by the owner; OPQ-032 (the owner approving their own PRs) is resolved in `docs/PR_POLICY.md`.
 - Deployment needs the owner's IONOS account (hosting, domain and email).
 - Payments are not finalised, so there is no pricing page and no price anywhere on the site.
 - Company and VAT registration numbers do not exist yet, so footers omit them rather than invent them.
