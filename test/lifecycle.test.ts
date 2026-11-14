@@ -136,6 +136,66 @@ describe('the board: approve → countersign → ratify → ingest', () => {
   });
 });
 
+describe('solo signing', () => {
+  const solo = { signing: { mode: 'solo' as const, waitMs: 600000 } };
+  const after = (a: Artefact, minutes: number) => new Date(Date.parse(a.at) + minutes * 60000);
+
+  it('dual (default): the approver is still refused with the existing message', async () => {
+    const p = await new Platform().init();
+    const a = await approved(p);
+    expect((await refused(p.countersign(a.id, dan, '', plain, after(a, 60))))?.message).toBe('A different person from the approver must countersign.');
+    expect(p.artefact(a.id)?.status).toBe('APPROVED');
+  });
+
+  it('solo: the approver countersigns after the wait, flagged single-signer everywhere', async () => {
+    const p = await new Platform(solo).init();
+    const a = await approved(p);
+    const done = await p.countersign(a.id, dan, '', plain, after(a, 11));
+    expect(done).toMatchObject({ status: 'INGESTED', approvedBy: 'dan', countersignedBy: 'dan', signing: 'single-signer' });
+    expect(p.warehouse.list<{ signing?: string }>('countersignatures')[0]?.signing).toBe('single-signer');
+    for (const action of ['artefact.countersigned', 'artefact.ratified']) {
+      const e = p.ledger.all.find((x) => x.action === action);
+      expect(e?.detail?.signing, action).toBe('single-signer');
+    }
+  });
+
+  it('solo: the approver is refused before the wait, naming the minutes left', async () => {
+    const p = await new Platform(solo).init();
+    const a = await approved(p);
+    const r = await refused(p.countersign(a.id, dan, '', plain, after(a, 9)));
+    expect(r).toBeInstanceOf(RunRefused);
+    expect(r?.kind).toBe('hitl');
+    expect(r?.message).toMatch(/1 minute/);
+    expect(p.artefact(a.id)?.status).toBe('APPROVED');
+  });
+
+  it('solo: a different person countersigns with no signing field anywhere', async () => {
+    const p = await new Platform(solo).init();
+    const a = await approved(p);
+    const done = await p.countersign(a.id, eve, '', plain, after(a, 0));
+    expect(done.status).toBe('INGESTED');
+    expect('signing' in done).toBe(false);
+    expect(JSON.stringify(p.warehouse.list('countersignatures'))).not.toMatch(/signing/);
+    expect(JSON.stringify(p.ledger.all.filter((x) => x.action.startsWith('artefact.')))).not.toMatch(/single-signer|"signing"/);
+  });
+
+  it('solo: an agent actor and an autonomous actor still cannot countersign', async () => {
+    const p = await new Platform(solo).init();
+    const a = await approved(p);
+    expect((await refused(p.countersign(a.id, bot, '', plain, after(a, 60))))?.message).toMatch(/named human/);
+    expect((await refused(p.countersign(a.id, { ...dan, id: 'auto:x' }, '', plain, after(a, 60))))?.message).toMatch(/named human/);
+  });
+
+  it('solo: an edit after approval returns it to DRAFT with approvedBy cleared', async () => {
+    const p = await new Platform(solo).init();
+    const a = await approved(p);
+    const edited = await p.edit(a.id, a.doc, dan);
+    expect(edited.status).toBe('DRAFT');
+    expect(edited.approvedBy).toBeUndefined();
+    expect((await refused(p.countersign(a.id, dan, '', plain, after(a, 60))))?.message).toMatch(/approved artefact/);
+  });
+});
+
 describe('Warehouse: a failed save leaves no phantom record', () => {
   it('rolls the record back out of the local view', async () => {
     const a = new MemoryAdapter();

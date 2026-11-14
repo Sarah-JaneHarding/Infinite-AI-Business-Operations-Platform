@@ -7,6 +7,7 @@ import { checkInput, checkOutput, runGates } from './guardrails/engine';
 import type { AgentContract, RunContext } from './agent';
 import type { Actor, Doc, LedgerEntry, Status } from './types';
 import { deidentify, detectPii, LearnerDataRefused } from './guardrails/pii';
+import { DEFAULT_SIGNING, SINGLE_SIGNER, soloWaitRemainingMs, type SigningPolicy } from './signing';
 import { ERASURE_CATEGORIES, normalizeSubject, type ErasureCategory, type ErasureRequest } from './erasure';
 
 export interface Artefact {
@@ -28,6 +29,8 @@ export interface Artefact {
   /** sha-256 of the document: every signature is bound to it. */
   docHash?: string;
   countersignedBy?: string;
+  /** Set when the approver also countersigned (solo mode, after the wait). */
+  signing?: typeof SINGLE_SIGNER;
   ratifiedAt?: string;
   ingestedAt?: string;
   /** Set on a revision: the ratified artefact it was copied from. */
@@ -57,6 +60,8 @@ export interface PlatformOptions {
   onPersistError?: (e: Error) => void;
   /** When set, the server authors and stores every ledger entry; the platform does not write the ledger itself. */
   sequencer?: Sequencer;
+  /** Who may countersign. Default: dual (a different person from the approver). */
+  signing?: SigningPolicy;
 }
 
 /** One object wiring departments → guardrails → brain → gateway → warehouse → ledger → HITL → learning. */
@@ -73,6 +78,7 @@ export class Platform {
   private tombstoned = new Set<string>();
   private onPersistError: (e: Error) => void;
   private sequencer?: Sequencer;
+  private signingPolicy: SigningPolicy;
   private persistTail: Promise<void> = Promise.resolve();
 
   constructor(o: PlatformOptions = {}) {
@@ -80,6 +86,7 @@ export class Platform {
     this.warehouse = new Warehouse(o.adapter ?? new MemoryAdapter());
     this.engine = o.engine;
     this.sequencer = o.sequencer;
+    this.signingPolicy = o.signing ?? DEFAULT_SIGNING;
     this.wire([], []);
     this.factsFn = o.facts ?? (() => ({}));
     this.knownNames = o.knownNames ?? [];
@@ -343,21 +350,30 @@ export class Platform {
    * Second signature. A different human from the approver countersigns the exact content that was approved; that
    * ratifies it, and then (unless the agent's contract says it is not relevant) it is ingested.
    */
-  async countersign(artefactId: string, signer: Actor, note: string, agent?: AgentContract): Promise<Artefact> {
+  async countersign(artefactId: string, signer: Actor, note: string, agent?: AgentContract, now: Date = new Date()): Promise<Artefact> {
     const cur = this.artefact(artefactId);
     if (!cur) throw new Error('Unknown artefact.');
     if (signer.kind !== 'human' || isAutonomous(signer.id)) throw new RunRefused('hitl', 'Only a named human can countersign.');
     if (cur.status !== 'APPROVED') throw new RunRefused('hitl', 'Only an approved artefact can be countersigned.');
-    if (signer.id === cur.approvedBy) throw new RunRefused('hitl', 'A different person from the approver must countersign.');
+    const single = signer.id === cur.approvedBy;
+    if (single) {
+      if (this.signingPolicy.mode !== 'solo') throw new RunRefused('hitl', 'A different person from the approver must countersign.');
+      const left = soloWaitRemainingMs(cur.at, now, this.signingPolicy);
+      if (left > 0) {
+        const mins = Math.ceil(left / 60000);
+        throw new RunRefused('hitl', `Solo signing: ${mins} minute${mins === 1 ? '' : 's'} left to wait after approval before you can countersign your own approval.`);
+      }
+    }
+    const mark = single ? { signing: SINGLE_SIGNER } : {};
     const n = (note ?? '').trim();
     if (n.length > 300) throw new RunRefused('hitl', 'Keep the countersignature note to 300 characters.');
     const docHash = cur.docHash ?? (await sha256Hex(canonical(cur.doc)));
     const at = new Date().toISOString();
-    const next: Artefact = { ...cur, id: artefactId, docHash, status: 'RATIFIED', countersignedBy: signer.id, ratifiedAt: at, at };
+    const next: Artefact = { ...cur, id: artefactId, docHash, status: 'RATIFIED', countersignedBy: signer.id, ratifiedAt: at, at, ...mark };
     await this.warehouse.put('artefact_versions', { ...next, editedBy: signer.id });
-    await this.warehouse.put('countersignatures', { id: newId('sig'), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at });
-    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.countersigned', subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy } });
-    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.ratified', subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id } });
+    await this.warehouse.put('countersignatures', { id: newId('sig'), artefactId, version: cur.version, docHash, signer: signer.id, note: n, at, ...mark });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.countersigned', subject: artefactId, detail: { note: n, docHash, approvedBy: cur.approvedBy, ...mark } });
+    await this.ledger.append({ orgId: this.orgId, actor: signer.id, action: 'artefact.ratified', subject: artefactId, detail: { docHash, approvedBy: cur.approvedBy, countersignedBy: signer.id, ...mark } });
     if (agent?.ingestion === 'none') return next;
     return this.ingest(artefactId, signer);
   }
