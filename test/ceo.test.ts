@@ -149,7 +149,7 @@ describe('ICS export', () => {
     const ics = toIcs(blocks, [{ id: 'e1', title: 'Board', start: '2026-11-19T06:00:00.000Z', end: '2026-11-19T07:00:00.000Z' }, { id: 'e2', title: 'Deleted', start: '2026-11-19T06:00:00.000Z', end: '2026-11-19T07:00:00.000Z', deleted: true }], NOW);
     expect(ics.startsWith('BEGIN:VCALENDAR\r\nVERSION:2.0')).toBe(true);
     expect(ics).toContain('DTSTART:20261118T060000Z');
-    expect(ics).toContain('SUMMARY:Approve\; the\\, memo');
+    expect(ics).toContain('SUMMARY:Approve\\; the\\, memo');
     expect(ics).toContain('DESCRIPTION:line1\\nline2');
     expect(ics).not.toContain('Deleted');
     expect((ics.match(/BEGIN:VEVENT/g) ?? []).length).toBe(2);

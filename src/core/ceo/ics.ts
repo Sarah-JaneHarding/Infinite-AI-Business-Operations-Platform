@@ -1,7 +1,7 @@
 /** iCalendar (RFC 5545) text for the CEO calendar. Works with Google Calendar, Outlook and Apple Calendar "subscribe by URL". No attendees, no personal data. */
 import type { Block, CalEvent } from './types';
 
-const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 const stamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 
 /** Lines are folded at 75 octets, continuation lines start with one space. */
