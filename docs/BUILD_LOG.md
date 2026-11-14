@@ -60,3 +60,6 @@ telemetry, which conflicts with the no-invented-metrics rule. It remains in git 
 - `public/brand-kit/` holds guidelines (HTML, PDF), editable letterhead (docx, PDF), email signatures with install guide, and design tokens. The full asset kit (social banners for LinkedIn, Facebook, YouTube, X, Instagram, slides, web, print, icons) is shipped as a separate zip.
 - `test/brand.test.ts` checks exact values, every library document, the docx footer, assets and kit files.
 - Limits: founder photo is 360 px; CMYK values are approximate; registration and VAT numbers pending.
+
+## 2026-11-14: AI Studio install failure
+- "Dependency installation failed" came from the tracked `bun.lock`, which still listed `@google/genai` (removed from `package.json` when the model path moved to Claude). A frozen bun install rejected it. Regenerated `bun.lock` (79 lines removed, nothing added); `bun install --frozen-lockfile`, `npm ci`, `npm install` and the build all pass on a clean copy. `package-lock.json` remains the lockfile CI and Docker use.
