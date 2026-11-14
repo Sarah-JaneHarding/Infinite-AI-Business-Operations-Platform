@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, FileText, GitFork, PackageCheck, PenLine, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useOps } from './store';
-import { can, signingHint, reportRow, type SingleSignerReportItem } from './boardGate';
+import { approvedAtFromLedger, can, signingHint, reportRow, type SingleSignerReportItem } from './boardGate';
 import { apiFetch, withReauth } from '../core/api';
-import type { LedgerEntry } from '../core/types';
 import { Badge, Card, statusTone } from './primitives';
 import { agentById } from '../departments';
 import { contractFor } from '../departments/custom';
@@ -21,13 +20,6 @@ const COLUMNS: { status: Artefact['status']; title: string; hint: string }[] = [
   { status: 'DRAFT', title: 'Drafts', hint: 'Nothing here is approved. Edit, save, then submit for review.' },
   { status: 'REJECTED', title: 'Rejected', hint: 'Kept for the record. Edit and resubmit, or leave.' },
 ];
-
-/** Server-stamped time of the latest approval of this exact version, read from the ledger the Platform already holds. */
-function approvedAtFromLedger(entries: readonly LedgerEntry[], a: Artefact): string | undefined {
-  let found: LedgerEntry | undefined;
-  for (const e of entries) if (e.action === 'hitl.approved' && e.subject === a.id && e.detail.version === a.version && (!found || e.seq > found.seq)) found = e;
-  return found?.at;
-}
 
 function SingleSignerReport() {
   const [rep, setRep] = useState<{ count: number; items: SingleSignerReportItem[] } | null>(null);
@@ -95,7 +87,7 @@ function Item({ a, me, act, open, failed = [] }: { a: Artefact; me: string; act:
   const [note, setNote] = useState('');
   const [token, setToken] = useState('');
   const agent = contractFor(a.agentId, p!.warehouse);
-  const gate = can(a, me, { signing, now: new Date(), defs: p!.warehouse, approvedAtFromLedger: approvedAtFromLedger(p!.ledger.all, a) });
+  const gate = can(a, me, { signing, now: new Date(), defs: p!.warehouse, approvedAtFromLedger: approvedAtFromLedger(p!.ledger.all, a.id, a.version) });
   const hint = signingHint(agent);
   const isApprover = a.approvedBy === me;
   const auto = isAutonomous(a.requestedBy);

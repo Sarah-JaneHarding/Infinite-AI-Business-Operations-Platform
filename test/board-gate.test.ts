@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { can, signingHint } from '../src/ui/boardGate';
+import { approvedAtFromLedger, can, signingHint } from '../src/ui/boardGate';
+import type { LedgerEntry } from '../src/core/types';
 import { AGENTS } from '../src/departments';
 import type { Artefact } from '../src/core/platform';
 import type { SigningPolicy } from '../src/core/signing';
@@ -69,8 +70,8 @@ describe('can(): countersigning your own approval', () => {
   it('is allowed in solo mode once the wait is over', () => {
     expect(can(art(plain.id, {}), 'sarah', { defs: NO_DEFS, signing: SOLO, now: at(600_000), approvedAtFromLedger: T0 }).ok).toBe(true);
   });
-  it('is refused while the ledger time is unknown', () => {
-    expect(can(art(plain.id, {}), 'sarah', { defs: NO_DEFS, signing: SOLO, now: at(9_999_999) })).toEqual({ ok: false, why: 'Waiting for the approval to be recorded in the ledger.' });
+  it('is refused while the ledger time is unknown, and says what to do if the entry never appears', () => {
+    expect(can(art(plain.id, {}), 'sarah', { defs: NO_DEFS, signing: SOLO, now: at(9_999_999) })).toEqual({ ok: false, why: 'The approval was saved but is not recorded in the ledger. If this does not change after a reload, edit the artefact and approve it again.' });
   });
   it('is refused for a twoPerson agent even in solo after the wait', () => {
     const g = can(art(twoPerson.id, {}), 'sarah', { defs: NO_DEFS, signing: SOLO, now: at(9_999_999), approvedAtFromLedger: T0 });
@@ -90,5 +91,21 @@ describe('signingHint()', () => {
     expect(signingHint(twoPerson)).toBe('A different person must countersign this.');
     expect(signingHint(pro)).toBe(`Needs a registered ${pro.professionalReview!.replace('_', ' ')} to countersign.`);
     expect(signingHint(undefined)).toBe('');
+  });
+});
+
+describe('approvedAtFromLedger()', () => {
+  const e = (seq: number, o: Partial<LedgerEntry> = {}, version: unknown = 2): LedgerEntry => ({ seq, at: `t${seq}`, orgId: 'org', actor: 'sarah', action: 'hitl.approved', subject: 'A1', detail: { version }, prevHash: '', hash: '', ...o });
+  it('is undefined when no hitl.approved entry names this artefact and version', () => {
+    expect(approvedAtFromLedger([], 'A1', 2)).toBeUndefined();
+    expect(approvedAtFromLedger([e(1, { subject: 'A2' }), e(2, { action: 'hitl.rejected' }), e(3, { detail: {} })], 'A1', 2)).toBeUndefined();
+  });
+  it('ignores an entry for a stale (earlier) version', () => {
+    expect(approvedAtFromLedger([e(1, {}, 1)], 'A1', 2)).toBeUndefined();
+    expect(approvedAtFromLedger([e(1, {}, 1), e(5, {}, 2), e(9, {}, 1)], 'A1', 2)).toBe('t5');
+  });
+  it('takes the latest entry by seq, not by position in the list', () => {
+    expect(approvedAtFromLedger([e(7), e(3)], 'A1', 2)).toBe('t7');
+    expect(approvedAtFromLedger([e(3), e(7)], 'A1', 2)).toBe('t7');
   });
 });

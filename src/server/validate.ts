@@ -169,7 +169,8 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
         const d = e.detail as { version?: unknown; docHash?: unknown } | undefined;
         return e.action === 'hitl.approved' && e.subject === cur.id && e.actor === cur.approvedBy && d?.version === cur.version && (cur.docHash === undefined || d?.docHash === cur.docHash);
       }).at(-1);
-      if (!entry) return bad('solo signing: the approval has not been recorded in the ledger yet for this version', 409);
+      // No retry: an approval whose ledger entry was lost stays unratifiable until it is edited and approved again.
+      if (!entry) return bad('solo signing: the approval was saved but is not recorded in the ledger for this version; if it does not appear after a reload, edit the artefact and approve it again', 409);
       const left = soloWaitRemainingMs(String(entry.at), ctx.now ?? new Date(), policy);
       if (left !== 0) {
         const mins = Math.max(1, Math.ceil((Number.isFinite(left) ? left : policy.waitMs) / 60_000));

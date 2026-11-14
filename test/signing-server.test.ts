@@ -248,7 +248,7 @@ describe('hitl.approved entries and approvals rows are bound to the approved ver
     await post(rows, 'approvals', approvalRow('apr_2', 2));
     const e = await rej(countersign(rows, 2, plus(61)));
     expect(e?.status).toBe(409);
-    expect(e?.message).toMatch(/not been recorded in the ledger/);
+    expect(e?.message).toMatch(/saved but is not recorded in the ledger/);
   });
 
   it('an entry for an old version is never accepted for the current version, even a forged one in the store', async () => {
@@ -257,14 +257,14 @@ describe('hitl.approved entries and approvals rows are bound to the approved ver
     rows.ledger = [approvalEntry(iso(0), 'dan', 'art_1', 1), approvalEntry(iso(0), 'dan', 'art_1', 1)];
     const e = await rej(countersign(rows, 2, plus(60)));
     expect(e?.status).toBe(409);
-    expect(e?.message).toMatch(/not been recorded in the ledger/);
+    expect(e?.message).toMatch(/saved but is not recorded in the ledger/);
   });
 
   it('an entry whose docHash differs from the artefact is not accepted', async () => {
     const rows = ledgered(v1(), approvalEntry(iso(0), 'dan', 'art_1', 1, 'f'.repeat(64)));
     const e = await rej(countersign(rows, 1, plus(60)));
     expect(e?.status).toBe(409);
-    expect(e?.message).toMatch(/not been recorded in the ledger/);
+    expect(e?.message).toMatch(/saved but is not recorded in the ledger/);
   });
 
   it('the normal flow: approve, entry, countersign after the wait; and again after an edit with its own entry', async () => {
@@ -359,7 +359,7 @@ describe('ratifying (APPROVED -> RATIFIED)', () => {
       for (const rows of [backdated(), ledgered(backdated(), approvalEntry(iso(0), 'dan', 'art_other'), { ...approvalEntry(iso(0)), action: 'hitl.rejected' })]) {
         const e = await rej(V(rows, rec(), 'dan', ctx));
         expect(e?.status).toBe(409);
-        expect(e?.message).toMatch(/approval has not been recorded in the ledger yet/);
+        expect(e?.message).toMatch(/^solo signing: the approval was saved but is not recorded in the ledger for this version; .*edit the artefact and approve it again$/);
       }
     });
 
@@ -376,13 +376,13 @@ describe('ratifying (APPROVED -> RATIFIED)', () => {
       // and a re-approval that was never ledgered cannot borrow the earlier, voided entry
       const unledgered = await rej(V(ledgered(history, approvalEntry(iso(0))), ratify(PLAIN.id, 'dan', 'dan', { version: 2, signing: 'single-signer' }), 'dan', ctx));
       expect(unledgered?.status).toBe(409);
-      expect(unledgered?.message).toMatch(/not been recorded in the ledger/);
+      expect(unledgered?.message).toMatch(/saved but is not recorded in the ledger/);
     });
 
     it('the latest entry must be by the current approver', async () => {
       const e = await rej(V(ledgered(backdated(), approvalEntry(iso(0), 'eve')), rec(), 'dan', ctx));
       expect(e?.status).toBe(409);
-      expect(e?.message).toMatch(/not been recorded in the ledger/);
+      expect(e?.message).toMatch(/saved but is not recorded in the ledger/);
     });
   });
 

@@ -9,6 +9,10 @@ import { Platform } from '../src/core/platform';
 import { ServerAdapter, serverSequencer } from '../src/core/serverAdapter';
 import { AGENTS } from '../src/departments';
 import type { Actor } from '../src/core/types';
+import { MemoryAdapter, type Rec } from '../src/core/warehouse';
+import { FileStore } from '../src/server/fileAdapter';
+import { validateAppend } from '../src/server/validate';
+import { appendLedger } from '../src/server/ledgerService';
 
 /** Boots the real server.ts as a child process (explicit env, so no host secret can leak in) and attacks it over HTTP. */
 const ROOT = process.cwd();
@@ -689,10 +693,13 @@ describe('server: signing registry and solo mode', () => {
     expect(right.status).toBe(409);
     expect(String(right.json?.error)).toMatch(/left to wait/);
 
-    // each wrong sign-in counts as a bad token: after ten in a minute the address is refused
-    let limited = 0;
-    for (let i = 0; i < 12; i++) if ((await send({ 'x-ops-reauth': 'y'.repeat(24) })).status === 429) limited++;
-    expect(limited).toBeGreaterThan(0);
+    // each wrong sign-in counts as a bad token: ten in a minute are answered, the eleventh is refused. `wrong` above was
+    // the first (no header and the right token count nothing). The limiter is a sliding 60 s window, and these requests
+    // take well under a second, so no window boundary can fall between them.
+    const firstTen = [wrong.status];
+    for (let i = 0; i < 9; i++) firstTen.push((await send({ 'x-ops-reauth': 'y'.repeat(24) })).status);
+    expect(firstTen).toEqual(Array(10).fill(403));
+    expect((await send({ 'x-ops-reauth': 'y'.repeat(24) })).status).toBe(429);
   }, 60_000);
 });
 
@@ -706,6 +713,41 @@ describe('server: single-signer report', () => {
     expect((await call(pro, '/api/signing/report')).status).toBe(401);
     expect(JSON.stringify(ok.json)).not.toContain(REG);
     expect((await call(open, '/api/signing/report')).status).toBe(200);
+  }, 60_000);
+
+  it('signing: lists a real single-signer ratification that went through the validators', async () => {
+    // Build the warehouse the way the server would: every write passes validateAppend / appendLedger against the very
+    // FileStore the server then boots from. The solo wait is passed by injecting a clock 11 minutes ahead.
+    const cwd = mkdtempSync(join(tmpdir(), 'ops-e2e-'));
+    const disk = new FileStore(join(cwd, 'data', 'warehouse'));
+    const later = () => new Date(Date.now() + 11 * 60_000);
+    const solo = { mode: 'solo' as const, waitMs: 600_000 };
+    const signers = [{ id: 'sarah', name: 'Sarah', scope: '*' as const }];
+    const adapter = new MemoryAdapter();
+    const orig = adapter.append.bind(adapter);
+    adapter.append = async (c: string, r: Rec) => {
+      if (c === 'ledger') await appendLedger(disk, { orgId: r.orgId, actor: r.actor, action: r.action, subject: r.subject, detail: r.detail }, disk.list('ledger').length, 'sarah');
+      else disk.append(c, await validateAppend(c, structuredClone(r), { actor: 'sarah', store: disk, signing: solo, signers, reauthed: true, now: later() }));
+      return orig(c, r);
+    };
+    const errors: Error[] = [];
+    const p = await new Platform({ adapter, signing: solo, signers, onPersistError: (e) => errors.push(e) }).init();
+    const agent = AGENTS.find((a) => !a.secondApprover && !a.twoPerson && !a.professionalReview)!;
+    const inputs = Object.fromEntries(agent.inputs.map((i) => [i.key, i.kind === 'number' ? '5' : i.kind === 'select' ? i.options![0] : 'Pilot school onboarding process']));
+    const a = await p.runAgent(agent, inputs, human('sarah'));
+    await p.submitForReview(a.id, human('sarah'));
+    await p.decide(a.id, human('sarah'), 'APPROVED', 'self-approved in solo mode', agent);
+    await p.countersign(a.id, human('sarah'), '', agent, later());
+    await p.flush();
+    expect(errors).toEqual([]);
+
+    const b = await boot(3473, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: 'sarah|Sarah|*', OPS_SIGNING_MODE: 'solo' }, cwd);
+    const rep = await call(b, '/api/signing/report', { token: T_DAN });
+    expect(rep.status).toBe(200);
+    expect(rep.json).toMatchObject({ count: 1, items: [{ artefactId: a.id, agentId: agent.id, kind: 'self-countersign', signer: 'sarah' }] });
+    const item = (rep.json?.items as Array<{ docHash: string; ratifiedAt: string }>)[0]!;
+    expect(item.docHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(Number.isNaN(Date.parse(item.ratifiedAt))).toBe(false);
   }, 60_000);
 });
 

@@ -8,7 +8,7 @@ import { summariseEvent, verifySignature, type EcoEvent } from './src/connector/
 import { ProposalPublisher, proposalFromArtefact, PublishRefused } from './src/connector/proposals';
 import { FileStore } from './src/server/fileAdapter';
 import { authenticate, parseAuth } from './src/server/auth';
-import { Rejected, validateAppend } from './src/server/validate';
+import { Rejected, validateAppend, type AppendCtx } from './src/server/validate';
 import { parseSigners, parseSigningPolicy, singleSignerReport, type Signer } from './src/server/signing';
 import type { SigningPolicy } from './src/core/signing';
 import { RateLimiter } from './src/server/rate';
@@ -71,9 +71,16 @@ try {
   process.exit(1);
 }
 
+/**
+ * The validation context for one append. Both write paths (POST /api/warehouse and server-side writes such as the
+ * autonomy runner's) build it here, so the signing policy, registry, roles and clock they pass cannot drift apart.
+ * Only the HTTP route can carry a re-authentication; a server-side write never does.
+ */
+const signingCtx = (actor: string | null, reauthed: boolean): AppendCtx => ({ actor, store, roles: rolesOf(roles, actor), signing, signers, reauthed, now: new Date() });
+
 /** A server-side write takes the same validated, serialised path a client write takes. */
 const appendValidated = (collection: string, rec: Rec, actor: string) => serial(async () => {
-  const v = await validateAppend(collection, rec, { actor, store, signing, signers, reauthed: false, now: new Date() });
+  const v = await validateAppend(collection, rec, signingCtx(actor, false));
   store.append(collection, v);
 });
 let autonomy: AutonomyService;
@@ -106,7 +113,7 @@ const wrap = (fn: (req: Request, res: Response) => unknown): RequestHandler => (
 };
 const actorOf = (res: Response) => res.locals.actor as string | null;
 
-/** Appends are checked against the current state, so they run one at a time. */
+/** Appends are checked against the current state, so they run one at a time. Ledger appends have their own queue (see `tails` in ledgerService.ts). */
 let tail: Promise<unknown> = Promise.resolve();
 const serial = <T>(fn: () => Promise<T>): Promise<T> => {
   const run = tail.then(fn, fn);
@@ -258,7 +265,7 @@ app.post('/api/warehouse/:collection', wrap(async (req, res) => {
       if (!reauthed && limits.failure(req, res)) return;
     }
     await serial(async () => {
-      const rec = await validateAppend(req.params.collection, req.body, { actor, store, roles: rolesOf(roles, actor), signing, signers, reauthed, now: new Date() });
+      const rec = await validateAppend(req.params.collection, req.body, signingCtx(actor, reauthed));
       store.append(req.params.collection, rec);
     });
     res.json({ ok: true });

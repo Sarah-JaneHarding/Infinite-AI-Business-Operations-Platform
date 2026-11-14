@@ -1,5 +1,6 @@
 import { contractFor, type DefStore } from '../departments/custom';
 import type { Artefact } from '../core/platform';
+import type { LedgerEntry } from '../core/types';
 import { requiresTwoPerson, soloWaitRemainingMs, type SigningPolicy } from '../core/signing';
 
 export interface GateContext {
@@ -12,6 +13,13 @@ export interface GateContext {
 }
 
 const prof = (p: string) => p.replace('_', ' ');
+
+/** Server-stamped time of the latest (by seq) `hitl.approved` entry for this artefact whose detail names this version. */
+export function approvedAtFromLedger(entries: readonly LedgerEntry[], artefactId: string, version: number): string | undefined {
+  let found: LedgerEntry | undefined;
+  for (const e of entries) if (e.action === 'hitl.approved' && e.subject === artefactId && e.detail.version === version && (!found || e.seq > found.seq)) found = e;
+  return found?.at;
+}
 
 /** The standing rule for an agent whose output always needs a second person, or '' when none applies. A hint only: the server decides. */
 export function signingHint(agent: { twoPerson?: boolean; professionalReview?: string } | undefined): string {
@@ -31,7 +39,7 @@ export function can(a: Artefact, me: string, ctx: GateContext): { ok: boolean; w
   if (a.status === 'APPROVED' && a.approvedBy === me) {
     if (agent && requiresTwoPerson(agent)) return { ok: false, why: `A different person must countersign this: ${signingHint(agent)}` };
     if (ctx.signing.mode !== 'solo') return { ok: false, why: 'You approved this. A different person must countersign.' };
-    if (ctx.approvedAtFromLedger === undefined) return { ok: false, why: 'Waiting for the approval to be recorded in the ledger.' };
+    if (ctx.approvedAtFromLedger === undefined) return { ok: false, why: 'The approval was saved but is not recorded in the ledger. If this does not change after a reload, edit the artefact and approve it again.' };
     const left = soloWaitRemainingMs(ctx.approvedAtFromLedger, ctx.now, ctx.signing);
     if (left > 0) {
       const mins = Math.ceil(left / 60_000);

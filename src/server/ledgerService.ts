@@ -28,6 +28,13 @@ export function appendLedger(store: LedgerStore, input: unknown, knownSeq: unkno
   return run;
 }
 
+/**
+ * Ledger writes queue here, per store. Warehouse writes queue separately (`serial` in server.ts), so a ledger append can
+ * interleave with a warehouse append. That is safe because both sides only grow (rows and entries are appended, never
+ * updated or deleted) and every cross-check fails closed: a `hitl.*` entry checked before its decision is stored is
+ * refused 409, and a solo countersign checked before its `hitl.approved` entry is stored is refused 409. Neither order
+ * lets something through that a strictly serial order would refuse.
+ */
 const tails = new WeakMap<object, Promise<unknown>>();
 
 /** Actions only the server writes. Budgets and test results are counted from them, so a client must not be able to add them. */
