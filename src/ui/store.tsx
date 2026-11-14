@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform } from '../core/platform';
+import { DEFAULT_SIGNING, type Profession, type SigningPolicy } from '../core/signing';
 import { LocalStorageAdapter, type StorageAdapter } from '../core/warehouse';
 import { ServerAdapter, serverSequencer } from '../core/serverAdapter';
 import { remoteEngine } from '../core/gateway';
@@ -32,6 +33,10 @@ interface Ctx {
   signIn: (token: string) => void;
   /** Set when the server refused or lost a record the platform tried to save. */
   syncError: string | null;
+  /** The signing policy the server runs under (dual unless it says solo). */
+  signing: SigningPolicy;
+  /** True when the signed-in person is on the server's signer registry. */
+  signer: boolean;
 }
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useOps = () => useContext(C);
@@ -57,6 +62,8 @@ export function OpsProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [serverActor, setServerActor] = useState<string | null>(null);
+  const [signing, setSigning] = useState<SigningPolicy>(DEFAULT_SIGNING);
+  const [signer, setSigner] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [actorName, setActorName] = useState(read('ops.actor', ''));
   const [actorRole, setActorRole] = useState(read('ops.role', 'Founder'));
@@ -67,6 +74,9 @@ export function OpsProvider({ children }: { children: ReactNode }) {
     (async () => {
       let adapter: StorageAdapter = new LocalStorageAdapter();
       let m: Ctx['mode'] = 'local';
+      let policy: SigningPolicy = DEFAULT_SIGNING;
+      let isSigner = false;
+      let signers: { id: string; profession: Profession }[] = [];
       const hadToken = Boolean(loadToken());
       try {
         const h = await apiFetch('/api/health');
@@ -82,7 +92,11 @@ export function OpsProvider({ children }: { children: ReactNode }) {
               setAuthNeeded(true);
               return;
             }
-            setServerActor(((await w.json()) as { actor: string }).actor);
+            const who = (await w.json()) as { actor: string; signing?: { mode: 'solo' | 'dual'; waitMinutes: number }; signer?: boolean; profession?: Profession };
+            setServerActor(who.actor);
+            if (who.signing) policy = { mode: who.signing.mode, waitMs: who.signing.waitMinutes * 60_000 };
+            isSigner = who.signer === true;
+            signers = who.profession ? [{ id: who.actor, profession: who.profession }] : [];
           }
           setAuthNeeded(false);
           const sa = new ServerAdapter();
@@ -91,8 +105,10 @@ export function OpsProvider({ children }: { children: ReactNode }) {
           m = 'server';
         }
       } catch { /* static hosting: browser storage */ }
-      const plat = new Platform({ adapter, facts: () => ({ ...snapshotFacts(), ...liveFacts.current }), onPersistError: (e) => setSyncError(e.message), sequencer: m === 'server' ? serverSequencer() : undefined });
+      const plat = new Platform({ adapter, facts: () => ({ ...snapshotFacts(), ...liveFacts.current }), onPersistError: (e) => setSyncError(e.message), sequencer: m === 'server' ? serverSequencer() : undefined, signing: m === 'server' ? policy : DEFAULT_SIGNING, signers: m === 'server' ? signers : [] });
       await plat.init();
+      setSigning(m === 'server' ? policy : DEFAULT_SIGNING);
+      setSigner(m === 'server' && isSigner);
       setP(plat);
       setMode(m);
     })();
@@ -131,6 +147,6 @@ export function OpsProvider({ children }: { children: ReactNode }) {
     setActorName(n); setActorRole(role); write('ops.actor', n); write('ops.role', role);
   };
 
-  const value: Ctx = { p, mode, health, live, liveError, refreshLive, actor, setActor, tick, bump, view, go, llm, setLlm, authNeeded, authError, signIn, syncError };
+  const value: Ctx = { p, mode, health, live, liveError, refreshLive, actor, setActor, tick, bump, view, go, llm, setLlm, authNeeded, authError, signIn, syncError, signing, signer };
   return <C.Provider value={value}>{children}</C.Provider>;
 }

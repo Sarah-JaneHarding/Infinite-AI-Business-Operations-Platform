@@ -38,4 +38,13 @@ describe('App shell keeps what authenticated mode needs', () => {
     expect(app).toMatch(/name: 'contracts'/);
     expect(app).toMatch(/<Contracts \/>/);
   });
+  it('Board shows the solo banner, asks for the token, wraps the countersign in withReauth and badges single-signer', () => {
+    const board = readFileSync('src/ui/Board.tsx', 'utf8');
+    expect(board).toContain('Solo signing is on. You approve, then countersign after');
+    expect(board).toContain('with your token. Every such ratification is flagged.');
+    expect(board).toContain('aria-label="Re-enter your token to countersign"');
+    expect(board).toMatch(/autoComplete="off"/);
+    expect(board).toMatch(/withReauth\(/);
+    expect(board).toContain('single-signer');
+  });
 });

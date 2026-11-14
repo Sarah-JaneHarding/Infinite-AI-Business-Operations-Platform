@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { CheckCircle2, FileText, GitFork, PackageCheck, PenLine, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useOps } from './store';
+import { can, signingHint } from './boardGate';
+import { withReauth } from '../core/api';
+import type { LedgerEntry } from '../core/types';
 import { Badge, Card, statusTone } from './primitives';
 import { agentById } from '../departments';
 import { isAutonomous, RunRefused, type Artefact } from '../core/platform';
@@ -18,16 +21,15 @@ const COLUMNS: { status: Artefact['status']; title: string; hint: string }[] = [
   { status: 'REJECTED', title: 'Rejected', hint: 'Kept for the record. Edit and resubmit, or leave.' },
 ];
 
-/** What this person may do to this artefact now, or why not. Mirrors the rules the server enforces. */
-function can(a: Artefact, me: string) {
-  const agent = agentById(a.agentId);
-  if (a.status === 'IN_REVIEW') return agent?.secondApprover && a.requestedBy === me ? { ok: false, why: 'This agent needs someone other than its author to approve.' } : { ok: true, why: '' };
-  if (a.status === 'APPROVED') return a.approvedBy === me ? { ok: false, why: 'You approved this. A different person must countersign.' } : { ok: true, why: '' };
-  return { ok: true, why: '' };
+/** Server-stamped time of the latest approval of this exact version, read from the ledger the Platform already holds. */
+function approvedAtFromLedger(entries: readonly LedgerEntry[], a: Artefact): string | undefined {
+  let found: LedgerEntry | undefined;
+  for (const e of entries) if (e.action === 'hitl.approved' && e.subject === a.id && e.detail.version === a.version && (!found || e.seq > found.seq)) found = e;
+  return found?.at;
 }
 
 export function Board() {
-  const { p, actor, bump, go } = useOps();
+  const { p, actor, bump, go, signing } = useOps();
   const [msg, setMsg] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     try { await fn(); setMsg({ tone: 'ok', text: ok }); } catch (e) { setMsg({ tone: 'bad', text: e instanceof RunRefused ? e.message : (e as Error).message }); } finally { bump(); }
@@ -40,6 +42,7 @@ export function Board() {
         <h1 className="text-2xl font-bold">Review board</h1>
         <p style={{ color: 'var(--muted)' }}>Every output starts as a draft. A reviewer approves the exact content, a <b>different</b> person countersigns it, and only then is it ratified and ingested. Any edit voids the signatures. Ratified output is final: change it by starting a revision, which goes through the whole board again.</p>
       </div>
+      {signing.mode === 'solo' && <div role="status" className="callout warn">Solo signing is on. You approve, then countersign after {signing.waitMs / 60_000} minutes with your token. Every such ratification is flagged.</div>}
       {msg && <div role="status" className={`callout ${msg.tone === 'ok' ? 'ok' : 'warn'}`}>{msg.text}</div>}
       {quarantined.length > 0 && (
         <Card title={<span className="flex items-center gap-2">Quarantined: failed their tests<Badge tone="bad">{quarantined.length}</Badge></span>}>
@@ -63,10 +66,13 @@ export function Board() {
 }
 
 function Item({ a, me, act, open, failed = [] }: { a: Artefact; me: string; act: (fn: () => Promise<unknown>, ok: string) => Promise<void>; open: () => void; failed?: { id: string; title: string; detail: string }[] }) {
-  const { p, actor } = useOps();
+  const { p, actor, signing } = useOps();
   const [note, setNote] = useState('');
+  const [token, setToken] = useState('');
   const agent = agentById(a.agentId);
-  const gate = can(a, me);
+  const gate = can(a, me, { signing, now: new Date(), approvedAtFromLedger: approvedAtFromLedger(p!.ledger.all, a) });
+  const hint = signingHint(agent);
+  const isApprover = a.approvedBy === me;
   const auto = isAutonomous(a.requestedBy);
   return (
     <li className="card p-3" data-testid="board-item">
@@ -77,12 +83,14 @@ function Item({ a, me, act, open, failed = [] }: { a: Artefact; me: string; act:
         <Badge>v{a.version}</Badge>
         {auto ? <Badge tone="draft"><ShieldCheck size={11} className="mr-1 inline" />Autonomous draft</Badge> : <Badge>by {a.requestedBy}</Badge>}
         {a.revisionOf && <Badge><GitFork size={11} className="mr-1 inline" />revision</Badge>}
+        {a.signing === 'single-signer' && <Badge tone="draft">single-signer</Badge>}
         <button className="btn ml-auto" onClick={open}><FileText size={13} /> Open</button>
       </div>
       <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
         {a.approvedBy && <>Approved by <b>{a.approvedBy}</b>. </>}{a.countersignedBy && <>Countersigned by <b>{a.countersignedBy}</b>. </>}{a.flags.length > 0 && <>Flags: {a.flags.join(', ')}.</>}
       </p>
 
+      {hint && a.status !== 'DRAFT' && a.status !== 'REJECTED' && <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{hint}</p>}
       {failed.length > 0 && <ul className="mt-2 list-disc pl-5 text-sm">{failed.map((f) => <li key={f.id}><b>{f.id} {f.title}:</b> {f.detail}</li>)}</ul>}
       {a.status === 'DRAFT' && <div className="mt-2"><button className="btn" disabled={failed.length > 0} title={failed.length ? 'It has to pass its tests first' : ''} onClick={() => act(() => p!.submitForReview(a.id, actor), 'Submitted for review.')}><Send size={14} /> Submit for review</button></div>}
 
@@ -101,7 +109,8 @@ function Item({ a, me, act, open, failed = [] }: { a: Artefact; me: string; act:
         <div className="mt-2 space-y-2">
           {!gate.ok && <p className="text-sm">{gate.why}</p>}
           <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Countersignature note (optional)" aria-label="Countersignature note" />
-          <button className="btn primary" disabled={!gate.ok} onClick={() => act(() => p!.countersign(a.id, actor, note, agent), agent?.ingestion === 'none' ? 'Countersigned and ratified.' : 'Countersigned, ratified and ingested into the library and the Brain.')}><PenLine size={14} /> Countersign and ratify</button>
+          {isApprover && signing.mode === 'solo' && <input className="input" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Your token (needed to countersign your own approval)" aria-label="Re-enter your token to countersign" />}
+          <button className="btn primary" disabled={!gate.ok || (isApprover && !token)} onClick={() => { const t = token; setToken(''); void act(() => (isApprover ? withReauth(t, () => p!.countersign(a.id, actor, note, agent)) : p!.countersign(a.id, actor, note, agent)), agent?.ingestion === 'none' ? 'Countersigned and ratified.' : 'Countersigned, ratified and ingested into the library and the Brain.'); }}><PenLine size={14} /> Countersign and ratify</button>
         </div>
       )}
 
