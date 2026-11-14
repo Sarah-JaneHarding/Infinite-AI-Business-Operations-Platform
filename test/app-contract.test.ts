@@ -47,4 +47,9 @@ describe('App shell keeps what authenticated mode needs', () => {
     expect(board).toMatch(/withReauth\(/);
     expect(board).toContain('single-signer');
   });
+  it('Board lists single-signer ratifications from the report route', () => {
+    const board = readFileSync('src/ui/Board.tsx', 'utf8');
+    expect(board).toContain('Single-signer ratifications (for second review)');
+    expect(board).toContain('/api/signing/report');
+  });
 });

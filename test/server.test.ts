@@ -696,6 +696,19 @@ describe('server: signing registry and solo mode', () => {
   }, 60_000);
 });
 
+describe('server: single-signer report', () => {
+  it('signing: a signed-in person gets the report, no token gets 401, and no registration text leaks', async () => {
+    const REG = 'REG-SECRET-98765';
+    const pro = await boot(3435, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: `sarah|Sarah Harding|legal|attorney|${REG};dan|Dan Roe|*`, ANTHROPIC_API_KEY: 'sk-ant-not-real-key-for-tests' });
+    const ok = await call(pro, '/api/signing/report', { token: T_DAN });
+    expect(ok.status).toBe(200);
+    expect(ok.json).toEqual({ count: 0, items: [] });
+    expect((await call(pro, '/api/signing/report')).status).toBe(401);
+    expect(JSON.stringify(ok.json)).not.toContain(REG);
+    expect((await call(open, '/api/signing/report')).status).toBe(200);
+  }, 60_000);
+});
+
 describe('server: signing configuration fails closed', () => {
   const tryBoot = (env: Record<string, string>) => new Promise<{ code: number | null; err: string } | null>((resolve) => {
     const p = spawn(process.execPath, [join(ROOT, 'node_modules/tsx/dist/cli.mjs'), join(ROOT, 'server.ts')], {

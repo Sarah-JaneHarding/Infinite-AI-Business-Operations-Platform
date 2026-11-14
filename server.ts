@@ -9,7 +9,7 @@ import { ProposalPublisher, proposalFromArtefact, PublishRefused } from './src/c
 import { FileStore } from './src/server/fileAdapter';
 import { authenticate, parseAuth } from './src/server/auth';
 import { Rejected, validateAppend } from './src/server/validate';
-import { parseSigners, parseSigningPolicy, type Signer } from './src/server/signing';
+import { parseSigners, parseSigningPolicy, singleSignerReport, type Signer } from './src/server/signing';
 import type { SigningPolicy } from './src/core/signing';
 import { RateLimiter } from './src/server/rate';
 import { appendLedger } from './src/server/ledgerService';
@@ -170,6 +170,8 @@ app.get('/api/whoami', (_q, res) => {
     profession: actor !== null ? signers.find((s) => s.id === actor)?.profession : undefined
   });
 });
+
+app.get('/api/signing/report', (_q, res) => res.json(singleSignerReport(store)));
 
 // ---- connector: read-only live status, cached briefly ----
 let cache: { at: number; status: LiveStatus } | null = null;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseAuth } from '../src/server/auth';
-import { parseSigners, parseSigningPolicy, maySignFor, maySignProfessional } from '../src/server/signing';
+import { parseSigners, parseSigningPolicy, maySignFor, maySignProfessional, singleSignerReport } from '../src/server/signing';
 import { DEFAULT_SIGNING, SINGLE_SIGNER, soloWaitRemainingMs } from '../src/core/signing';
 
 const auth = parseAuth({
@@ -134,5 +134,44 @@ describe('maySignProfessional', () => {
     expect(maySignProfessional(signers, 'lerato', 'accountant')).toBe(false);
     expect(maySignProfessional(signers, 'sarah', 'attorney')).toBe(false);
     expect(maySignProfessional(signers, 'stranger', 'attorney')).toBe(false);
+  });
+});
+
+describe('singleSignerReport', () => {
+  type R = Record<string, unknown>;
+  const store = (rows: R[]) => ({ list: (c: string) => (c === 'artefact_versions' ? (rows as never) : []) });
+  const v = (o: R): R => ({ id: 'a1', title: 'T', agentId: 'ag', requestedBy: 'sarah', approvedBy: 'sarah', countersignedBy: 'sarah', docHash: 'h'.repeat(64), ratifiedAt: '2026-01-01T00:00:00.000Z', status: 'RATIFIED', signing: 'single-signer', ...o });
+
+  it('report: an empty store gives no items', () => {
+    expect(singleSignerReport(store([]))).toEqual({ count: 0, items: [] });
+  });
+  it('report: lists a flagged self-countersign with the approver as signer', () => {
+    expect(singleSignerReport(store([v({})]))).toEqual({ count: 1, items: [{ artefactId: 'a1', title: 'T', agentId: 'ag', kind: 'self-countersign', signer: 'sarah', ratifiedAt: '2026-01-01T00:00:00.000Z', docHash: 'h'.repeat(64) }] });
+  });
+  it('report: lists a flagged self-approval with the author as signer', () => {
+    const r = singleSignerReport(store([v({ status: 'INGESTED', approvedBy: 'sarah', countersignedBy: 'dan', requestedBy: 'sarah' })]));
+    expect(r.items[0]).toMatchObject({ kind: 'self-approval', signer: 'sarah' });
+  });
+  it('report: a normal two-person ratification is not listed', () => {
+    expect(singleSignerReport(store([v({ signing: undefined, countersignedBy: 'dan' })])).count).toBe(0);
+  });
+  it('report: draft, approved and other non-final flagged versions are not listed', () => {
+    expect(singleSignerReport(store([v({ id: 'x', status: 'APPROVED' }), v({ id: 'y', status: 'DRAFT' }), v({ id: 'z', status: 'REJECTED' })])).count).toBe(0);
+  });
+  it('report: only the latest version per artefact counts, so it lists once', () => {
+    const r = singleSignerReport(store([v({ status: 'RATIFIED' }), v({ status: 'INGESTED' })]));
+    expect(r.count).toBe(1);
+    expect(singleSignerReport(store([v({ status: 'RATIFIED' }), v({ status: 'DRAFT', signing: undefined })])).count).toBe(0);
+  });
+  it('report: items are ordered by ratifiedAt ascending', () => {
+    const r = singleSignerReport(store([v({ id: 'late', ratifiedAt: '2026-03-01T00:00:00.000Z' }), v({ id: 'early', ratifiedAt: '2026-01-01T00:00:00.000Z' })]));
+    expect(r.items.map((i) => i.artefactId)).toEqual(['early', 'late']);
+  });
+});
+
+describe('reportRow', () => {
+  it('report: shortens the hash to 12 characters and the timestamp to a date', async () => {
+    const { reportRow } = await import('../src/ui/boardGate');
+    expect(reportRow({ artefactId: 'a', title: 't', agentId: 'g', kind: 'self-approval', signer: 's', ratifiedAt: '2026-02-03T04:05:06.000Z', docHash: 'abcdef0123456789' })).toEqual({ kindLabel: 'approved own draft', date: '2026-02-03', hash: 'abcdef012345' });
   });
 });

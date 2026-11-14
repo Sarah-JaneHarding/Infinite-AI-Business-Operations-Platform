@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, FileText, GitFork, PackageCheck, PenLine, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useOps } from './store';
-import { can, signingHint } from './boardGate';
-import { withReauth } from '../core/api';
+import { can, signingHint, reportRow, type SingleSignerReportItem } from './boardGate';
+import { apiFetch, withReauth } from '../core/api';
 import type { LedgerEntry } from '../core/types';
 import { Badge, Card, statusTone } from './primitives';
 import { agentById } from '../departments';
@@ -28,8 +28,31 @@ function approvedAtFromLedger(entries: readonly LedgerEntry[], a: Artefact): str
   return found?.at;
 }
 
+function SingleSignerReport() {
+  const [rep, setRep] = useState<{ count: number; items: SingleSignerReportItem[] } | null>(null);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    let live = true;
+    apiFetch('/api/signing/report')
+      .then(async (r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return (await r.json()) as { count: number; items: SingleSignerReportItem[] }; })
+      .then((d) => { if (live) setRep(d); })
+      .catch((e: Error) => { if (live) setErr(e.message); });
+    return () => { live = false; };
+  }, []);
+  return (
+    <Card title="Single-signer ratifications (for second review)">
+      {err ? <p className="text-sm">Could not load the report: {err}</p> : !rep ? <p className="text-sm" style={{ color: 'var(--muted)' }}>Loading.</p> : rep.count === 0 ? <p className="text-sm" style={{ color: 'var(--muted)' }}>None.</p> : (
+        <>
+          <p className="mb-2 text-xs" style={{ color: 'var(--muted)' }}>{rep.count} in total.</p>
+          <ul className="space-y-1 text-sm">{rep.items.map((i) => { const r = reportRow(i); return <li key={i.artefactId}><b>{i.title}</b>: {r.kindLabel}, signer {i.signer}, ratified {r.date}, hash {r.hash}</li>; })}</ul>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export function Board() {
-  const { p, actor, bump, go, signing } = useOps();
+  const { p, actor, bump, go, signing, mode } = useOps();
   const [msg, setMsg] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     try { await fn(); setMsg({ tone: 'ok', text: ok }); } catch (e) { setMsg({ tone: 'bad', text: e instanceof RunRefused ? e.message : (e as Error).message }); } finally { bump(); }
@@ -61,6 +84,7 @@ export function Board() {
           </Card>
         );
       })}
+      {mode === 'server' && <SingleSignerReport />}
     </div>
   );
 }

@@ -38,3 +38,14 @@ export function can(a: Artefact, me: string, ctx: GateContext): { ok: boolean; w
   }
   return { ok: true, why: '' };
 }
+
+export interface SingleSignerReportItem { artefactId: string; title: string; agentId: string; kind: 'self-countersign' | 'self-approval'; signer: string; ratifiedAt: string; docHash: string }
+
+/** Display fields for one report row: plain words for the kind, the date part of the timestamp, and a short hash. */
+export function reportRow(i: SingleSignerReportItem): { kindLabel: string; date: string; hash: string } {
+  return {
+    kindLabel: i.kind === 'self-countersign' ? 'countersigned own approval' : 'approved own draft',
+    date: i.ratifiedAt.slice(0, 10),
+    hash: i.docHash.slice(0, 12)
+  };
+}

@@ -1,4 +1,5 @@
 import type { Auth } from './auth';
+import type { ReadStore } from './validate';
 import { DEFAULT_SIGNING, PROFESSIONS, holdsProfession, type Profession, type SigningPolicy } from '../core/signing';
 
 /**
@@ -88,4 +89,36 @@ export function maySignFor(signers: readonly Signer[], personId: string, departm
 /** True only if this person is registered with exactly the required profession. */
 export function maySignProfessional(signers: readonly Signer[], personId: string, required: Profession): boolean {
   return holdsProfession(signers, personId, required);
+}
+
+export interface SingleSignerItem {
+  artefactId: string;
+  title: string;
+  agentId: string;
+  kind: 'self-countersign' | 'self-approval';
+  signer: string;
+  ratifiedAt: string;
+  docHash: string;
+}
+
+/** Ratified or ingested artefacts that went through a one-person path, for a second review. Read-only; latest version per id only. */
+export function singleSignerReport(store: ReadStore): { count: number; items: SingleSignerItem[] } {
+  const latest = new Map<string, Record<string, unknown>>();
+  for (const r of store.list('artefact_versions')) latest.set(String(r.id), r as Record<string, unknown>);
+  const items: SingleSignerItem[] = [];
+  for (const [id, r] of latest) {
+    if ((r.status !== 'RATIFIED' && r.status !== 'INGESTED') || r.signing !== 'single-signer') continue;
+    const selfCounter = r.approvedBy === r.countersignedBy;
+    items.push({
+      artefactId: id,
+      title: String(r.title ?? ''),
+      agentId: String(r.agentId ?? ''),
+      kind: selfCounter ? 'self-countersign' : 'self-approval',
+      signer: String(selfCounter ? r.approvedBy : r.requestedBy),
+      ratifiedAt: String(r.ratifiedAt ?? ''),
+      docHash: String(r.docHash ?? '')
+    });
+  }
+  items.sort((a, b) => (a.ratifiedAt < b.ratifiedAt ? -1 : a.ratifiedAt > b.ratifiedAt ? 1 : 0));
+  return { count: items.length, items };
 }
