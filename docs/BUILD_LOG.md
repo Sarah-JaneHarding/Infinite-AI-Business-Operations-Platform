@@ -63,3 +63,10 @@ telemetry, which conflicts with the no-invented-metrics rule. It remains in git 
 
 ## 2026-11-14: AI Studio install failure
 - "Dependency installation failed" came from the tracked `bun.lock`, which still listed `@google/genai` (removed from `package.json` when the model path moved to Claude). A frozen bun install rejected it. Regenerated `bun.lock` (79 lines removed, nothing added); `bun install --frozen-lockfile`, `npm ci`, `npm install` and the build all pass on a clean copy. `package-lock.json` remains the lockfile CI and Docker use.
+
+## 2026-11-14: CEO Command Centre and v1.4 alignment
+- New first screen, `CEO Command Centre`: 16 department lights, one consolidated task list with status badges, a human-flag marker, and a SAST calendar of flagged tasks. Recomputed every 30 seconds from recorded data. See `docs/CEO_COMMAND_CENTRE.md`.
+- v1.4 package (HTML, Word) and library index stored in `docs/business-plan/` and seeded by `npm run seed:business`; plan figures in `src/core/ceo/plan.ts` are checked against `SCHOOL_PRICING`.
+- `OPS-CEO-01` drafts an operations review with `[src:ops.*]` tags (service agent, OPQ-028).
+- Connections: signed calendar feed (.ics), HMAC inbound webhook, outgoing digest. OAuth connectors not built (OPQ-027).
+- Visually checked in the dark theme at 1440 px with sample data; not tested against a live multi-user server.

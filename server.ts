@@ -17,6 +17,10 @@ import { makeRunner } from './src/server/autonomy/runner';
 import { autonomyRoutes } from './src/server/autonomyRoutes';
 import { parseRoles, requestLimits, requireRole, rolesOf, securityHeaders, type RoleTable } from './src/server/security';
 import { snapshotFacts } from './src/connector/snapshot';
+import { randomUUID } from 'node:crypto';
+import { calendarFeed, ceoStateFromStore, CEO_COLLECTIONS, tokenOk } from './src/server/ceoServer';
+import { parseInbound } from './src/core/ceo/guard';
+import { digestText } from './src/core/ceo/digest';
 import type { Artefact } from './src/core/platform';
 import type { Rec } from './src/core/warehouse';
 import { ModelHub } from './src/server/models/hub';
@@ -112,6 +116,8 @@ app.get('/api/health', (_q, res) => res.json({
   roles: roles !== null,
   ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true',
   webhook: Boolean(env.GITHUB_WEBHOOK_SECRET),
+  inbound: (env.OPS_INBOUND_SECRET ?? '').length >= 16,
+  calendarFeed: (env.OPS_CALENDAR_TOKEN ?? '').length >= 24,
   outbound: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST).length > 0
 }));
 
@@ -136,6 +142,34 @@ app.post('/api/connector/webhook', express.raw({ type: '*/*', limit: '1mb' }), w
   // A signed event can start the active standing orders listening for it. Not awaited: the webhook answers GitHub at once.
   void autonomy.onEvent(ev.kind).catch((e: Error) => console.error('autonomy event failed:', e.message));
   res.json({ ok: true });
+}));
+
+// ---- CEO command centre, public by token or signature (a calendar app and an outside system cannot sign in) ----
+// Calendar feed: read-only, off unless OPS_CALENDAR_TOKEN (24+ characters) is set. Answers 404, never 401, so it does not reveal itself.
+app.get('/api/ceo/calendar.ics', (req, res) => {
+  if (!tokenOk(env.OPS_CALENDAR_TOKEN, req.query['token'])) return void res.status(404).type('text/plain').send('not found');
+  res.set('cache-control', 'private, max-age=300').type('text/calendar; charset=utf-8').send(calendarFeed(store.load()));
+});
+// Inbound webhook: an outside system adds a task for a person. HMAC-signed (x-ops-signature: sha256=...), strict body, 16 KiB, always needs a person.
+app.post('/api/integrations/inbound', express.raw({ type: '*/*', limit: '16kb' }), wrap(async (req, res) => {
+  const secret = env.OPS_INBOUND_SECRET ?? '';
+  if (secret.length < 16) return res.status(404).json({ error: 'the inbound webhook is not enabled' });
+  const body = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
+  if (!(await verifySignature(secret, body, req.header('x-ops-signature')))) return res.status(401).json({ error: 'bad signature' });
+  let payload: unknown;
+  try { payload = JSON.parse(body); } catch { return res.status(400).json({ error: 'body is not JSON' }); }
+  const parsed = parseInbound(payload, () => randomUUID());
+  if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+  if (store.list('ceo_tasks').some((r) => r.id === parsed.value.id)) return res.json({ ok: true, duplicate: true, id: parsed.value.id });
+  const at = new Date().toISOString();
+  try {
+    await appendValidated('ceo_tasks', { ...parsed.value, by: 'inbound-webhook', at } as unknown as Rec, 'inbound-webhook');
+  } catch (e) {
+    if (e instanceof Rejected) return res.status(e.status).json({ error: e.message });
+    throw e;
+  }
+  store.append('connector_events', { id: `in_${Date.now()}`, kind: 'task_received', summary: `inbound task ${parsed.value.id} for ${parsed.value.dept}`, at });
+  res.json({ ok: true, id: parsed.value.id });
 }));
 
 app.use(express.json({ limit: '512kb' }));
@@ -198,6 +232,22 @@ app.post('/api/integrations/send', wrap(async (req, res) => {
   res.status(r.ok ? 200 : 502).json({ ok: r.ok, status: r.status, host: t.url.hostname });
 }));
 
+// ---- CEO digest: plain text for Slack-style incoming webhooks (they accept {"text": "..."}); same allowlist and address checks as the artefact send ----
+app.get('/api/ceo/digest', (_q, res) => res.type('text/plain; charset=utf-8').send(digestText(ceoStateFromStore(store.load()))));
+app.post('/api/ceo/digest/send', wrap(async (req, res) => {
+  const actor = actorOf(res);
+  if (!actor) return res.status(403).json({ error: 'Sending needs an authenticated user (set OPS_USERS).' });
+  const t = checkTarget(String(req.body?.url ?? ''), parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST));
+  if (!t.ok) return res.status(403).json({ error: t.why });
+  try { const addrs = await lookup(t.url.hostname, { all: true }); if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) return res.status(403).json({ error: 'That host resolves to a non-public address.' }); } catch { return res.status(502).json({ error: 'Could not resolve that host.' }); }
+  const body = JSON.stringify({ text: digestText(ceoStateFromStore(store.load())) });
+  const headers: Record<string, string> = { 'content-type': 'application/json', 'user-agent': 'infinite-ai-ops' };
+  if (env.OPS_OUTBOUND_SECRET) headers['x-ops-signature'] = sign(env.OPS_OUTBOUND_SECRET, body);
+  const r = await fetch(t.url, { method: 'POST', headers, body, redirect: 'error', signal: AbortSignal.timeout(10_000) }).catch((e: Error) => ({ ok: false, status: 0, statusText: e.message }));
+  store.append('connector_events', { id: `dg_${Date.now()}`, kind: 'digest_sent', summary: `digest to ${t.url.hostname}: ${r.status}`, by: actor, at: new Date().toISOString() });
+  res.status(r.ok ? 200 : 502).json({ ok: r.ok, status: r.status, host: t.url.hostname });
+}));
+
 // ---- models: the hub is the only door to a model provider (docs/MODEL_HUB.md). Gateway, copilot, recommendations, setup. ----
 // Provider attestation and activating an autonomous order are legal and security judgements: they need the officer role once roles exist (OPQ-015, OPQ-019).
 // Stopping things (revoke, pause) stays open to everyone signed in: it is always the safe direction.
@@ -220,7 +270,12 @@ app.post('/api/ledger', wrap(async (req, res) => {
 }));
 
 // ---- warehouse (append-only, validated) ----
-app.get('/api/warehouse', (_q, res) => res.json(store.load()));
+app.get('/api/warehouse', (req, res) => {
+  // ?only=a,b returns just those collections: the dashboard refreshes every 30 seconds and must not pull the document library each time.
+  const only = typeof req.query['only'] === 'string' ? req.query['only'] === 'ceo' ? CEO_COLLECTIONS : req.query['only'].split(',').filter((c) => /^[a-z0-9_]{1,64}$/.test(c)) : null;
+  const all = store.load();
+  res.json(only ? Object.fromEntries(only.filter((c) => c in all).map((c) => [c, all[c]])) : all);
+});
 app.post('/api/warehouse/:collection', wrap(async (req, res) => {
   try {
     await serial(async () => {
