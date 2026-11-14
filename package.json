@@ -16,7 +16,8 @@
     "build:library": "tsx scripts/build-library.ts",
     "seed:library": "tsx scripts/seed-library.ts",
     "audit:ecosystem": "node scripts/audit-ecosystem.mjs",
-    "server": "tsx server.ts"
+    "server": "tsx server.ts",
+    "seed:business": "tsx scripts/seed-business.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

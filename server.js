@@ -10,11 +10,11 @@ function parseStages(stageLog) {
     return { n: Number(m[1]), title: (d ? d[1] : m[2]).trim(), date: d ? d[2] : null };
   });
 }
-function parseOpenQuestions(text) {
+function parseOpenQuestions(text2) {
   const map = /* @__PURE__ */ new Map();
-  for (const m of text.matchAll(/^\|\s*(OQ-\d+)\s*\|\s*([\d-]+)\s*\|\s*([^|]*)\|\s*([^|]*?)\s*\|\s*(.+?)\s*\|\s*$/gm))
+  for (const m of text2.matchAll(/^\|\s*(OQ-\d+)\s*\|\s*([\d-]+)\s*\|\s*([^|]*)\|\s*([^|]*?)\s*\|\s*(.+?)\s*\|\s*$/gm))
     map.set(m[1], { id: m[1], raised: m[2], status: m[4].trim(), title: m[5].replace(/\*\*/g, "").slice(0, 160) });
-  for (const m of text.matchAll(/^### (OQ-\d+)(?: \(partial\))? — (.+?)(?: · (resolved )?(\d{4}-\d{2}-\d{2}))?$/gm))
+  for (const m of text2.matchAll(/^### (OQ-\d+)(?: \(partial\))? — (.+?)(?: · (resolved )?(\d{4}-\d{2}-\d{2}))?$/gm))
     if (!map.has(m[1])) map.set(m[1], { id: m[1], raised: m[4] ?? null, status: m[3] ? "RESOLVED" : "OPEN", title: m[2].slice(0, 160) });
   return [...map.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
@@ -260,8 +260,8 @@ function authenticate(auth2, token) {
 }
 
 // src/core/crypto.ts
-async function sha256Hex(text) {
-  const data = new TextEncoder().encode(text);
+async function sha256Hex(text2) {
+  const data = new TextEncoder().encode(text2);
   const buf = await globalThis.crypto.subtle.digest("SHA-256", data);
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -1935,10 +1935,38 @@ var research = {
   ]
 };
 
+// src/departments/ceoReview.ts
+var makeOpsReview = (depts) => defineAgent("executive", "CEO", {
+  n: 1,
+  name: "Operations review",
+  summary: "Reads the live counts from every department, assesses each against the fixed health rules, and drafts the CEO review. A person approves it.",
+  framework: "Balanced Scorecard + exception-based management",
+  purpose: "strategy_planning",
+  formats: ["md", "docx", "html", "pdf", "json"],
+  inputs: [long("focus", "Anything you want the review to look at (optional)")],
+  narrative: (c) => ({ "ops.tasks.overdue": c.facts["ops.tasks.overdue"] ?? 0, "ops.tasks.blocked": c.facts["ops.tasks.blocked"] ?? 0, "ops.depts.red": c.facts["ops.depts.red"] ?? 0 }),
+  title: () => "Operations review",
+  sections: (c) => {
+    const light = (id) => String(c.facts[`ops.${id}.light`] ?? "unknown");
+    const red = depts.filter((d) => light(d.id) === "red");
+    const amber = depts.filter((d) => light(d.id) === "amber");
+    const none = depts.filter((d) => light(d.id) === "none");
+    return [
+      { h: "Overall position", kv: [["Tasks tracked", src(c, "ops.tasks.total")], ["Open or in progress", src(c, "ops.tasks.open")], ["Blocked", src(c, "ops.tasks.blocked")], ["Overdue", src(c, "ops.tasks.overdue")], ["Done", src(c, "ops.tasks.done")], ["Waiting for a person", src(c, "ops.tasks.humanOpen")], ["Departments red / amber / green / nothing recorded", `${src(c, "ops.depts.red")} / ${src(c, "ops.depts.amber")} / ${src(c, "ops.depts.green")} / ${src(c, "ops.depts.none")}`]] },
+      { h: "Needs attention first", bullets: [...red.map((d) => `${d.name} is red: ${src(c, `ops.${d.id}.overdue`)} overdue, ${src(c, `ops.${d.id}.blocked`)} blocked.`), ...amber.map((d) => `${d.name} is amber: ${src(c, `ops.${d.id}.blocked`)} blocked, ${src(c, `ops.${d.id}.inReview`)} waiting for review.`), ...red.length + amber.length ? [] : ["No department is red or amber on what has been recorded."]] },
+      { h: "Department by department", table: { headers: ["Department", "Status", "Open", "Blocked", "Overdue", "Waiting for review"], rows: depts.map((d) => [d.name, light(d.id), src(c, `ops.${d.id}.open`), src(c, `ops.${d.id}.blocked`), src(c, `ops.${d.id}.overdue`), src(c, `ops.${d.id}.inReview`)]) } },
+      { h: "Nothing recorded yet", p: none.length ? `${none.map((d) => d.name).join(", ")}. "Nothing recorded" is not good news: it means no tracker rows, checklist ticks or artefacts exist for the department.` : "Every department has recorded work." },
+      { h: "What this review cannot see", callout: { tone: "warn", text: "The monitor counts only what people and agents recorded in the platform. It has no revenue, customer, learner or school data and makes no judgement about quality. Add those from your own records, with a source." } },
+      { h: "Your note", input: c.input.focus ?? "" }
+    ];
+  }
+});
+
 // src/departments/index.ts
 var DEPARTMENTS = [executive, product, curriculum, aibrain, security, legal, finance, sales, marketing, success, support, government, people, devops, procurement, research];
 var AGENTS = DEPARTMENTS.flatMap((d) => d.agents);
-var agentById = (id) => AGENTS.find((a) => a.id === id);
+var SERVICE_AGENTS = [makeOpsReview(DEPARTMENTS)];
+var agentById = (id) => AGENTS.find((a) => a.id === id) ?? SERVICE_AGENTS.find((a) => a.id === id);
 
 // src/core/erasure.ts
 var ERASURE_CATEGORIES = ["data_subject_request", "consent_withdrawn", "retention_expired", "unlawfully_obtained", "other"];
@@ -1987,24 +2015,24 @@ var PHONE = /(?:\+27|\b0)[\s-]?[6-8]\d[\s-]?\d{3}[\s-]?\d{4}\b|(?:\+27|\b0)[\s-]
 var TITLED = /\b(?:Mr|Mrs|Ms|Miss|Mx|Dr|Prof|Principal|Mnr|Mev)\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?/g;
 var LEARNER_ID = /\b(?:EMIS|learner\s*(?:no|number|id|name)|student\s*(?:no|number|id)|pupil\s*(?:no|number|id))\b[\s:#-]*[\w-]+/gi;
 var THIRTEEN = /(?<!\d)\d{13}(?!\d)/g;
-function collect(re, text, kind, keep = () => true) {
+function collect(re, text2, kind, keep = () => true) {
   const out = [];
-  for (const m of text.matchAll(re)) {
+  for (const m of text2.matchAll(re)) {
     if (keep(m[0])) out.push({ kind, match: m[0], start: m.index ?? 0, end: (m.index ?? 0) + m[0].length });
   }
   return out;
 }
-function detectPii(text, knownNames = []) {
+function detectPii(text2, knownNames = []) {
   const found = [
-    ...collect(THIRTEEN, text, "sa_id", validSaId),
-    ...collect(EMAIL, text, "email"),
-    ...collect(PHONE, text, "phone_za"),
-    ...collect(TITLED, text, "titled_name"),
-    ...collect(LEARNER_ID, text, "learner_identifier")
+    ...collect(THIRTEEN, text2, "sa_id", validSaId),
+    ...collect(EMAIL, text2, "email"),
+    ...collect(PHONE, text2, "phone_za"),
+    ...collect(TITLED, text2, "titled_name"),
+    ...collect(LEARNER_ID, text2, "learner_identifier")
   ];
   for (const name of knownNames.filter((n) => n.trim().length >= 3)) {
     const re = new RegExp("\\b" + name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "gi");
-    found.push(...collect(re, text, "known_name"));
+    found.push(...collect(re, text2, "known_name"));
   }
   return found.sort((a, b) => a.start - b.start);
 }
@@ -2014,8 +2042,8 @@ var LearnerDataRefused = class extends Error {
     this.findings = findings;
   }
 };
-function deidentify(text, sources, knownNames = []) {
-  const findings = detectPii(text, knownNames);
+function deidentify(text2, sources, knownNames = []) {
+  const findings = detectPii(text2, knownNames);
   const learner = findings.filter((f) => f.kind === "learner_identifier");
   if (learner.length) throw new LearnerDataRefused(learner);
   const tokens = {};
@@ -2025,7 +2053,7 @@ function deidentify(text, sources, knownNames = []) {
   let cursor = 0;
   for (const f of findings) {
     if (f.start < cursor) continue;
-    out += text.slice(cursor, f.start);
+    out += text2.slice(cursor, f.start);
     const key = f.kind + ":" + f.match.toLowerCase();
     let tok = seen.get(key);
     if (!tok) {
@@ -2037,7 +2065,7 @@ function deidentify(text, sources, knownNames = []) {
     out += tok;
     cursor = f.end;
   }
-  out += text.slice(cursor);
+  out += text2.slice(cursor);
   return { text: out, tokens, findings, provenance: { deidentified: true, sources } };
 }
 
@@ -2050,10 +2078,10 @@ var RULES = [
   ["approval_flag", /\bSKIP_APPROVAL\b|\bAUTO_APPROVE\b|\bFORCE_APPROVE\b/],
   ["exfiltrate", /\b(send|post|upload|exfiltrate)\b[^.\n]{0,40}\b(secrets?|api\s*keys?|tokens?|passwords?|credentials?)\b/i]
 ];
-function detectInjection(text) {
+function detectInjection(text2) {
   const out = [];
   for (const [rule, re] of RULES) {
-    const m = text.match(re);
+    const m = text2.match(re);
     if (m) out.push({ rule, match: m[0] });
   }
   return out;
@@ -2287,15 +2315,129 @@ function runAcceptance(c, agent) {
 }
 var failedChecks = (a) => a.results.filter((r) => !r.pass);
 
+// src/core/guardrails/claims.ts
+var NUMBER = /(?<![A-Za-z0-9_.\-/])(?:R\s?|\$|US\$)?\d[\d,\s]*(?:\.\d+)?\s?(?:%|[kKmMbB]\b|bn\b)?(?![A-Za-z0-9_\-/])/g;
+function isExempt(raw, before, after) {
+  const n = raw.replace(/[R$,\s%kKmMbB]|US|bn/g, "");
+  if (/^(19|20)\d{2}$/.test(n)) return true;
+  if (n.length <= 1 && !/[%R$]/.test(raw)) return true;
+  if (/(?:iso|iec|nist|sp|soc|sections?|ss?|act|no|pr|issue|rfc|cis|owasp|oq|ac|mod|le)\.?\s*$/i.test(before) || /#\s*$/.test(before)) return true;
+  if (/(?:^|\s)(stage|step|phase|section|part|week|term|grade|gate|tier|level|l|q|fy|b|v|a|sprint|rule|day)\s*$/i.test(before)) return true;
+  if (/^\s*(?:\.|\)|:)\s/.test(after) && before.trim() === "") return true;
+  return false;
+}
+function enforceSourcing(text2, allowed = []) {
+  const allow = new Set([...allowed].map((v2) => String(v2).replace(/[R$,\s%]/g, "").toLowerCase()));
+  const stripped = [];
+  let sourced = 0;
+  const lines3 = text2.split("\n").map((line) => {
+    if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) return line;
+    return line.split(/(?<=[.!?;])\s+/).map((sentence) => {
+      const hasTag = /\[src:[^\]]+\]/.test(sentence);
+      return sentence.replace(NUMBER, (raw, offset, whole) => {
+        const before = whole.slice(0, offset).replace(/\[src:[^\]]*\]/g, "");
+        const after = whole.slice(offset + raw.length);
+        if (isExempt(raw, before, after)) return raw;
+        const norm = raw.replace(/[R$,\s%]/g, "").toLowerCase();
+        if (hasTag || allow.has(norm)) {
+          sourced++;
+          return raw;
+        }
+        stripped.push(raw.trim());
+        return "[UNSOURCED]";
+      });
+    }).join(" ");
+  });
+  return { text: lines3.join("\n"), stripped, sourced };
+}
+
+// src/core/guardrails/engine.ts
+function runGates(g) {
+  if (g.dataClass === "learner") return { gate: "data_class", reason: "Learner-level data is never admitted to the operations platform." };
+  if (g.subjectId && g.tombstoned?.has(g.subjectId)) return { gate: "tombstone", reason: `Subject ${g.subjectId} has been erased; no processing is permitted.` };
+  if (!PURPOSES.includes(g.purpose) || !g.allowedPurposes.includes(g.purpose))
+    return { gate: "purpose", reason: `Purpose "${g.purpose}" is not permitted for this agent.` };
+  if (g.dataClass === "personal" && !g.lawfulBasis) return { gate: "lawful_basis", reason: "Personal data requires a stated lawful basis (POPIA s11)." };
+  return null;
+}
+function checkInput(text2, sources, knownNames = []) {
+  const injection = detectInjection(text2);
+  if (injection.length) return { ok: false, refusal: "injection", injection };
+  try {
+    return { ok: true, clean: deidentify(text2, sources, knownNames), injection };
+  } catch (e) {
+    if (e instanceof LearnerDataRefused) return { ok: false, refusal: "learner_data", pii: e.findings };
+    throw e;
+  }
+}
+function checkOutput(text2, allowedNumbers, knownNames = []) {
+  const pii = detectPii(text2, knownNames).filter((f) => f.kind !== "titled_name" || false);
+  let redacted = text2;
+  for (const f of [...pii].sort((a, b) => b.start - a.start)) redacted = redacted.slice(0, f.start) + `[REDACTED_${f.kind.toUpperCase()}]` + redacted.slice(f.end);
+  const claims = enforceSourcing(redacted, allowedNumbers);
+  const flags = [];
+  if (pii.length) flags.push(`pii_echo:${pii.length}`);
+  if (claims.stripped.length) flags.push(`unsourced_claims:${claims.stripped.length}`);
+  return { text: claims.text, claims, piiRedacted: pii.length, flags };
+}
+
+// src/core/ceo/time.ts
+var SAST_OFFSET_MS = 2 * 36e5;
+var pad = (n) => String(n).padStart(2, "0");
+function sastDate(ms) {
+  const d = new Date(ms + SAST_OFFSET_MS);
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+function sastToUtc(date, hour, minute = 0) {
+  const [y, m, d] = date.split("-").map(Number);
+  return Date.UTC(y, m - 1, d, hour, minute) - SAST_OFFSET_MS;
+}
+var sastWeekday = (date) => (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getUTCDay();
+function addDays(date, n) {
+  const d = /* @__PURE__ */ new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+var isDate = (s) => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
+
+// src/core/ceo/guard.ts
+function checkTaskText(...parts) {
+  const text2 = parts.filter(Boolean).join("\n");
+  if (!text2) return null;
+  if (detectPii(text2).some((f) => f.kind === "sa_id")) return "That text contains an ID number, so it was refused.";
+  const v2 = checkInput(text2, ["ceo:text"]);
+  if (v2.ok) return null;
+  return v2.refusal === "injection" ? "That text reads like an instruction to the platform, so it was refused." : "That text contains a learner identifier, so it was refused.";
+}
+var MAX_TITLE = 200;
+var MAX_NOTES = 1e3;
+var ID = /^[A-Za-z0-9._:-]{1,100}$/;
+function parseInbound(body, newId2) {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return { ok: false, error: "body must be a JSON object" };
+  const b = body;
+  const extra = Object.keys(b).filter((k) => !["externalId", "title", "dept", "due", "notes"].includes(k));
+  if (extra.length) return { ok: false, error: `unknown field: ${extra[0]}` };
+  if (typeof b["title"] !== "string" || !b["title"].trim() || b["title"].length > MAX_TITLE) return { ok: false, error: `title is required (up to ${MAX_TITLE} characters)` };
+  if (b["externalId"] !== void 0 && (typeof b["externalId"] !== "string" || !ID.test(b["externalId"]))) return { ok: false, error: "externalId must be 1-100 letters, digits or . _ : -" };
+  if (b["dept"] !== void 0 && !DEPARTMENTS.some((d) => d.id === b["dept"])) return { ok: false, error: "dept is not a department id" };
+  if (b["due"] !== void 0 && !isDate(b["due"])) return { ok: false, error: "due must be YYYY-MM-DD" };
+  if (b["notes"] !== void 0 && (typeof b["notes"] !== "string" || b["notes"].length > MAX_NOTES)) return { ok: false, error: `notes must be text up to ${MAX_NOTES} characters` };
+  const refused = checkTaskText(b["title"], b["notes"]);
+  if (refused) return { ok: false, error: refused };
+  return { ok: true, value: { id: `in_${b["externalId"] ?? newId2()}`, title: b["title"].trim(), dept: b["dept"] ?? "executive", due: b["due"], notes: b["notes"], source: "inbound", kind: "action", requiresHuman: true } };
+}
+
 // src/server/validate.ts
 var MAX_RECORD_BYTES = 256 * 1024;
 var MAX_RECORDS = 2e4;
 var CORE = ["ledger", "brain", "artefact_versions", "runs", "approvals", "countersignatures", "tombstones", "erasure_requests"];
 var LIBRARY = ["documents", "document_chunks", "custom_defs", "chat_log", "integration_settings"];
+var CEO = ["ceo_tasks", "ceo_task_state", "ceo_events"];
 var CUSTOM_WIDGET_COLLECTION = /^cw_[a-z0-9_]{1,40}$/;
 var CLIENT_COLLECTIONS = /* @__PURE__ */ new Set([
   ...CORE,
   ...LIBRARY,
+  ...CEO,
   ...DEPARTMENTS.flatMap((d) => d.widgets).flatMap((w) => "collection" in w ? [w.collection] : [])
 ]);
 var Rejected = class extends Error {
@@ -2339,8 +2481,43 @@ async function validateAppend(collection, body, ctx) {
     case "tombstones":
       tombstone(rec, ctx);
       break;
+    case "ceo_tasks":
+      ceoTask(rec);
+      break;
+    case "ceo_events":
+      ceoEvent(rec);
+      break;
+    case "ceo_task_state":
+      ceoState(rec);
+      break;
   }
   return rec;
+}
+function ceoTask(rec) {
+  if (typeof rec.title !== "string" || !rec.title.trim() || rec.title.length > MAX_TITLE) bad(`title is required (up to ${MAX_TITLE} characters)`);
+  if (rec.notes !== void 0 && (typeof rec.notes !== "string" || rec.notes.length > MAX_NOTES)) bad("notes too long");
+  if (rec.due !== void 0 && rec.due !== "" && !isDate(rec.due)) bad("due must be YYYY-MM-DD");
+  if (typeof rec.dept !== "string" || !DEPARTMENTS.some((d) => d.id === rec.dept)) bad("dept is not a department id");
+  const refused = checkTaskText(rec.title, rec.notes ?? void 0);
+  if (refused) bad(refused);
+}
+function ceoEvent(rec) {
+  if (typeof rec.title !== "string" || !rec.title.trim() || rec.title.length > MAX_TITLE) bad("title is required");
+  const s = Date.parse(String(rec.start));
+  const e = Date.parse(String(rec.end));
+  if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s || e - s > 24 * 36e5) bad("start and end must be times, end after start, within one day");
+  const refused = checkTaskText(rec.title);
+  if (refused) bad(refused);
+}
+function ceoState(rec) {
+  if (rec.status !== void 0 && !["open", "in_progress", "blocked", "done"].includes(String(rec.status))) bad("bad status");
+  if (rec.scheduledStart !== void 0 && !Number.isFinite(Date.parse(String(rec.scheduledStart)))) bad("scheduledStart must be a time");
+  if (rec.minutes !== void 0 && !(typeof rec.minutes === "number" && rec.minutes >= 5 && rec.minutes <= 480)) bad("minutes must be 5-480");
+  if (rec.note !== void 0) {
+    if (typeof rec.note !== "string" || rec.note.length > MAX_NOTES) bad("note too long");
+    const refused = checkTaskText(rec.note);
+    if (refused) bad(refused);
+  }
 }
 async function artefact(rec, ctx) {
   if (typeof rec.doc !== "object" || rec.doc === null || typeof rec.docHash !== "string" || await sha256Hex(canonical(rec.doc)) !== rec.docHash) bad("docHash does not match the document");
@@ -2938,11 +3115,11 @@ var Brain = class {
     await this.ledger.append({ orgId: this.orgId, actor: approver.id, action: "brain.ratify", subject: next.id, detail: { supersedes: f.id } });
     return next;
   }
-  async supersede(id, text, provenance, by) {
+  async supersede(id, text2, provenance, by) {
     const old = this.facts.find((x) => x.id === id);
     if (!old || old.tier === "L0" || old.status === "tombstoned") throw new Error("Cannot supersede that fact.");
     if (!provenance.deidentified) throw new Error("Brain refuses facts that are not de-identified.");
-    const next = { ...old, id: newId("fact"), text, provenance, supersedes: id, by, at: (/* @__PURE__ */ new Date()).toISOString(), status: TIER_NEEDS_RATIFY.includes(old.tier) ? "proposed" : "ratified" };
+    const next = { ...old, id: newId("fact"), text: text2, provenance, supersedes: id, by, at: (/* @__PURE__ */ new Date()).toISOString(), status: TIER_NEEDS_RATIFY.includes(old.tier) ? "proposed" : "ratified" };
     this.mark(old, "superseded");
     this.facts.push(next);
     this.onChange?.(next);
@@ -3032,6 +3209,10 @@ var Warehouse = class {
     for (const r of this.cols[collection] ?? []) m.set(r[key], r);
     return [...m.values()];
   }
+  /** Every collection's records, oldest first. A copy: callers cannot change what is stored. */
+  all() {
+    return Object.fromEntries(Object.entries(this.cols).map(([k, v2]) => [k, [...v2]]));
+  }
   collections() {
     return Object.fromEntries(Object.entries(this.cols).map(([k, v2]) => [k, v2.length]));
   }
@@ -3073,85 +3254,19 @@ var Gateway = class {
       throw new GatewayRefused("Gateway refuses any request that is not de-identified.");
     }
     if (!req.provenance.sources.length) throw new GatewayRefused("Gateway refuses requests without provenance sources.");
-    let text;
+    let text2;
     let engine = this.engine;
     try {
-      text = await engine.complete(req);
+      text2 = await engine.complete(req);
     } catch (e) {
       await this.ledger.append({ orgId: req.orgId, actor: req.agentId, action: "gateway.fallback", subject: req.purpose, detail: { from: engine.name, error: String(e.message) } });
       engine = localDraftEngine;
-      text = await engine.complete(req);
+      text2 = await engine.complete(req);
     }
     await this.ledger.append({ orgId: req.orgId, actor: req.agentId, action: "gateway.complete", subject: req.purpose, detail: { engine: engine.name, promptChars: req.prompt.length, sources: req.provenance.sources } });
-    return { text, engine: engine.name };
+    return { text: text2, engine: engine.name };
   }
 };
-
-// src/core/guardrails/claims.ts
-var NUMBER = /(?<![A-Za-z0-9_.\-/])(?:R\s?|\$|US\$)?\d[\d,\s]*(?:\.\d+)?\s?(?:%|[kKmMbB]\b|bn\b)?(?![A-Za-z0-9_\-/])/g;
-function isExempt(raw, before, after) {
-  const n = raw.replace(/[R$,\s%kKmMbB]|US|bn/g, "");
-  if (/^(19|20)\d{2}$/.test(n)) return true;
-  if (n.length <= 1 && !/[%R$]/.test(raw)) return true;
-  if (/(?:iso|iec|nist|sp|soc|sections?|ss?|act|no|pr|issue|rfc|cis|owasp|oq|ac|mod|le)\.?\s*$/i.test(before) || /#\s*$/.test(before)) return true;
-  if (/(?:^|\s)(stage|step|phase|section|part|week|term|grade|gate|tier|level|l|q|fy|b|v|a|sprint|rule|day)\s*$/i.test(before)) return true;
-  if (/^\s*(?:\.|\)|:)\s/.test(after) && before.trim() === "") return true;
-  return false;
-}
-function enforceSourcing(text, allowed = []) {
-  const allow = new Set([...allowed].map((v2) => String(v2).replace(/[R$,\s%]/g, "").toLowerCase()));
-  const stripped = [];
-  let sourced = 0;
-  const lines3 = text.split("\n").map((line) => {
-    if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) return line;
-    return line.split(/(?<=[.!?;])\s+/).map((sentence) => {
-      const hasTag = /\[src:[^\]]+\]/.test(sentence);
-      return sentence.replace(NUMBER, (raw, offset, whole) => {
-        const before = whole.slice(0, offset).replace(/\[src:[^\]]*\]/g, "");
-        const after = whole.slice(offset + raw.length);
-        if (isExempt(raw, before, after)) return raw;
-        const norm = raw.replace(/[R$,\s%]/g, "").toLowerCase();
-        if (hasTag || allow.has(norm)) {
-          sourced++;
-          return raw;
-        }
-        stripped.push(raw.trim());
-        return "[UNSOURCED]";
-      });
-    }).join(" ");
-  });
-  return { text: lines3.join("\n"), stripped, sourced };
-}
-
-// src/core/guardrails/engine.ts
-function runGates(g) {
-  if (g.dataClass === "learner") return { gate: "data_class", reason: "Learner-level data is never admitted to the operations platform." };
-  if (g.subjectId && g.tombstoned?.has(g.subjectId)) return { gate: "tombstone", reason: `Subject ${g.subjectId} has been erased; no processing is permitted.` };
-  if (!PURPOSES.includes(g.purpose) || !g.allowedPurposes.includes(g.purpose))
-    return { gate: "purpose", reason: `Purpose "${g.purpose}" is not permitted for this agent.` };
-  if (g.dataClass === "personal" && !g.lawfulBasis) return { gate: "lawful_basis", reason: "Personal data requires a stated lawful basis (POPIA s11)." };
-  return null;
-}
-function checkInput(text, sources, knownNames = []) {
-  const injection = detectInjection(text);
-  if (injection.length) return { ok: false, refusal: "injection", injection };
-  try {
-    return { ok: true, clean: deidentify(text, sources, knownNames), injection };
-  } catch (e) {
-    if (e instanceof LearnerDataRefused) return { ok: false, refusal: "learner_data", pii: e.findings };
-    throw e;
-  }
-}
-function checkOutput(text, allowedNumbers, knownNames = []) {
-  const pii = detectPii(text, knownNames).filter((f) => f.kind !== "titled_name" || false);
-  let redacted = text;
-  for (const f of [...pii].sort((a, b) => b.start - a.start)) redacted = redacted.slice(0, f.start) + `[REDACTED_${f.kind.toUpperCase()}]` + redacted.slice(f.end);
-  const claims = enforceSourcing(redacted, allowedNumbers);
-  const flags = [];
-  if (pii.length) flags.push(`pii_echo:${pii.length}`);
-  if (claims.stripped.length) flags.push(`unsourced_claims:${claims.stripped.length}`);
-  return { text: claims.text, claims, piiRedacted: pii.length, flags };
-}
 
 // src/core/platform.ts
 var isAutonomous = (id) => id.startsWith("auto:");
@@ -4487,6 +4602,404 @@ function snapshotFacts(s = snapshot) {
   };
 }
 
+// server.ts
+import { randomUUID } from "node:crypto";
+
+// src/server/ceoServer.ts
+import { timingSafeEqual as timingSafeEqual2 } from "node:crypto";
+
+// src/core/ceo/plan.ts
+var PLAN_DECISIONS = [
+  { id: "D-1", question: "Which price card is authoritative?", decision: "Per-school formula is the working price, provisional until three schools have seen it.", status: "decided", dept: "finance" },
+  { id: "D-2", question: "Publish VAT-inclusive prices rounded or exact?", decision: "Exact VAT-inclusive prices with the ex-VAT split shown.", status: "decided", dept: "finance" },
+  { id: "D-3", question: "Is teacher training a second line?", decision: "No. Teacher training is included in the ecosystem.", status: "decided", dept: "product" },
+  { id: "D-4", question: "Who are pilot schools #2 and #3?", decision: "Defer #2 and #3 until pre-pilot testing with #1 is complete.", status: "decided", dept: "success" },
+  { id: "D-5", question: "Founder salary and time commitment", decision: "R35,000 per month, half-time, pre-pilot and pilot phase.", status: "decided", humanAction: "Decide what happens to founder pay after month 12 (pilot-phase review).", dept: "executive" },
+  { id: "D-6", question: "VAT registration route", decision: "Voluntary registration from launch, subject to the accountant.", status: "decided", humanAction: "Confirm the VAT route and timing with the accountant.", dept: "finance" },
+  { id: "OQ-003", question: "School-supplied templates and countersignature", decision: "Defer until school onboarding.", status: "deferred", humanAction: "Ask the Benjamin Pine principal for the unit blueprint, assessment task, rubric/memo and parent report templates, with a date.", dept: "success" },
+  { id: "OQ-016", question: "Calibrate LLM judges (50+ human labels per module)", decision: "December-holiday labelling sprint with primary school staff; two people label a sample.", status: "decided", humanAction: "Schedule the labelling sprint.", when: "December", dept: "curriculum" },
+  { id: "OQ-017", question: "Run k6 peak and spike tests in staging", decision: "Apply Terraform to a small staging environment, then run k6.", status: "decided", humanAction: "Schedule the staging environment and the k6 run.", when: "Nov-Dec", dept: "devops" },
+  { id: "OQ-020", question: "Record architecture walkthrough", decision: "30-45 minutes using HOW_TO_ADD_AN_AGENT.md.", status: "decided", humanAction: "Schedule and record the architecture walkthrough.", when: "December", dept: "devops" },
+  { id: "OQ-036", question: "Is MFA enforced for admin, SMT and platform roles?", decision: "Keycloak OTP and email verification with a drift test.", status: "decided", humanAction: "Run it against a live Keycloak and confirm.", dept: "security" },
+  { id: "OQ-044", question: "Serve the widget archive from the app?", decision: "Yes, from the ecosystem app, behind a gated route.", status: "decided", humanAction: "Decide the CSP approach and sign off.", dept: "security" },
+  { id: "TOK", question: "Sign-in tokens that were in an uploaded .env file", decision: "Rotate them.", status: "open", humanAction: "Rotate the sign-in tokens.", dept: "security" }
+];
+
+// src/core/ceo/tasks.ts
+var TRACKER_RULES = [
+  { collection: "actions", title: ["action"], status: "status", due: "due", owner: "owner", done: ["Done"], blocked: ["Blocked"], verb: "Action" },
+  { collection: "okr", title: ["objective", "kr"], status: "status", owner: "owner", done: ["Done"], blocked: ["At risk"], progress: ["On track"], skip: ["Not started"], verb: "Objective" },
+  { collection: "compliance_calendar", title: ["item"], status: "status", due: "date", done: ["Done"], verb: "Compliance date" },
+  { collection: "obligations", title: ["contract", "obligation"], status: "status", due: "due", owner: "owner", done: ["Done"], verb: "Obligation" },
+  { collection: "tickets", title: ["summary"], status: "status", done: ["Resolved"], blocked: ["Waiting"], progress: ["In progress"], urgentWhen: ["priority", "P1"], verb: "Support ticket" },
+  { collection: "tender_requirements", title: ["tender", "req"], status: "status", owner: "owner", done: ["Checked"], progress: ["In progress", "Ready"], verb: "Tender requirement" },
+  { collection: "content_calendar", title: ["channel", "piece"], status: "status", due: "date", done: ["Published"], progress: ["Drafting", "Review", "Approved"], requires: "piece", verb: "Content" },
+  { collection: "content_review", title: ["asset"], status: "status", owner: "reviewer", done: ["Approved"], blocked: ["Changes needed"], verb: "Content review" },
+  { collection: "usability_findings", title: ["finding"], status: "status", done: ["Fixed"], progress: ["Planned"], urgentWhen: ["severity", "Blocker"], verb: "Usability finding" },
+  { collection: "contracts", title: ["counterparty", "type"], status: "status", due: "renewal", owner: "owner", done: ["Signed"], blocked: ["Expired"], progress: ["Counsel review", "Negotiation"], decisionWhen: ["status", "Counsel review"], verb: "Contract" },
+  { collection: "debtors", title: ["school", "invoice"], status: "status", due: "due", done: ["Paid"], blocked: ["Disputed"], progress: ["Promised"], verb: "Debtor" },
+  { collection: "dsr_log", title: ["type", "ref"], status: "status", done: ["Responded", "Closed"], urgentWhen: ["status", "Open"], verb: "Data subject request" },
+  { collection: "breach_log", title: ["what"], decisionWhen: ["regulator", "Decision pending"], urgentWhen: ["regulator", "Decision pending"], verb: "Incident" },
+  { collection: "restore_tests", title: ["system"], status: "result", done: ["Passed"], blocked: ["Failed"], progress: ["Partly"], skip: ["Passed"], verb: "Restore test" },
+  { collection: "operator_register", title: ["operator", "service"], status: "agreement", done: ["Signed"], progress: ["In progress"], verb: "Operator agreement" },
+  { collection: "claims_register", title: ["claim"], status: "status", done: ["Checked"], progress: ["Evidence given"], verb: "Claim" },
+  { collection: "evals", title: ["agent", "suite"], status: "status", done: ["Passing"], blocked: ["Failing"], progress: ["Defined"], verb: "Eval" },
+  { collection: "crm_pipeline", title: ["school", "next"], status: "stage", due: "due", done: ["Won", "Lost"], requires: "next", verb: "Sales next step" }
+];
+var text = (r, k) => String(r[k] ?? "").trim();
+var latestById2 = (rows2) => {
+  const m = /* @__PURE__ */ new Map();
+  for (const r of rows2 ?? []) m.set(r.id, r);
+  return [...m.values()];
+};
+var DEPT_OWNER2 = (d) => `Head of ${d.name.split(" &")[0]}`;
+function trackerTasks(inp, today2) {
+  const out = [];
+  for (const d of inp.departments) {
+    for (const w of d.widgets) {
+      if (w.type !== "tracker") continue;
+      const rule = TRACKER_RULES.find((r) => r.collection === w.collection);
+      if (!rule) continue;
+      for (const r of latestById2(inp.collections[w.collection]).filter((x) => !x.deleted)) {
+        const title = rule.title.map((k) => text(r, k)).filter(Boolean).join(": ");
+        if (!title) continue;
+        if (rule.requires && !text(r, rule.requires)) continue;
+        const st = rule.status ? text(r, rule.status) : "";
+        if (st && rule.skip?.includes(st)) continue;
+        const due = rule.due && isDate(r[rule.due]) ? r[rule.due] : void 0;
+        const decision = rule.decisionWhen ? text(r, rule.decisionWhen[0]) === rule.decisionWhen[1] : false;
+        const urgent = rule.urgentWhen ? text(r, rule.urgentWhen[0]) === rule.urgentWhen[1] : false;
+        out.push(finish({
+          id: `trk:${w.collection}:${r.id}`,
+          dept: d.id,
+          title: `${rule.verb}: ${title}`,
+          source: "tracker",
+          sourceRef: w.collection,
+          status: st && rule.done?.includes(st) ? "done" : st && rule.blocked?.includes(st) ? "blocked" : st && rule.progress?.includes(st) ? "in_progress" : "open",
+          kind: decision ? "decision" : "action",
+          requiresHuman: true,
+          priority: urgent ? 1 : 3,
+          due,
+          owner: rule.owner && text(r, rule.owner) ? text(r, rule.owner) : DEPT_OWNER2(d),
+          reason: `${rule.verb} recorded in ${d.name}${st ? ` with status "${st}"` : ""}. A person has to ${decision ? "decide" : "do or confirm"} it.`
+        }, today2));
+      }
+    }
+  }
+  return out;
+}
+function checklistTasks(inp, today2) {
+  const out = [];
+  for (const d of inp.departments) {
+    for (const w of d.widgets) {
+      if (w.type !== "checklist") continue;
+      const state = new Map(latestById2(inp.collections[w.collection]).map((r) => [r.id, r]));
+      w.items.forEach((label, i) => {
+        const done = Boolean(state.get(`item-${i}`)?.done);
+        out.push(finish({
+          id: `chk:${w.collection}:${i}`,
+          dept: d.id,
+          title: `${w.title}: ${label}`,
+          source: "checklist",
+          sourceRef: w.collection,
+          status: done ? "done" : "open",
+          kind: "action",
+          requiresHuman: true,
+          priority: 3,
+          owner: DEPT_OWNER2(d),
+          reason: `Unticked item on the ${w.title} checklist in ${d.name}. Evidence is recorded by a person.`
+        }, today2));
+      });
+    }
+  }
+  return out;
+}
+function artefactTasks(inp, today2) {
+  const out = [];
+  const deptName = new Map(inp.departments.map((d) => [d.id, d]));
+  for (const a of latestById2(inp.collections["artefact_versions"])) {
+    const d = deptName.get(a.dept);
+    const owner = d ? DEPT_OWNER2(d) : void 0;
+    const base = { dept: a.dept, source: "artefact", sourceRef: a.id, owner, due: void 0, requiresHuman: true };
+    if (a.status === "IN_REVIEW") out.push(finish({ ...base, id: `art:${a.id}`, title: `Approve or reject: ${a.title}`, status: "open", kind: "decision", priority: 1, reason: `${a.agentId} drafted this. Only a named person can approve it.` }, today2));
+    else if (a.status === "DRAFT") out.push(finish({ ...base, id: `art:${a.id}`, title: `Edit and submit for review: ${a.title}`, status: "in_progress", kind: "action", priority: 2, reason: `${a.agentId} left this as a draft. A person edits it and submits it.` }, today2));
+    else if (a.status === "APPROVED" && inp.agentSecondApprover?.(a.agentId) && !a.countersignedBy) out.push(finish({ ...base, id: `art:${a.id}`, title: `Countersign: ${a.title}`, status: "open", kind: "decision", priority: 1, reason: "This agent needs a second, different person to countersign." }, today2));
+  }
+  return out;
+}
+function planTasks(today2) {
+  return PLAN_DECISIONS.filter((p) => p.humanAction).map((p) => finish({
+    id: `plan:${p.id}`,
+    dept: p.dept,
+    title: `${p.id}: ${p.humanAction}`,
+    source: "plan",
+    sourceRef: p.id,
+    status: "open",
+    kind: "decision",
+    requiresHuman: true,
+    priority: 2,
+    owner: "CEO",
+    reason: `Business Planning Package v1.4, section 15${p.when ? ` (${p.when})` : ""}. ${p.decision}`
+  }, today2));
+}
+function manualTasks(inp, today2) {
+  return latestById2(inp.collections["ceo_tasks"]).filter((t) => !t.deleted && t.title).map((t) => finish({
+    id: `man:${t.id}`,
+    dept: t.dept || "executive",
+    title: t.title,
+    source: t.source === "inbound" ? "inbound" : "manual",
+    sourceRef: t.id,
+    status: "open",
+    kind: t.kind ?? "action",
+    requiresHuman: t.requiresHuman ?? t.kind !== "ai_draft",
+    priority: 2,
+    due: isDate(t.due) ? t.due : void 0,
+    owner: t.owner || "CEO",
+    reason: t.source === "inbound" ? "Arrived through the inbound webhook." : "Added by hand."
+  }, today2));
+}
+function monitorTasks(inp, today2) {
+  const week = inp.now - 7 * 864e5;
+  const ran = latestById2(inp.collections["artefact_versions"]).some((a) => a.agentId === OPS_REVIEW_AGENT && Date.parse(a.at) >= week);
+  return ran ? [] : [finish({
+    id: "mon:weekly-review",
+    dept: "executive",
+    title: "Run the weekly operations review (an agent drafts it; you approve it)",
+    source: "monitor",
+    sourceRef: OPS_REVIEW_AGENT,
+    status: "open",
+    kind: "ai_draft",
+    requiresHuman: false,
+    priority: 2,
+    reason: "No operations review has been drafted in the last seven days."
+  }, today2)];
+}
+var OPS_REVIEW_AGENT = "OPS-CEO-01";
+function finish(t, today2) {
+  let { status, priority: priority2 } = t;
+  if (status !== "done" && t.due && t.due < today2) status = "overdue";
+  if ((status === "overdue" || status === "blocked") && priority2 > 1) priority2 = 1;
+  else if (status !== "done" && t.due && priority2 > 2) priority2 = 2;
+  return { ...t, status, priority: priority2 };
+}
+var STATE_STATUS = { open: "open", in_progress: "in_progress", blocked: "blocked", done: "done" };
+function deriveTasks(inp) {
+  const today2 = sastDate(inp.now);
+  const states = new Map(latestById2(inp.collections["ceo_task_state"]).map((s) => [s.id, s]));
+  const all = [...trackerTasks(inp, today2), ...checklistTasks(inp, today2), ...artefactTasks(inp, today2), ...planTasks(today2), ...manualTasks(inp, today2), ...monitorTasks(inp, today2)];
+  return all.map((t) => {
+    const s = states.get(t.id);
+    if (s?.status && (t.source === "plan" || t.source === "manual" || t.source === "inbound")) return finish({ ...t, status: STATE_STATUS[s.status] }, today2);
+    return t;
+  }).sort((a, b) => a.priority - b.priority || (a.due ?? "9999").localeCompare(b.due ?? "9999") || a.title.localeCompare(b.title));
+}
+
+// src/core/ceo/schedule.ts
+var CALENDAR_RULES = { startHour: 8, endHour: 17, breakFrom: 12, breakTo: 13, blockMinutes: 30, maxBlocksPerDay: 8, horizonDays: 15 };
+var overlaps = (a, b) => a.s < b.e && b.s < a.e;
+function schedule(tasks, events2, states, now) {
+  const R = CALENDAR_RULES;
+  const st = new Map(states.map((s) => [s.id, s]));
+  const candidates = tasks.filter((t) => t.requiresHuman && t.status !== "done" && !(t.priority === 3 && !t.due));
+  const busy = events2.filter((e) => !("deleted" in e && e.deleted)).map((e) => ({ s: Date.parse(e.start), e: Date.parse(e.end) })).filter((x) => Number.isFinite(x.s) && Number.isFinite(x.e) && x.e > x.s);
+  const blocks = [];
+  const loose = [];
+  for (const t of candidates) {
+    const s = st.get(t.id);
+    const start2 = s?.scheduledStart ? Date.parse(s.scheduledStart) : NaN;
+    if (Number.isFinite(start2)) {
+      const end = start2 + (s?.minutes ?? R.blockMinutes) * 6e4;
+      blocks.push({ id: `blk:${t.id}`, taskId: t.id, title: t.title, dept: t.dept, start: new Date(start2).toISOString(), end: new Date(end).toISOString(), fixed: true, reason: "Pinned by the CEO" });
+      busy.push({ s: start2, e: end });
+    } else loose.push(t);
+  }
+  const order = [...loose].sort((a, b) => (a.status === "overdue" ? 0 : 1) - (b.status === "overdue" ? 0 : 1) || (a.due ?? "9999").localeCompare(b.due ?? "9999") || a.priority - b.priority || a.title.localeCompare(b.title));
+  const perDay = /* @__PURE__ */ new Map();
+  for (const b of blocks) perDay.set(sastDate(Date.parse(b.start)), (perDay.get(sastDate(Date.parse(b.start))) ?? 0) + 1);
+  const unscheduled = [];
+  const first = sastDate(now);
+  let queue = order;
+  for (let day = 0; day < R.horizonDays + 4 && queue.length; day++) {
+    const date = addDays(first, day);
+    const wd = sastWeekday(date);
+    if (wd === 0 || wd === 6) continue;
+    if (day > R.horizonDays + 2) break;
+    for (let mins = R.startHour * 60; mins + R.blockMinutes <= R.endHour * 60 && queue.length; mins += R.blockMinutes) {
+      if (mins >= R.breakFrom * 60 && mins < R.breakTo * 60) continue;
+      if ((perDay.get(date) ?? 0) >= R.maxBlocksPerDay) break;
+      const s = sastToUtc(date, Math.floor(mins / 60), mins % 60);
+      const slot = { s, e: s + R.blockMinutes * 6e4 };
+      if (slot.s < now || busy.some((b) => overlaps(slot, b))) continue;
+      const t = queue[0];
+      queue = queue.slice(1);
+      blocks.push({ id: `blk:${t.id}`, taskId: t.id, title: t.title, dept: t.dept, start: new Date(slot.s).toISOString(), end: new Date(slot.e).toISOString(), fixed: false, late: Boolean(t.due && date > t.due), reason: t.reason });
+      busy.push(slot);
+      perDay.set(date, (perDay.get(date) ?? 0) + 1);
+    }
+  }
+  unscheduled.push(...queue);
+  return { blocks: blocks.sort((a, b) => a.start.localeCompare(b.start)), unscheduled };
+}
+
+// src/core/ceo/health.ts
+var HEALTH_RULES = {
+  red: "Any overdue task, or 3 or more blocked tasks.",
+  amber: "Any blocked task, an artefact waiting for review for more than 3 days, or open tasks with no activity for 14 days.",
+  green: "Activity recorded and none of the above.",
+  none: "Nothing recorded yet: no tracker rows, checklist ticks or artefacts.",
+  reviewDays: 3,
+  quietDays: 14,
+  redBlocked: 3
+};
+var DAY2 = 864e5;
+function deptHealth(departments, tasks, collections, now) {
+  const arts = latestById2(collections["artefact_versions"]);
+  return departments.map((d) => {
+    const mine = tasks.filter((t) => t.dept === d.id);
+    const colls = d.widgets.filter((w) => w.type === "tracker" || w.type === "checklist").map((w) => "collection" in w ? w.collection : "");
+    const stamps = [];
+    for (const c of colls) for (const r of collections[c] ?? []) {
+      const t = Date.parse(String(r["at"] ?? r["storedAt"] ?? ""));
+      if (Number.isFinite(t)) stamps.push(t);
+    }
+    const dArts = arts.filter((a) => a.dept === d.id);
+    for (const a of dArts) {
+      const t = Date.parse(a.at);
+      if (Number.isFinite(t)) stamps.push(t);
+    }
+    const last = stamps.length ? Math.max(...stamps) : void 0;
+    const overdue = mine.filter((t) => t.status === "overdue").length;
+    const blocked = mine.filter((t) => t.status === "blocked").length;
+    const open = mine.filter((t) => t.status !== "done").length;
+    const staleReview = dArts.filter((a) => a.status === "IN_REVIEW" && now - Date.parse(a.at) > HEALTH_RULES.reviewDays * DAY2).length;
+    const quiet = last !== void 0 && now - last > HEALTH_RULES.quietDays * DAY2 && open > 0;
+    const reasons = [];
+    if (overdue) reasons.push(`${overdue} overdue`);
+    if (blocked) reasons.push(`${blocked} blocked`);
+    if (staleReview) reasons.push(`${staleReview} artefact(s) waiting for review over ${HEALTH_RULES.reviewDays} days`);
+    if (quiet) reasons.push(`no activity for over ${HEALTH_RULES.quietDays} days`);
+    let light;
+    if (last === void 0) light = "none";
+    else if (overdue >= 1 || blocked >= HEALTH_RULES.redBlocked) light = "red";
+    else if (blocked >= 1 || staleReview || quiet) light = "amber";
+    else light = "green";
+    if (light === "none") reasons.push("nothing recorded yet");
+    return {
+      dept: d.id,
+      name: d.name,
+      light,
+      open,
+      blocked,
+      overdue,
+      done: mine.filter((t) => t.status === "done").length,
+      total: mine.length,
+      inReview: dArts.filter((a) => a.status === "IN_REVIEW").length,
+      humanOpen: mine.filter((t) => t.requiresHuman && t.status !== "done").length,
+      lastActivity: last === void 0 ? void 0 : new Date(last).toISOString(),
+      reasons
+    };
+  });
+}
+
+// src/core/ceo/ics.ts
+var esc2 = (s) => s.replace(/\\/g, "\\\\").replace(/;/g, ";").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+var stamp = (iso) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+function fold(line) {
+  const enc = new TextEncoder();
+  if (enc.encode(line).length <= 75) return line;
+  const out = [];
+  let cur = "";
+  let size = 0;
+  for (const ch of line) {
+    const n = enc.encode(ch).length;
+    if (size + n > (out.length ? 74 : 75)) {
+      out.push(cur);
+      cur = "";
+      size = 0;
+    }
+    cur += ch;
+    size += n;
+  }
+  out.push(cur);
+  return out.join("\r\n ");
+}
+function toIcs(blocks, events2, now, name = "Infinite-AI CEO calendar") {
+  const lines3 = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Infinite-AI//Business Operations Platform//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc2(name)}`, "X-WR-TIMEZONE:Africa/Johannesburg", "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H"];
+  const dtstamp = stamp(new Date(now).toISOString());
+  const add = (uid, summary, start2, end, desc, cat) => {
+    lines3.push("BEGIN:VEVENT", `UID:${uid}@infinite-ai-ecosystem`, `DTSTAMP:${dtstamp}`, `DTSTART:${stamp(start2)}`, `DTEND:${stamp(end)}`, `SUMMARY:${esc2(summary)}`);
+    if (desc) lines3.push(`DESCRIPTION:${esc2(desc)}`);
+    if (cat) lines3.push(`CATEGORIES:${esc2(cat)}`);
+    lines3.push("TRANSP:OPAQUE", "END:VEVENT");
+  };
+  for (const b of blocks) add(b.id, b.title, b.start, b.end, b.reason, b.dept);
+  for (const e of events2.filter((x) => !x.deleted)) add(`evt:${e.id}`, e.title, e.start, e.end);
+  lines3.push("END:VCALENDAR");
+  return lines3.map(fold).join("\r\n") + "\r\n";
+}
+
+// src/core/ceo/index.ts
+function opsFacts(tasks, health, blocksCount) {
+  const f = {
+    "ops.tasks.total": tasks.length,
+    "ops.tasks.open": tasks.filter((t) => t.status === "open" || t.status === "in_progress").length,
+    "ops.tasks.blocked": tasks.filter((t) => t.status === "blocked").length,
+    "ops.tasks.overdue": tasks.filter((t) => t.status === "overdue").length,
+    "ops.tasks.done": tasks.filter((t) => t.status === "done").length,
+    "ops.tasks.humanOpen": tasks.filter((t) => t.requiresHuman && t.status !== "done").length,
+    "ops.calendar.blocks": blocksCount,
+    "ops.depts.red": health.filter((h) => h.light === "red").length,
+    "ops.depts.amber": health.filter((h) => h.light === "amber").length,
+    "ops.depts.green": health.filter((h) => h.light === "green").length,
+    "ops.depts.none": health.filter((h) => h.light === "none").length
+  };
+  for (const h of health) {
+    f[`ops.${h.dept}.light`] = h.light;
+    f[`ops.${h.dept}.open`] = h.open;
+    f[`ops.${h.dept}.overdue`] = h.overdue;
+    f[`ops.${h.dept}.blocked`] = h.blocked;
+    f[`ops.${h.dept}.inReview`] = h.inReview;
+  }
+  return f;
+}
+function buildCeoState(inp) {
+  const tasks = deriveTasks(inp);
+  const events2 = latestById2(inp.collections["ceo_events"]).filter((e) => !e.deleted);
+  const states = latestById2(inp.collections["ceo_task_state"]);
+  const sched = schedule(tasks, events2, states, inp.now);
+  const health = deptHealth(inp.departments, tasks, inp.collections, inp.now);
+  return { tasks, ...sched, health, events: events2, facts: opsFacts(tasks, health, sched.blocks.length), at: new Date(inp.now).toISOString() };
+}
+
+// src/server/ceoServer.ts
+var MIN_TOKEN = 24;
+function tokenOk(expected, given) {
+  if (!expected || expected.length < MIN_TOKEN || typeof given !== "string" || given.length !== expected.length) return false;
+  return timingSafeEqual2(Buffer.from(expected), Buffer.from(given));
+}
+var ceoStateFromStore = (all, now = Date.now()) => buildCeoState({ departments: DEPARTMENTS, collections: all, agentSecondApprover: (id) => Boolean(agentById(id)?.secondApprover), now });
+function calendarFeed(all, now = Date.now()) {
+  const s = ceoStateFromStore(all, now);
+  return toIcs(s.blocks, s.events, now);
+}
+var CEO_COLLECTIONS = [.../* @__PURE__ */ new Set([...DEPARTMENTS.flatMap((d) => d.widgets).flatMap((w) => "collection" in w ? [w.collection] : []), "artefact_versions", "ceo_tasks", "ceo_task_state", "ceo_events"])];
+
+// src/core/ceo/digest.ts
+function digestText(s, name = "Infinite-AI") {
+  const c = s.facts;
+  const lines3 = [
+    `${name} operations digest (${s.at.slice(0, 16).replace("T", " ")} UTC)`,
+    `Tasks: ${c["ops.tasks.open"]} open, ${c["ops.tasks.blocked"]} blocked, ${c["ops.tasks.overdue"]} overdue, ${c["ops.tasks.humanOpen"]} waiting for a person.`,
+    `Departments: ${c["ops.depts.red"]} red, ${c["ops.depts.amber"]} amber, ${c["ops.depts.green"]} green, ${c["ops.depts.none"]} with nothing recorded.`
+  ];
+  const urgent = s.tasks.filter((t) => t.requiresHuman && t.status !== "done" && t.priority === 1).slice(0, 5);
+  if (urgent.length) {
+    lines3.push("Needs you first:");
+    for (const t of urgent) lines3.push(`- ${t.title}${t.due ? ` (due ${t.due})` : ""}`);
+  }
+  return lines3.join("\n").slice(0, 1500);
+}
+
 // src/server/models/hub.ts
 import { createHash as createHash2 } from "node:crypto";
 
@@ -4544,9 +5057,9 @@ function checkToolResult(result) {
   return null;
 }
 var numbersIn = (s) => [...s.matchAll(/\d[\d,]*(?:\.\d+)?/g)].map((m) => m[0].replace(/,/g, ""));
-function checkModelOutput(text, inputs) {
+function checkModelOutput(text2, inputs) {
   const allowed = inputs.flatMap(numbersIn);
-  const o = checkOutput(text, allowed, []);
+  const o = checkOutput(text2, allowed, []);
   return { text: o.text, flags: o.flags };
 }
 
@@ -5467,6 +5980,8 @@ app.get("/api/health", (_q, res) => res.json({
   roles: roles !== null,
   ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === "true",
   webhook: Boolean(env.GITHUB_WEBHOOK_SECRET),
+  inbound: (env.OPS_INBOUND_SECRET ?? "").length >= 16,
+  calendarFeed: (env.OPS_CALENDAR_TOKEN ?? "").length >= 24,
   outbound: parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST).length > 0
 }));
 var events = [];
@@ -5488,6 +6003,34 @@ app.post("/api/connector/webhook", express.raw({ type: "*/*", limit: "1mb" }), w
   cache = null;
   void autonomy.onEvent(ev.kind).catch((e) => console.error("autonomy event failed:", e.message));
   res.json({ ok: true });
+}));
+app.get("/api/ceo/calendar.ics", (req, res) => {
+  if (!tokenOk(env.OPS_CALENDAR_TOKEN, req.query["token"])) return void res.status(404).type("text/plain").send("not found");
+  res.set("cache-control", "private, max-age=300").type("text/calendar; charset=utf-8").send(calendarFeed(store.load()));
+});
+app.post("/api/integrations/inbound", express.raw({ type: "*/*", limit: "16kb" }), wrap(async (req, res) => {
+  const secret = env.OPS_INBOUND_SECRET ?? "";
+  if (secret.length < 16) return res.status(404).json({ error: "the inbound webhook is not enabled" });
+  const body = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : "";
+  if (!await verifySignature(secret, body, req.header("x-ops-signature"))) return res.status(401).json({ error: "bad signature" });
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return res.status(400).json({ error: "body is not JSON" });
+  }
+  const parsed = parseInbound(payload, () => randomUUID());
+  if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+  if (store.list("ceo_tasks").some((r) => r.id === parsed.value.id)) return res.json({ ok: true, duplicate: true, id: parsed.value.id });
+  const at = (/* @__PURE__ */ new Date()).toISOString();
+  try {
+    await appendValidated("ceo_tasks", { ...parsed.value, by: "inbound-webhook", at }, "inbound-webhook");
+  } catch (e) {
+    if (e instanceof Rejected) return res.status(e.status).json({ error: e.message });
+    throw e;
+  }
+  store.append("connector_events", { id: `in_${Date.now()}`, kind: "task_received", summary: `inbound task ${parsed.value.id} for ${parsed.value.dept}`, at });
+  res.json({ ok: true, id: parsed.value.id });
 }));
 app.use(express.json({ limit: "512kb" }));
 app.use("/api", (req, res, next) => {
@@ -5545,6 +6088,25 @@ app.post("/api/integrations/send", wrap(async (req, res) => {
   store.append("connector_events", { id: `out_${Date.now()}`, kind: "artefact_sent", summary: `${art.id} v${art.version} to ${t.url.hostname}: ${r.status}`, by: actor, at: (/* @__PURE__ */ new Date()).toISOString() });
   res.status(r.ok ? 200 : 502).json({ ok: r.ok, status: r.status, host: t.url.hostname });
 }));
+app.get("/api/ceo/digest", (_q, res) => res.type("text/plain; charset=utf-8").send(digestText(ceoStateFromStore(store.load()))));
+app.post("/api/ceo/digest/send", wrap(async (req, res) => {
+  const actor = actorOf(res);
+  if (!actor) return res.status(403).json({ error: "Sending needs an authenticated user (set OPS_USERS)." });
+  const t = checkTarget(String(req.body?.url ?? ""), parseAllowlist(env.OPS_OUTBOUND_ALLOWLIST));
+  if (!t.ok) return res.status(403).json({ error: t.why });
+  try {
+    const addrs = await lookup(t.url.hostname, { all: true });
+    if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) return res.status(403).json({ error: "That host resolves to a non-public address." });
+  } catch {
+    return res.status(502).json({ error: "Could not resolve that host." });
+  }
+  const body = JSON.stringify({ text: digestText(ceoStateFromStore(store.load())) });
+  const headers = { "content-type": "application/json", "user-agent": "infinite-ai-ops" };
+  if (env.OPS_OUTBOUND_SECRET) headers["x-ops-signature"] = sign(env.OPS_OUTBOUND_SECRET, body);
+  const r = await fetch(t.url, { method: "POST", headers, body, redirect: "error", signal: AbortSignal.timeout(1e4) }).catch((e) => ({ ok: false, status: 0, statusText: e.message }));
+  store.append("connector_events", { id: `dg_${Date.now()}`, kind: "digest_sent", summary: `digest to ${t.url.hostname}: ${r.status}`, by: actor, at: (/* @__PURE__ */ new Date()).toISOString() });
+  res.status(r.ok ? 200 : 502).json({ ok: r.ok, status: r.status, host: t.url.hostname });
+}));
 app.post("/api/models/providers/:id/attest", requireRole(roles, "officer"));
 app.post("/api/autonomy/orders/:id/activate", requireRole(roles, "officer"));
 app.use("/api", modelRoutes(hub));
@@ -5558,7 +6120,11 @@ app.post("/api/ledger", wrap(async (req, res) => {
     throw e;
   }
 }));
-app.get("/api/warehouse", (_q, res) => res.json(store.load()));
+app.get("/api/warehouse", (req, res) => {
+  const only = typeof req.query["only"] === "string" ? req.query["only"] === "ceo" ? CEO_COLLECTIONS : req.query["only"].split(",").filter((c) => /^[a-z0-9_]{1,64}$/.test(c)) : null;
+  const all = store.load();
+  res.json(only ? Object.fromEntries(only.filter((c) => c in all).map((c) => [c, all[c]])) : all);
+});
 app.post("/api/warehouse/:collection", wrap(async (req, res) => {
   try {
     await serial(async () => {

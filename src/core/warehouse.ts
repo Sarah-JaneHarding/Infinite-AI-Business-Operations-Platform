@@ -100,6 +100,11 @@ export class Warehouse {
     return [...m.values()] as unknown as T[];
   }
 
+  /** Every collection's records, oldest first. A copy: callers cannot change what is stored. */
+  all(): Record<string, Rec[]> {
+    return Object.fromEntries(Object.entries(this.cols).map(([k, v]) => [k, [...v]]));
+  }
+
   collections() {
     return Object.fromEntries(Object.entries(this.cols).map(([k, v]) => [k, v.length]));
   }
