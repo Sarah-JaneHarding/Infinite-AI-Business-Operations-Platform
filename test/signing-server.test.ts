@@ -178,7 +178,8 @@ describe('where the marker may appear', () => {
 
 describe('the approvals row and hitl ledger entry follow the artefact', () => {
   const row = (o: Row = {}) => ({ id: 'apr_1', artefactId: 'art_1', decision: 'APPROVED', approver: 'sarah', ...o }) as Rec;
-  const flagged = () => approvedRows(SA.id, 'sarah', { signing: 'single-signer' });
+  const approvalRow = { id: 'apr_1', artefactId: 'art_1', decision: 'APPROVED', approver: 'sarah' };
+  const flagged = () => ({ ...approvedRows(SA.id, 'sarah', { signing: 'single-signer' }), approvals: [{ ...approvalRow, signing: 'single-signer' }] });
 
   it('an approvals row must carry the marker exactly when the artefact does', async () => {
     await expect(V(flagged(), row({ signing: 'single-signer' }), 'sarah', {}, 'approvals')).resolves.toBeDefined();
@@ -192,7 +193,57 @@ describe('the approvals row and hitl ledger entry follow the artefact', () => {
     const missing = await rej(appendLedger(store(flagged()), l({ note: '' }), 0, 'sarah'));
     expect(missing?.status).toBe(409);
     expect(missing?.message).toMatch(/marker/);
-    expect((await rej(appendLedger(store(approvedRows(SA.id, 'sarah')), l({ signing: 'single-signer' }), 0, 'sarah')))?.status).toBe(409);
+    expect((await rej(appendLedger(store({ ...approvedRows(SA.id, 'sarah'), approvals: [approvalRow] }), l({ signing: 'single-signer' }), 0, 'sarah')))?.status).toBe(409);
+  });
+});
+
+describe('hitl.approved entries never outnumber approvals', () => {
+  const iso = (m: number) => plus(m).toISOString();
+  const entry = { orgId: 'o', actor: 'dan', action: 'hitl.approved', subject: 'art_1', detail: { note: '' } };
+  const approvalRow = (id: string) => ({ id, artefactId: 'art_1', decision: 'APPROVED', approver: 'dan' });
+  const ledgerOf = (rows: Record<string, Row[]>) => (rows.ledger ?? []).length;
+  /** Re-approval after an edit: a new DRAFT, review and APPROVED version, as the Platform writes them. */
+  const reapprove = (rows: Record<string, Row[]>, at: string) => rows.artefact_versions!.push(art({ version: 2 }), art({ version: 2, status: 'IN_REVIEW' }), art({ version: 2, status: 'APPROVED', approvedBy: 'dan', at }));
+  const countersignV2 = (rows: Record<string, Row[]>) => V(rows, ratify(PLAIN.id, 'dan', 'dan', { version: 2, signing: 'single-signer' }), 'dan', { signing: SOLO, reauthed: true, now: plus(30) });
+
+  it('a second hitl.approved entry for the same approval is refused 409', async () => {
+    const rows = { ...approvedRows(PLAIN.id, 'dan'), approvals: [approvalRow('apr_1')] };
+    await expect(appendLedger(store(rows), entry, 0, 'dan')).resolves.toBeDefined();
+    const again = await rej(appendLedger(store(rows), entry, 1, 'dan'));
+    expect(again?.status).toBe(409);
+    expect(again?.message).toMatch(/already in the ledger/);
+    expect(ledgerOf(rows)).toBe(1);
+  });
+
+  it('an entry written ahead of its approvals row is refused 409', async () => {
+    const e = await rej(appendLedger(store(approvedRows(PLAIN.id, 'dan')), entry, 0, 'dan'));
+    expect(e?.status).toBe(409);
+    expect(e?.message).toMatch(/already in the ledger/);
+  });
+
+  it('the attack: pad entries while approved, edit, re-approve unledgered: the padding is refused and the solo countersign is refused', async () => {
+    const rows: Record<string, Row[]> = { ...approvedRows(PLAIN.id, 'dan', { at: iso(0) }), approvals: [approvalRow('apr_1')] };
+    await expect(appendLedger(store(rows), entry, 0, 'dan', () => iso(0))).resolves.toBeDefined();
+    for (let i = 0; i < 2; i++) expect((await rej(appendLedger(store(rows), entry, 1, 'dan', () => iso(1))))?.status).toBe(409);
+    expect(ledgerOf(rows)).toBe(1);
+    reapprove(rows, iso(0)); // the client backdates the re-approval and never ledgers it
+    rows.approvals!.push(approvalRow('apr_2'));
+    const e = await rej(countersignV2(rows));
+    expect(e?.status).toBe(409);
+    expect(e?.message).toMatch(/not been recorded in the ledger/);
+  });
+
+  it('the normal flow: approvals row then entry, again after an edit, and the solo countersign uses the second entry', async () => {
+    const flow = async (secondAt: string) => {
+      const rows: Record<string, Row[]> = { ...approvedRows(PLAIN.id, 'dan', { at: iso(0) }), approvals: [approvalRow('apr_1')] };
+      await expect(appendLedger(store(rows), entry, 0, 'dan', () => iso(0))).resolves.toBeDefined();
+      reapprove(rows, iso(0));
+      rows.approvals!.push(approvalRow('apr_2'));
+      await expect(appendLedger(store(rows), entry, 1, 'dan', () => secondAt)).resolves.toBeDefined();
+      return rows;
+    };
+    expect((await rej(countersignV2(await flow(iso(25)))))?.message).toMatch(/5 minutes left/); // timed from the second entry, not the first
+    await expect(countersignV2(await flow(iso(19)))).resolves.toMatchObject({ status: 'RATIFIED', version: 2, signing: 'single-signer' });
   });
 });
 

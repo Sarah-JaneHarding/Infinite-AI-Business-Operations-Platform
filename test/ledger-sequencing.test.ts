@@ -46,7 +46,7 @@ describe('appendLedger (server)', () => {
     expect((await reject(appendLedger(inReview, input({ actor: 'dan', action: 'hitl.approved', subject: 'art_1' }), 0, 'dan')))?.status).toBe(409);
     expect((await reject(appendLedger(memStore({ artefact_versions: [art('DRAFT')] }), input({ action: 'artefact.submit', subject: 'art_1' }), 0, 'sarah')))?.status).toBe(409);
     await expect(appendLedger(inReview, input({ action: 'artefact.submit', subject: 'art_1' }), 0, 'sarah')).resolves.toBeDefined();
-    const decided = memStore({ artefact_versions: [art('APPROVED', { approvedBy: 'dan' })] });
+    const decided = memStore({ artefact_versions: [art('APPROVED', { approvedBy: 'dan' })], approvals: [{ id: 'apr_1', artefactId: 'art_1', decision: 'APPROVED', approver: 'dan' } as Rec] }); // the approvals row is written before its ledger entry
     expect((await reject(appendLedger(decided, input({ actor: 'sarah', action: 'hitl.approved', subject: 'art_1' }), 0, 'sarah')))?.status).toBe(409); // approver differs
     await expect(appendLedger(decided, input({ actor: 'dan', action: 'hitl.approved', subject: 'art_1' }), 0, 'dan')).resolves.toBeDefined();
   });

@@ -55,6 +55,13 @@ async function write(store: LedgerStore, input: unknown, knownSeq: unknown, acto
   const d = detail as Record<string, unknown>;
   // The single-signer marker and the profession in a board entry must say exactly what the warehouse says.
   if (/^hitl\.(approved|rejected)$/.test(action) && d.signing !== art?.signing) bad('the single-signer marker does not match the recorded decision', 409);
+  if (action === 'hitl.approved') {
+    // One entry per approval: the approvals row is written first, so a legitimate entry is always one behind. Duplicates,
+    // and entries written ahead of an approval, are refused, which keeps the solo wait timed from the current approval's entry.
+    const entries = store.list('ledger').filter((e) => e.action === 'hitl.approved' && e.subject === subject).length;
+    const approvals = store.list('approvals').filter((r) => r.artefactId === subject && r.decision === 'APPROVED').length;
+    if (entries >= approvals) bad('this approval is already in the ledger', 409);
+  }
   if (action === 'artefact.submit' && art?.status !== 'IN_REVIEW') bad('artefact is not in review', 409);
   if (/^artefact\.(countersigned|ratified)$/.test(action)) {
     if (!art || (art.status !== 'RATIFIED' && art.status !== 'INGESTED') || art.countersignedBy !== who) return bad('no recorded countersignature matches this ledger entry', 409);
