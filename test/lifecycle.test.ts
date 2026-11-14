@@ -324,6 +324,8 @@ describe('professional review and two-person agents', () => {
   const after = (a: Artefact, minutes: number) => new Date(Date.parse(a.at) + minutes * 60000);
   const legal: typeof plain = { ...plain, professionalReview: 'attorney' };
   const twoOnly: typeof plain = { ...plain, twoPerson: true };
+  const legalStrict: typeof plain = { ...strict, professionalReview: 'attorney' };
+  const twoStrict: typeof plain = { ...strict, twoPerson: true };
 
   it('an attorney countersigns a professional artefact: ratified, no signing marker, profession recorded', async () => {
     const p = await new Platform({ ...solo, signers }).init();
@@ -375,13 +377,33 @@ describe('professional review and two-person agents', () => {
     expect(JSON.stringify(p.warehouse.list('approvals'))).not.toMatch(/signing/);
   });
 
-  it('solo: the author cannot approve own work for a professionalReview or twoPerson agent', async () => {
+  it('solo: the author cannot approve own work for a secondApprover agent that is also professionalReview or twoPerson', async () => {
     const p = await new Platform({ ...solo, signers }).init();
-    for (const agent of [legal, twoOnly]) {
+    for (const agent of [legalStrict, twoStrict]) {
       const a = await p.runAgent(agent, inputsFor(agent), sarah);
       await p.submitForReview(a.id, sarah);
       expect((await refused(p.decide(a.id, sarah, 'APPROVED', '', agent)))?.message).toMatch(/second person/);
     }
+  });
+
+  it('without secondApprover, the author may approve own work in dual mode (no marker), but never countersign it', async () => {
+    const p = await new Platform({ signers }).init();
+    for (const agent of [legal, twoOnly]) {
+      const a = await p.runAgent(agent, inputsFor(agent), sarah);
+      await p.submitForReview(a.id, sarah);
+      const done = await p.decide(a.id, sarah, 'APPROVED', 'mine', agent);
+      expect(done.status).toBe('APPROVED');
+      expect('signing' in done).toBe(false);
+      expect((await refused(p.countersign(a.id, sarah, '', agent, after(done, 60))))?.kind).toBe('hitl');
+      expect(p.artefact(a.id)?.status).toBe('APPROVED');
+    }
+  });
+
+  it('dual: a secondApprover agent that is also professionalReview still refuses author approval', async () => {
+    const p = await new Platform({ signers }).init();
+    const a = await p.runAgent(legalStrict, inputsFor(legalStrict), sarah);
+    await p.submitForReview(a.id, sarah);
+    expect((await refused(p.decide(a.id, sarah, 'APPROVED', '', legalStrict)))?.message).toMatch(/second person/);
   });
 
   it('drafting is open: a legal agent runs and submits for review in solo', async () => {

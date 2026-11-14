@@ -341,11 +341,11 @@ export class Platform {
     if (!cur) throw new Error('Unknown artefact.');
     if (approver.kind !== 'human' || isAutonomous(approver.id)) throw new RunRefused('hitl', 'Only a named human can approve or reject.');
     if (cur.status !== 'IN_REVIEW') throw new RunRefused('hitl', 'Artefact must be submitted for review first.');
-    // Solo mode relaxes only a plain secondApprover agent; twoPerson and professionalReview agents never relax.
+    // Only a secondApprover agent restricts the author. Solo mode relaxes that for a plain secondApprover agent;
+    // one that is also twoPerson or professionalReview never relaxes. (The two-person rule bites at countersign.)
     let mark: { signing?: typeof SINGLE_SIGNER } = {};
-    if ((agent?.secondApprover || (agent && requiresTwoPerson(agent))) && approver.id === cur.requestedBy) {
-      if (agent && requiresTwoPerson(agent)) throw new RunRefused('hitl', 'This agent requires a second person to approve.');
-      if (this.signingPolicy.mode !== 'solo') throw new RunRefused('hitl', 'This agent requires a second person to approve.');
+    if (agent?.secondApprover && approver.id === cur.requestedBy) {
+      if (requiresTwoPerson(agent) || this.signingPolicy.mode !== 'solo') throw new RunRefused('hitl', 'This agent requires a second person to approve.');
       if (decision === 'APPROVED') mark = { signing: SINGLE_SIGNER };
     }
     if (decision === 'REJECTED' && !note.trim()) throw new RunRefused('hitl', 'A rejection needs a reason.');
