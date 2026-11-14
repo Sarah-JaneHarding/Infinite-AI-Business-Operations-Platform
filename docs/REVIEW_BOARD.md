@@ -1,7 +1,7 @@
 # Review board
 
 Every output, from a person, an agent or an autonomous run, is a **draft** until two different people have signed the
-exact content. Open it from the sidebar: **Review Board**.
+exact content (except in solo mode, where one registered person may sign twice, flagged; see "Solo signing" below). Open it from the sidebar: **Review Board**.
 
 ```
 DRAFT ──submit──▶ IN_REVIEW ──approve──▶ APPROVED ──countersign──▶ RATIFIED ──ingest──▶ INGESTED
@@ -13,14 +13,14 @@ DRAFT ──submit──▶ IN_REVIEW ──approve──▶ APPROVED ──coun
 | ---- | --- | --------------- |
 | **Edit and save** | a person | A new version. Every edit returns the artefact to DRAFT and voids earlier signatures. |
 | **Review and approve** | a named human | The approval, bound to the exact content (a hash). A rejection needs a reason. Agents that require it need someone other than the author. |
-| **Countersign** | a *different* human from the approver | The second signature on the same content. This ratifies it. |
+| **Countersign** | a *different* human from the approver (in solo mode the approver may do it themselves, flagged; never for `twoPerson` or `professionalReview` agents) | The second signature on the same content. This ratifies it. |
 | **Ratify** | recorded with the countersignature | `artefact.countersigned` then `artefact.ratified` in the audit ledger. |
 | **Ingest** | the countersigner's action, automatic | The exact ratified document is saved to the document library (immutable) and an episode is recorded in the Brain. Skipped when the agent's contract says `ingestion: 'none'` (not relevant). A failed ingestion leaves it RATIFIED and can be retried. |
 
 ## Rules (enforced on the server, not only in the browser)
 
 - No bot, agent or autonomous actor (`auto:…`) can approve, countersign, ratify or ingest.
-- The approver and the countersigner must be different people. The author may be one of the two, but nobody signs twice.
+- The approver and the countersigner must be different people. The author may be one of the two, but nobody signs twice. This holds in dual mode and when `OPS_SIGNERS` is unset. In solo mode it is relaxed for agents that are not `twoPerson` or `professionalReview` (flagged `single-signer`); for those two kinds it holds in every mode. See "Solo signing" below.
 - A signature only counts for the exact content it was given on: the content hash must not change between approval and
   countersignature, and nothing can be edited after ratification.
 - **Ratified output is final.** To change it, start a *revision*: a new draft copied from it that goes through the whole board
@@ -33,7 +33,7 @@ DRAFT ──submit──▶ IN_REVIEW ──approve──▶ APPROVED ──coun
 ## Two-person teams
 
 With only two people, one approves and the other countersigns; the author may be either. That is the minimum the rules allow
-(two different humans, neither signing twice). Whether authors should be barred from signing their own work is an open
+(two different humans, neither signing twice; solo mode is the one-person exception, see below). Whether authors should be barred from signing their own work is an open
 decision (OPQ-017).
 
 ## Solo signing, two-person and professional review
@@ -95,6 +95,6 @@ with two signers. Artefacts already ratified as single-signer keep their flag an
 
 ## What this does not do
 
-- It does not decide *who* may approve or countersign (roles). Anyone signed in can. That needs the role model (OPQ-002).
+- It does not decide *who* may approve or countersign (roles). Anyone signed in can, unless `OPS_SIGNERS` is set: then the registry limits who may sign (scope, and profession for professional review). Roles beyond that need the role model (OPQ-002).
 - Ingestion puts the whole document in the library and a short episode in the Brain. It does not extract facts from the
   document into the Brain's policy tiers; that is a separate, human-ratified step.

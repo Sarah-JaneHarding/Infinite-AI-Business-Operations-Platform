@@ -3,7 +3,7 @@
 Roles, tasks and specialist agents for the 16 business operations departments. **Roles are drafted for the founder to review**: the repository defines none, so rename, merge or drop any of them. Each role has two tasks, and each task has one agent.
 
 - 100 agents in total: 100 built, 0 planned.
-- Every agent drafts for a human, needs approval, and invents no numbers or policy. Agents marked **2nd** need a second approver.
+- Every agent drafts for a human, needs approval, and invents no numbers or policy. Agents marked **2nd** need a second approver (in solo mode the author may self-approve, flagged; see `docs/REVIEW_BOARD.md`).
 - Ids follow `OPS-<CODE>-nn`. Existing agents keep their numbers. New ones continue from 04.
 - All 100 agents are built. The Batch number in the source is the order they were built: Finance and Government first, then one department per batch.
 

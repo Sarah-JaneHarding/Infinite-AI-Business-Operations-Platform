@@ -23,3 +23,17 @@ describe('documentation and repository policy files', () => {
     for (const term of ['OPS_SIGNING_MODE', 'twoPerson', 'professionalReview']) expect(doc).toContain(term);
   });
 });
+
+describe('OPEN_QUESTIONS table', () => {
+  it('keeps every OPQ row contiguous with the table, with the header cell count', () => {
+    const lines = read('docs/OPEN_QUESTIONS.md').split('\n');
+    const cells = (l: string): number => l.split(/(?<!\\)\|/).length - 2;
+    const header = lines.find((l) => l.startsWith('| ID '));
+    expect(header).toBeDefined();
+    lines.forEach((l, i) => {
+      if (!l.startsWith('| OPQ-')) return;
+      expect(lines[i - 1]?.startsWith('|'), `row not directly under a table line: ${l.slice(0, 12)}`).toBe(true);
+      expect(cells(l), `cell count: ${l.slice(0, 12)}`).toBe(cells(header ?? ''));
+    });
+  });
+});
