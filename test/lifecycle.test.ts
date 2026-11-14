@@ -165,7 +165,22 @@ describe('solo signing', () => {
     const r = await refused(p.countersign(a.id, dan, '', plain, after(a, 9)));
     expect(r).toBeInstanceOf(RunRefused);
     expect(r?.kind).toBe('hitl');
-    expect(r?.message).toMatch(/1 minute/);
+    expect(r?.message).toBe('Solo signing: 1 minute left to wait after approval before you can countersign your own approval.');
+    expect(p.artefact(a.id)?.status).toBe('APPROVED');
+  });
+
+  it('solo: five minutes in, it names "5 minutes"', async () => {
+    const p = await new Platform(solo).init();
+    const a = await approved(p);
+    expect((await refused(p.countersign(a.id, dan, '', plain, after(a, 5))))?.message).toMatch(/: 5 minutes left to wait/);
+  });
+
+  it('solo: an invalid clock fails closed with a hitl refusal and no NaN', async () => {
+    const p = await new Platform(solo).init();
+    const a = await approved(p);
+    const r = await refused(p.countersign(a.id, dan, '', plain, new Date(NaN)));
+    expect(r?.kind).toBe('hitl');
+    expect(r?.message).not.toMatch(/NaN/);
     expect(p.artefact(a.id)?.status).toBe('APPROVED');
   });
 

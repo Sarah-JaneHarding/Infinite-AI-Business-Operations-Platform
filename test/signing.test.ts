@@ -98,6 +98,17 @@ describe('soloWaitRemainingMs', () => {
     expect(soloWaitRemainingMs('2026-11-14T10:00:00Z', new Date('2026-11-14T10:10:00Z'), policy)).toBe(0);
     expect(soloWaitRemainingMs('2026-11-14T10:00:00Z', new Date('2026-11-14T11:00:00Z'), policy)).toBe(0);
   });
+  it('is exactly 0 at the boundary and 1 ms short of it', () => {
+    const at = '2026-11-14T10:00:00.000Z';
+    const edge = Date.parse(at) + 600_000;
+    expect(soloWaitRemainingMs(at, new Date(edge), policy)).toBe(0);
+    expect(soloWaitRemainingMs(at, new Date(edge - 1), policy)).toBe(1);
+  });
+  it('fails closed: an invalid clock or unreadable timestamp keeps the full wait, never NaN', () => {
+    expect(soloWaitRemainingMs('2026-11-14T10:00:00Z', new Date(NaN), policy)).toBe(600_000);
+    expect(soloWaitRemainingMs('not a date', new Date('2026-11-14T11:00:00Z'), policy)).toBe(600_000);
+    expect(soloWaitRemainingMs('2026-11-14T10:00:00Z', new Date('2026-11-14T11:00:00Z'), { mode: 'solo', waitMs: NaN })).toBe(Number.MAX_SAFE_INTEGER);
+  });
 });
 
 describe('maySignProfessional', () => {

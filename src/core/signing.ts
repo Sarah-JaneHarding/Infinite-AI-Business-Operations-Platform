@@ -12,5 +12,9 @@ export type Profession = (typeof PROFESSIONS)[number];
 export function soloWaitRemainingMs(approvedAt: string, now: Date, policy: SigningPolicy): number {
   const start = Date.parse(approvedAt);
   if (Number.isNaN(start)) return policy.waitMs; // fail closed: an unreadable timestamp never shortens the wait
-  return Math.max(0, start + policy.waitMs - now.getTime());
+  const nowMs = now.getTime();
+  if (Number.isNaN(nowMs)) return policy.waitMs; // fail closed: an invalid clock never shortens the wait
+  const left = Math.max(0, start + policy.waitMs - nowMs);
+  return Number.isFinite(left) ? left : Number.MAX_SAFE_INTEGER; // never NaN or Infinity
+
 }

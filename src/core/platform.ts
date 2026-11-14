@@ -359,8 +359,8 @@ export class Platform {
     if (single) {
       if (this.signingPolicy.mode !== 'solo') throw new RunRefused('hitl', 'A different person from the approver must countersign.');
       const left = soloWaitRemainingMs(cur.at, now, this.signingPolicy);
-      if (left > 0) {
-        const mins = Math.ceil(left / 60000);
+      if (!(left <= 0)) {
+        const mins = Number.isFinite(left) ? Math.ceil(left / 60000) : Math.ceil(this.signingPolicy.waitMs / 60000);
         throw new RunRefused('hitl', `Solo signing: ${mins} minute${mins === 1 ? '' : 's'} left to wait after approval before you can countersign your own approval.`);
       }
     }
