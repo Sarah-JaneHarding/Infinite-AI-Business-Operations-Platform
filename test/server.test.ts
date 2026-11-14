@@ -724,7 +724,8 @@ describe('server: signing configuration fails closed', () => {
   const ONE = { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'sarah|Sarah Harding|*' };
   const cases: Array<[string, Record<string, string>, RegExp]> = [
     ['solo without OPS_USERS', { OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*named users/],
-    ['solo with two signers', { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: 'sarah|Sarah|*;dan|Dan|*', OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*exactly one signer/],
+    ['solo with two signers', { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: 'sarah|Sarah|*;dan|Dan|*', OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*exactly one non-professional signer.*found 2/],
+    ['solo with only a professional signer', { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'sarah|Sarah|legal|attorney|LPC 1', OPS_SIGNING_MODE: 'solo' }, /FATAL: OPS_SIGNING_MODE.*exactly one non-professional signer.*found 0/],
     ['a signer who is not a user', { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: 'dan|Dan|*' }, /FATAL: OPS_SIGNERS.*not a user/],
     ['a bad wait value', { ...ONE, OPS_SIGNING_MODE: 'solo', OPS_SOLO_WAIT_MINUTES: 'soon' }, /FATAL: OPS_SOLO_WAIT_MINUTES/],
     ['an unknown mode', { ...ONE, OPS_SIGNING_MODE: 'triple' }, /FATAL: OPS_SIGNING_MODE.*unknown mode/],
@@ -734,4 +735,16 @@ describe('server: signing configuration fails closed', () => {
     expect(r?.code).toBe(1);
     expect(r?.err).toMatch(re);
   }, 20_000);
+});
+
+describe('server: signing configuration that must start', () => {
+  it('signing: the empty keys .env.example ships (OPS_SIGNERS=, OPS_SIGNING_MODE=, OPS_SOLO_WAIT_MINUTES=) start in dual with ten minutes', async () => {
+    const b = await boot(3471, { OPS_USERS: `sarah:${T_SARAH}`, OPS_SIGNERS: '', OPS_SIGNING_MODE: '', OPS_SOLO_WAIT_MINUTES: ' ' });
+    expect((await call(b, '/api/whoami', { token: T_SARAH })).json).toMatchObject({ actor: 'sarah', signing: { mode: 'dual', waitMinutes: 10 }, signer: false });
+  }, 60_000);
+  it('signing: solo with the owner and a registered attorney starts in solo', async () => {
+    const b = await boot(3472, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_SIGNERS: 'sarah|Sarah|*;dan|Dan|legal|attorney|LPC 1', OPS_SIGNING_MODE: 'solo' });
+    expect((await call(b, '/api/whoami', { token: T_SARAH })).json).toMatchObject({ actor: 'sarah', signing: { mode: 'solo', waitMinutes: 10 }, signer: true });
+    expect((await call(b, '/api/whoami', { token: T_DAN })).json).toMatchObject({ actor: 'dan', signer: true, profession: 'attorney' });
+  }, 60_000);
 });

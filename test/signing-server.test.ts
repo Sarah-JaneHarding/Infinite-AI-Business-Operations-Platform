@@ -432,6 +432,32 @@ describe('ratifying (APPROVED -> RATIFIED)', () => {
         expect((await rej(V(approvedRows(LEGAL.id, 'dan'), ratify(LEGAL.id, 'dan', 'lerato', { signing: 'single-signer' }), 'lerato', ctx)))?.status).toBe(400);
       });
     }
+    it('solo with the owner and a registered attorney: the owner signs a normal agent alone; a legal artefact needs the attorney, never the owner', async () => {
+      const both = [signer('sarah', '*'), signer('lerato', ['legal'], 'attorney')];
+      const ctx = { signing: SOLO, signers: both, reauthed: true, now: plus(10) };
+      // normal agent: the owner approves their own work and countersigns it after the wait, flagged single-signer
+      const own = await V(ledgered(approvedRows(PLAIN.id, 'sarah'), approvalEntry(APPROVED_AT, 'sarah')), ratify(PLAIN.id, 'sarah', 'sarah', { signing: 'single-signer' }), 'sarah', ctx);
+      expect(own).toMatchObject({ status: 'RATIFIED', approvedBy: 'sarah', countersignedBy: 'sarah', signing: 'single-signer' });
+      // professionalReview: the owner may approve a draft the attorney wrote (a different person from the author) ...
+      await expect(V(inReview(LEGAL.id, 'lerato'), decision(LEGAL.id, 'sarah', { requestedBy: 'lerato' }), 'sarah', ctx)).resolves.toMatchObject({ status: 'APPROVED', approvedBy: 'sarah' });
+      // ... but never countersign it, even after the wait, re-authenticated and flagged
+      const owner = await rej(V(ledgered(approvedRows(LEGAL.id, 'sarah'), approvalEntry(APPROVED_AT, 'sarah')), ratify(LEGAL.id, 'sarah', 'sarah', { signing: 'single-signer' }), 'sarah', ctx));
+      expect(owner?.status).toBe(403);
+      expect(owner?.message).toMatch(/different person from the approver/);
+      const ownerUnflagged = await rej(V(approvedRows(LEGAL.id, 'sarah'), ratify(LEGAL.id, 'sarah', 'sarah'), 'sarah', ctx));
+      expect(ownerUnflagged?.status).toBe(403);
+      // the attorney, a different person from the approver, ratifies it with no marker
+      const ok = await V(approvedRows(LEGAL.id, 'sarah'), ratify(LEGAL.id, 'sarah', 'lerato'), 'lerato', ctx);
+      expect(ok).toMatchObject({ status: 'RATIFIED', approvedBy: 'sarah', countersignedBy: 'lerato' });
+      expect('signing' in ok).toBe(false);
+      // the attorney cannot countersign a legal artefact they approved themselves
+      const self = await rej(V(approvedRows(LEGAL.id, 'lerato'), ratify(LEGAL.id, 'lerato', 'lerato', { signing: 'single-signer' }), 'lerato', ctx));
+      expect(self?.status).toBe(403);
+      // and the owner cannot approve a legal draft of their own in solo (the two-person rule is never relaxed)
+      const selfApprove = await rej(V(inReview(LEGAL.id, 'sarah'), decision(LEGAL.id, 'sarah', { signing: 'single-signer' }), 'sarah', ctx));
+      expect(selfApprove?.status).toBe(403);
+    });
+
     it('fails closed with no signers configured: nobody holds the profession', async () => {
       for (const s of [undefined, []]) {
         const e = await rej(V(approvedRows(LEGAL.id, 'dan'), ratify(LEGAL.id, 'dan', 'lerato'), 'lerato', { signers: s }));

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { parse as parseDotenv } from 'dotenv';
 import { describe, it, expect } from 'vitest';
 import { parseAuth } from '../src/server/auth';
 import { parseSigners, parseSigningPolicy, maySignFor, maySignProfessional, singleSignerReport } from '../src/server/signing';
@@ -59,6 +61,9 @@ describe('parseSigners', () => {
 describe('parseSigningPolicy', () => {
   const one = parseSigners('sarah|Sarah|*', auth, depts);
   const two = parseSigners('sarah|Sarah|*;dan|Dan|finance', auth, depts);
+  const ownerAndAttorney = parseSigners('sarah|Sarah|*;lerato|Lerato|legal|attorney|LPC 123', auth, depts);
+  const attorneyOnly = parseSigners('lerato|Lerato|legal|attorney|LPC 123', auth, depts);
+  const ownerAndTwoAttorneys = parseSigners('sarah|Sarah|*;lerato|Lerato|legal|attorney|LPC 123;dan|Dan|legal|attorney|LPC 456', auth, depts);
 
   it('defaults to dual with a ten minute wait', () => {
     expect(parseSigningPolicy({}, [], auth)).toEqual({ mode: 'dual', waitMs: 600000 });
@@ -79,9 +84,38 @@ describe('parseSigningPolicy', () => {
     expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, two, auth)).toThrow(/^OPS_SIGNING_MODE:/);
     expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, one, open)).toThrow(/^OPS_SIGNING_MODE:/);
     expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'triple' }, one, auth)).toThrow(/^OPS_SIGNING_MODE:/);
-    for (const w of ['0', '1441', '1.5', 'abc', '']) {
+    for (const w of ['0', '1441', '1.5', 'abc', '-5']) {
       expect(() => parseSigningPolicy({ OPS_SOLO_WAIT_MINUTES: w }, one, auth)).toThrow(/^OPS_SOLO_WAIT_MINUTES:/);
     }
+  });
+
+  it('treats an empty or whitespace-only mode or wait as unset, like OPS_SIGNERS', () => {
+    for (const blank of ['', '  ', '\t']) {
+      expect(parseSigningPolicy({ OPS_SIGNING_MODE: blank }, [], auth)).toEqual({ mode: 'dual', waitMs: 600000 });
+      expect(parseSigningPolicy({ OPS_SOLO_WAIT_MINUTES: blank }, [], auth)).toEqual({ mode: 'dual', waitMs: 600000 });
+      expect(parseSigningPolicy({ OPS_SIGNING_MODE: 'solo', OPS_SOLO_WAIT_MINUTES: blank }, one, auth)).toEqual({ mode: 'solo', waitMs: 600000 });
+    }
+  });
+
+  it('the shipped .env.example, as dotenv loads it, starts in dual with the ten minute wait', () => {
+    const env = parseDotenv(readFileSync('.env.example', 'utf8'));
+    expect(env.OPS_SIGNING_MODE).toBe('');
+    expect(env.OPS_SOLO_WAIT_MINUTES).toBe('');
+    const signers = parseSigners(env.OPS_SIGNERS, auth, depts);
+    expect(() => parseSigningPolicy(env, signers, auth)).not.toThrow();
+    expect(parseSigningPolicy(env, signers, auth)).toEqual({ mode: 'dual', waitMs: 600000 });
+  });
+
+  it('solo allows exactly one non-professional signer plus any number of professional signers', () => {
+    expect(parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, ownerAndAttorney, auth)).toEqual({ mode: 'solo', waitMs: 600000 });
+    expect(parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, ownerAndTwoAttorneys, auth)).toEqual({ mode: 'solo', waitMs: 600000 });
+  });
+
+  it('solo refuses two non-professional signers, or only professional signers', () => {
+    expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, two, auth)).toThrow(/^OPS_SIGNING_MODE: solo needs exactly one non-professional signer.*found 2/);
+    expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, attorneyOnly, auth)).toThrow(/^OPS_SIGNING_MODE: solo needs exactly one non-professional signer.*found 0/);
+    expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, [], auth)).toThrow(/^OPS_SIGNING_MODE: solo needs exactly one non-professional signer.*found 0/);
+    expect(() => parseSigningPolicy({ OPS_SIGNING_MODE: 'solo' }, ownerAndAttorney, open)).toThrow(/^OPS_SIGNING_MODE: solo needs named users/);
   });
 
   it('accepts the wait bounds', () => {

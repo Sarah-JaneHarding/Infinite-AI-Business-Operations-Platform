@@ -85,7 +85,8 @@ Not verified / known limits:
 - Signing and profession markers must now match exactly on re-appended rows.
 - `hitl.approved` ledger entries written before this change have no version, so a solo self-countersign for an artefact approved earlier needs a re-approval.
 - `|` and `;` cannot appear in a registration.
-- An empty `OPS_SIGNERS` means unset, while an empty `OPS_SIGNING_MODE` or `OPS_SOLO_WAIT_MINUTES` stops the server.
+- An empty or blank `OPS_SIGNERS`, `OPS_SIGNING_MODE` or `OPS_SOLO_WAIT_MINUTES` means unset (no registry, dual, 10 minutes), so `cp .env.example .env` starts the server. (Corrected in the final review fix: an empty mode or wait used to stop the server.)
+- Solo needs exactly one non-professional signer; any number of registered professionals may sit beside them (final review fix).
 - The single-signer report trusts stored fields that write-time validation enforces.
 - The `server.js` bundle was not regenerated.
 - The Dependabot `uuid` alert via exceljs remains an open owner decision.

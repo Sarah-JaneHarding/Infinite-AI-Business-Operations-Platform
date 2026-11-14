@@ -47,8 +47,8 @@ Drafting is never gated: agents draft every document in every mode.
 | Key | Meaning |
 | --- | ------- |
 | `OPS_SIGNERS` | The registry of people who may sign for the business: entries `id\|Display Name\|scope\|profession\|registration` separated by `;`. Scope is `*` or departments joined with `+`. A professional entry needs a department scope and registration text. Each id must be in `OPS_USERS`. `\|` and `;` cannot appear in a registration. Unset (or empty) means no registry: behaviour is exactly as before. |
-| `OPS_SIGNING_MODE` | `solo` opts in. Default is dual. Solo needs `OPS_USERS` and exactly one registered signer; the server refuses to start in solo with two signers. An empty value stops the server. |
-| `OPS_SOLO_WAIT_MINUTES` | Whole minutes, 1 to 1440, default 10. An empty value stops the server. |
+| `OPS_SIGNING_MODE` | `solo` opts in. Default is dual. Solo needs `OPS_USERS` and exactly **one non-professional** signer (the person who signs alone); any number of professional signers (attorney, accountant, tax practitioner, each with a department scope) may be registered beside them. The server refuses to start in solo with no non-professional signer, or with two or more. Empty or blank means unset (dual). |
+| `OPS_SOLO_WAIT_MINUTES` | Whole minutes, 1 to 1440, default 10. Empty or blank means unset (10); any other value outside 1 to 1440 stops the server. |
 
 Professions are `attorney`, `accountant` and `tax_practitioner`. Registration numbers are free text kept for the owner's record.
 The platform stores them and cannot verify them.
@@ -85,7 +85,7 @@ gated. Which other agents should be is OPQ-028. The contract rule is C11 in `doc
 ### Returning to dual
 
 Register a second signer in `OPS_SIGNERS` and remove `OPS_SIGNING_MODE=solo`, then restart. The server will not start in solo
-with two signers. Artefacts already ratified as single-signer keep their flag and stay on the report.
+with two non-professional signers (registered professionals do not count). Artefacts already ratified as single-signer keep their flag and stay on the report.
 
 ### Migration notes
 

@@ -4,8 +4,9 @@ import { DEFAULT_SIGNING, PROFESSIONS, holdsProfession, type Profession, type Si
 
 /**
  * People who may sign for the business, and for which departments. Configured, never client-supplied.
- * `|` and `;` cannot appear in a registration (they are the field and entry separators). An empty OPS_SIGNERS means
- * unset (no registry), while an empty OPS_SIGNING_MODE or OPS_SOLO_WAIT_MINUTES value throws.
+ * `|` and `;` cannot appear in a registration (they are the field and entry separators). An empty or whitespace-only
+ * OPS_SIGNERS, OPS_SIGNING_MODE or OPS_SOLO_WAIT_MINUTES means unset (`.env.example` ships them empty, and dotenv and
+ * compose `env_file` load that as ""): no registry, dual, ten minutes. Any other bad value throws.
  */
 export interface Signer {
   id: string;
@@ -59,13 +60,20 @@ export function parseSigners(raw: string | undefined, auth: Auth, knownDepartmen
   return signers;
 }
 
-/** Fails closed: solo mode is only valid with named users and exactly one registered signer. */
+/** Empty or whitespace-only counts as unset. */
+const setting = (v: string | undefined): string | undefined => (v === undefined || v.trim() === '' ? undefined : v.trim());
+
+/**
+ * Fails closed: solo mode is only valid with named users and exactly ONE non-professional signer (the person who signs
+ * alone). Any number of professional signers may be registered beside them: they are department-scoped and are the
+ * different person a professionalReview artefact needs.
+ */
 export function parseSigningPolicy(env: SigningEnv, signers: readonly Signer[], auth: Auth): SigningPolicy {
-  const modeRaw = env.OPS_SIGNING_MODE === undefined ? DEFAULT_SIGNING.mode : env.OPS_SIGNING_MODE.trim();
+  const modeRaw = setting(env.OPS_SIGNING_MODE) ?? DEFAULT_SIGNING.mode;
   if (modeRaw !== 'solo' && modeRaw !== 'dual') throw new Error(`OPS_SIGNING_MODE: unknown mode "${modeRaw}" (use solo or dual)`);
   let waitMs = DEFAULT_SIGNING.waitMs;
-  if (env.OPS_SOLO_WAIT_MINUTES !== undefined) {
-    const t = env.OPS_SOLO_WAIT_MINUTES.trim();
+  const t = setting(env.OPS_SOLO_WAIT_MINUTES);
+  if (t !== undefined) {
     const minutes = /^\d+$/.test(t) ? Number(t) : NaN;
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
       throw new Error('OPS_SOLO_WAIT_MINUTES: must be a whole number from 1 to 1440');
@@ -74,7 +82,10 @@ export function parseSigningPolicy(env: SigningEnv, signers: readonly Signer[], 
   }
   if (modeRaw === 'solo') {
     if (auth.mode === 'open') throw new Error('OPS_SIGNING_MODE: solo needs named users (OPS_USERS), not open mode');
-    if (signers.length !== 1) throw new Error('OPS_SIGNING_MODE: solo needs exactly one signer in OPS_SIGNERS');
+    const plain = signers.filter((s) => s.profession === undefined).length;
+    if (plain !== 1) {
+      throw new Error(`OPS_SIGNING_MODE: solo needs exactly one non-professional signer in OPS_SIGNERS (found ${plain}); professional signers (attorney, accountant, tax_practitioner) may be added beside them`);
+    }
   }
   return { mode: modeRaw, waitMs };
 }
