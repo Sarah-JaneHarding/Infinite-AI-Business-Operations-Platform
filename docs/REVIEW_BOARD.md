@@ -46,7 +46,7 @@ Drafting is never gated: agents draft every document in every mode.
 
 | Key | Meaning |
 | --- | ------- |
-| `OPS_SIGNERS` | The registry of people who may sign for the business: entries `id\|Display Name\|scope\|profession\|registration` separated by `;`. Scope is `*` or departments joined with `+`. A professional entry needs a department scope and registration text. Each id must be in `OPS_USERS`. `\|` and `;` cannot appear in a registration. Unset (or empty) means no registry: behaviour is exactly as before. |
+| `OPS_SIGNERS` | The registry of people who may sign for the business: entries `id\|Display Name\|scope\|profession\|registration` separated by `;`. Scope is `*` or departments joined with `+`. A professional entry needs a department scope and registration text. Each id must be in `OPS_USERS`. `\|` and `;` cannot appear in a registration. Unset (or empty) means no registry: anyone signed in may approve and countersign as before, **except** that `professionalReview` agents (OPS-LEG-01 to 05) can then never be ratified (nobody holds a profession), and `twoPerson` agents always need a second, different person. Those rules apply in every mode, with or without a registry. |
 | `OPS_SIGNING_MODE` | `solo` opts in. Default is dual. Solo needs `OPS_USERS` and exactly **one non-professional** signer (the person who signs alone); any number of professional signers (attorney, accountant, tax practitioner, each with a department scope) may be registered beside them. The server refuses to start in solo with no non-professional signer, or with two or more. Empty or blank means unset (dual). |
 | `OPS_SOLO_WAIT_MINUTES` | Whole minutes, 1 to 1440, default 10. Empty or blank means unset (10); any other value outside 1 to 1440 stops the server. |
 
@@ -55,12 +55,15 @@ The platform stores them and cannot verify them.
 
 ### What solo mode allows
 
-- The approver may countersign their own approval, after the wait, with a fresh re-authentication: the request carries the
-  signer's own token in the `x-ops-reauth` header. The wait is timed by the server from the server-authored `hitl.approved`
+- The approver may countersign their own approval, after the wait, by re-entering their token: the request carries the
+  signer's own token in the `x-ops-reauth` header. This is token re-entry (the same token the browser already holds in
+  sessionStorage), which proves a deliberate act; it is not a second factor. The wait is timed by the server from the server-authored `hitl.approved`
   ledger entry for that artefact version, not from anything the client sends.
-- A solo author may approve their own run of an agent that needs a second approver (custom agents included).
+- A solo author may approve their own run of an agent that needs a second approver (custom agents included). With a
+  registry, a custom agent's decisions need a `*`-scoped signer: the server ignores the department on a custom definition
+  and fails closed.
 - Either way the record is flagged `signing: single-signer`. The Board shows a banner while solo is on, a token prompt for
-  the re-authentication, and a single-signer badge on flagged artefacts.
+  the token re-entry, and a single-signer badge on flagged artefacts.
 - Both signatures stay bound to the same content hash; any edit voids both.
 - Agents and `auto:` actors can never sign, in any mode.
 
@@ -75,12 +78,29 @@ The platform stores them and cannot verify them.
 Default mapping today: OPS-LEG-01 to OPS-LEG-05 need an attorney; OPS-SEC-01 and OPS-PPL-04 are `twoPerson`; nothing else is
 gated. Which other agents should be is OPQ-028. The contract rule is C11 in `docs/AGENT_CONTRACTS.md`.
 
+These rules hold in every mode and whether or not `OPS_SIGNERS` is set. With no registry nobody holds a profession, so a
+`professionalReview` artefact stays APPROVED and cannot be ratified until a professional is registered.
+
+**Solo with a registered professional.** Solo allows exactly one non-professional signer and any number of professional
+signers beside them, for example `OPS_SIGNERS=owner|Owner|*;lerato|Lerato M|legal|attorney|<registration>` with
+`OPS_SIGNING_MODE=solo`. The owner then signs ordinary agents alone (flagged single-signer). A legal artefact needs the
+attorney to countersign, and the attorney must be a different person from the approver. Because the legal agents also need
+an approver other than their author, an owner-drafted legal artefact with only one attorney registered cannot be completed
+(the attorney cannot both approve and countersign); have the attorney run the agent and the owner approve, or register a
+second signer. A professional may also approve and countersign ordinary artefacts within their own department scope, and in
+solo the solo rules (wait, token re-entry, flag) apply to them there too. The single-signer flag never appears on a
+`professionalReview` artefact.
+
 ### What the ledger and report show
 
 - Single-signer approvals and countersignatures carry `signing: single-signer` in the ledger and on the artefact record.
 - `GET /api/signing/report` lists every single-signer ratification (kind `self-countersign` or `self-approval`, signer, time,
   content hash) so a second person can review them later.
 - `GET /api/whoami` returns `signing`, `signer` and the caller's own `profession`. It never returns registration text.
+- A professional countersignature records the person and their `profession` on the countersignature row and in the
+  `artefact.countersigned` and `artefact.ratified` ledger entries. It does **not** record the registration text: the ledger
+  is readable by everyone signed in, and registration text stays in the registry (`OPS_SIGNERS`), like whoami. The owner can
+  look it up there for any countersignature (OPQ-028).
 
 ### Returning to dual
 
@@ -92,6 +112,14 @@ with two non-professional signers (registered professionals do not count). Artef
 - `hitl.approved` ledger entries written before this change carry no version. A solo self-countersign for an artefact approved
   earlier therefore needs a re-approval first.
 - Signing and profession markers must now match exactly when rows are re-appended.
+- Legal artefacts (OPS-LEG-01 to 05) that were approved but not countersigned before this change stay APPROVED until an
+  attorney is registered in `OPS_SIGNERS` and countersigns them.
+- Legal artefacts ratified before this change have no `profession` on their countersignature row, so the outbound gate
+  refuses to publish or send them. They are not grandfathered (a client-supplied ratification time could be forged): start a
+  revision and take it through the board again, with a registered attorney countersigning.
+- Deploying: a browser tab still running an older bundle writes `approvals` rows without `version`. The server refuses the
+  ledger entry for that approval, so the artefact cannot pass the outbound gate (or a solo self-countersign) until it is
+  edited and approved again. Reload every open tab after deploying.
 
 ## What this does not do
 

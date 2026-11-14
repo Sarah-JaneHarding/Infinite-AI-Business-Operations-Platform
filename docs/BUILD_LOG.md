@@ -74,12 +74,18 @@ Built:
 - `GET /api/signing/report`: single-signer ratifications for later second review.
 - Docs and policy: `docs/REVIEW_BOARD.md` section, `docs/PR_POLICY.md`, `.github/CODEOWNERS`, OPQ-017/019 notes, OPQ-027 resolved, OPQ-028 raised, design doc corrections (IONOS, no prices, no registration numbers yet), `test/docs.test.ts`.
 
-Tests: `npx vitest run`: 37 files, 1212 tests passed.
+Tests: `npx vitest run`: 37 files, 1212 tests passed (before the final review fixes).
+
+Final review fixes (2026-11-14): blank signing keys mean unset; solo allows registered professionals beside one non-professional signer; one contract resolver (`contractFor`) for built-in and custom agents in the Board, Studio, board gate and Platform; actionable lost-ledger-entry text; `signingCtx` shared by both server write paths; docs corrected. Tests: `npx vitest run`: 37 files, 1231 tests passed.
 
 Not verified / known limits:
 - The solo countersign success path is not driven end to end with a real wait; it is covered at validator level with an injected clock.
 - Registration numbers are free text and unverified.
 - The second signer and the professionals are not registered (OPQ-028), so two-person and professional artefacts stay approved and unratified.
+- With `OPS_SIGNERS` unset, behaviour is as before except that `professionalReview` agents (OPS-LEG-01 to 05) can never be ratified and `twoPerson` agents need a second person, in every mode. Legal artefacts approved but not countersigned stay approved until an attorney is registered; legal artefacts ratified before this change lack `profession` on the countersignature and will not pass the outbound gate without a revision through the board.
+- The ledger names the professional and their profession, not their registration text (kept in the registry).
+- Re-authentication is token re-entry (the token the browser already holds), proof of a deliberate act, not a second factor.
+- After deploying, reload open tabs: an older bundle writes approvals without `version`, and that approval then cannot pass the outbound gate.
 - The Board countdown is computed at render, not live.
 - `withReauth` sets the header module-wide for the duration of one countersign call.
 - Signing and profession markers must now match exactly on re-appended rows.

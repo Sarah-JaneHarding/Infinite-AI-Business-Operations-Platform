@@ -48,7 +48,11 @@ export interface AppendCtx {
   now?: Date;
 }
 
-/** The registry scope check, skipped when no registry is configured. A custom agent has no department, so it needs a '*' signer. */
+/**
+ * The registry scope check, skipped when no registry is configured. A custom agent's definition does carry a department,
+ * but the server ignores it (the contract is never taken from client-written data) and passes none, so only a '*'-scoped
+ * signer can sign for a custom agent. Fails closed.
+ */
 function checkRegistry(ctx: AppendCtx, personId: string, department: string | undefined) {
   if (ctx.signers?.length && !maySignFor(ctx.signers, personId, department)) bad('you are not a registered signer for this department', 403);
 }

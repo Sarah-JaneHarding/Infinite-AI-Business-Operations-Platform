@@ -88,7 +88,7 @@ describe('the signer registry at approval (IN_REVIEW -> APPROVED/REJECTED)', () 
     expect(ok.signing).toBeUndefined();
   });
 
-  it('a custom agent has no department, so it needs a "*" signer', async () => {
+  it('a custom agent needs a "*" signer (the server ignores the department on its definition)', async () => {
     const e = await rej(V(inReview(CUSTOM, 'mo'), decision(CUSTOM, 'dan', { requestedBy: 'mo' }), 'dan', { signers }));
     expect(e?.status).toBe(403);
     expect(e?.message).toMatch(/not a registered signer/);
