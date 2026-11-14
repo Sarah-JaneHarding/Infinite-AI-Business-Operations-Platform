@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkTarget, isPrivateIp, parseAllowlist, sign } from '../src/server/outbound';
+import { checkTarget, safePath, isPrivateIp, parseAllowlist, sign } from '../src/server/outbound';
 
 const allow = parseAllowlist('Hooks.Example.com, api.partner.co.za');
 describe('outbound target check', () => {
@@ -26,5 +26,24 @@ describe('integration registry', () => {
     expect(integrations({ outbound: true }, false).find((i) => i.id === 'outbound')?.state).toBe('off');
     expect(integrations({ outbound: true }, true).find((i) => i.id === 'outbound')?.state).toBe('live');
     for (const id of ['sso', 'messaging', 'payments']) expect(integrations({ llm: true, githubToken: true }, true).find((i) => i.id === id)?.state).toBe('not_built');
+  });
+});
+
+describe('outbound URL is rebuilt from the allow-list', () => {
+  it('uses the allow-list host and keeps an ordinary path', () => {
+    const r = checkTarget('https://HOOKS.example.com./services/T0/B0/key', allow);
+    expect(r.ok && r.url.href).toBe('https://hooks.example.com/services/T0/B0/key');
+  });
+  it('drops query and fragment', () => {
+    const r = checkTarget('https://hooks.example.com/in?next=https://evil.com#x', allow);
+    expect(r.ok && r.url.href).toBe('https://hooks.example.com/in');
+  });
+  it('refuses path traversal in every spelling', () => {
+    for (const p of ['/a/../b', '/a/%2e%2e/b', '/a/%2E%2E/b', '/%2e%2e', '/a/./b', '/a%2Fb', '/a%5Cb', '/a\\b', '/a%00b', '/a%0d%0ab', '/a/%zz']) expect(checkTarget('https://hooks.example.com' + p, allow).ok, p).toBe(false);
+  });
+  it('safePath accepts plain segments and refuses odd ones', () => {
+    expect(safePath('/services/T0/B0/key-1_x')).toBe('/services/T0/B0/key-1_x');
+    expect(safePath('/..')).toBeUndefined();
+    expect(safePath('/' + 'a'.repeat(600))).toBeUndefined();
   });
 });
