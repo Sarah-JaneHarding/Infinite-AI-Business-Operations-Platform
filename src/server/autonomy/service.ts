@@ -130,7 +130,7 @@ export class AutonomyService {
     if (o.status === 'REVOKED' || (status === 'PAUSED' && o.status !== 'ACTIVE')) throw new OrderRefused(409, `the order is ${o.status.toLowerCase()}`);
     const next = this.save(o, { status, statusNote: r });
     await this.audit(action, by, id, { reason: r });
-    for (const t of this.tasks()) if (t.orderId === id && t.status === 'QUEUED') await this.finish(t, 'CANCELLED', r, 'autonomy.task.cancelled', by);
+    for (const t of this.tasks()) if (t.orderId === id && t.status === 'QUEUED') await this.finish(t, 'QUEUED', 'CANCELLED', r, 'autonomy.task.cancelled', by);
     return next;
   }
 
@@ -145,17 +145,24 @@ export class AutonomyService {
   tasks(filter: { dept?: string; status?: TaskStatus } = {}): Task[] {
     return this.latestTasks().filter((t) => (!filter.dept || t.dept === filter.dept) && (!filter.status || t.status === filter.status)).sort(compareTasks);
   }
-  private saveTask(t: Task, patch: Partial<Task>): Task {
-    const { note: _drop, ...keep } = t;
-    const next: Task = { ...keep, ...patch, version: t.version + 1, at: this.now().toISOString() };
+  /**
+   * Appends the next version of a task, but only if its latest stored version is still in the state the caller saw. Callers hold
+   * snapshots across awaits, so this re-read is what stops one transition overwriting another (a cancel undone by a run).
+   * It is synchronous with the write, so nothing can slip in between. Returns null when the task has moved on.
+   */
+  private saveTask(t: Task, from: TaskStatus, patch: Partial<Task>): Task | null {
+    const cur = this.latestTasks().find((x) => x.id === t.id);
+    if (!cur || cur.status !== from) return null;
+    const { note: _drop, ...keep } = cur;
+    const next: Task = { ...keep, ...patch, version: cur.version + 1, at: this.now().toISOString() };
     if (next.note === undefined) delete next.note;
     this.deps.store.append('autonomy_tasks', next as unknown as Rec);
     return next;
   }
   /** Moves a task to a final state and says so in the ledger. */
-  private async finish(t: Task, status: TaskStatus, note: string, action: string, by: string): Promise<Task> {
-    const next = this.saveTask(t, { status, note });
-    await this.audit(action, by, t.orderId, { taskId: t.id, note });
+  private async finish(t: Task, from: TaskStatus, status: TaskStatus, note: string, action: string, by: string): Promise<Task | null> {
+    const next = this.saveTask(t, from, { status, note });
+    if (next) await this.audit(action, by, t.orderId, { taskId: t.id, note });
     return next;
   }
   private queue(o: StandingOrder, req: { priority: 1 | 2 | 3; due: string; inputs?: Record<string, string>; origin: TaskOrigin; dedupeKey?: string }): Task {
@@ -194,7 +201,9 @@ export class AutonomyService {
     const r = (reason ?? '').trim();
     if (r.length < 5 || r.length > 300) throw new OrderRefused(400, 'Give a reason, in 5 to 300 characters.');
     if (t.status !== 'QUEUED') throw new OrderRefused(409, `the task is ${t.status.toLowerCase()}`);
-    return this.finish(t, 'CANCELLED', r, 'autonomy.task.cancelled', by);
+    const next = await this.finish(t, 'QUEUED', 'CANCELLED', r, 'autonomy.task.cancelled', by);
+    if (!next) throw new OrderRefused(409, 'the task is no longer queued');
+    return next;
   }
 
   /** A trigger asks for a task. Nothing from the trigger but its kind, slot or event name is kept. Returns null when one is already there. */
@@ -220,18 +229,18 @@ export class AutonomyService {
   drain(now: Date = this.now()): Promise<RunOutcome[]> {
     if (!this.enabled) return Promise.resolve([]);
     return this.exclusive(async () => {
-      for (const t of this.latestTasks().filter((x) => x.status === 'RUNNING')) await this.finish(t, 'FAILED', 'interrupted by a restart; not retried', 'autonomy.failed', `auto:${t.orderId}`);
+      for (const t of this.latestTasks().filter((x) => x.status === 'RUNNING')) await this.finish(t, 'RUNNING', 'FAILED', 'interrupted by a restart; not retried', 'autonomy.failed', `auto:${t.orderId}`);
       const out: RunOutcome[] = [];
       for (;;) {
         let next: Task | undefined;
         for (const t of this.tasks({ status: 'QUEUED' })) {
           const o = this.orders().find((x) => x.id === t.orderId);
           if (!o || o.status !== 'ACTIVE') {
-            await this.finish(t, 'CANCELLED', `the order is ${(o?.status ?? 'missing').toLowerCase()}`, 'autonomy.task.cancelled', `auto:${t.orderId}`);
+            await this.finish(t, 'QUEUED', 'CANCELLED', `the order is ${(o?.status ?? 'missing').toLowerCase()}`, 'autonomy.task.cancelled', `auto:${t.orderId}`);
             continue;
           }
           if (now.getTime() - Date.parse(t.due) > TASK_EXPIRY_MS) {
-            await this.finish(t, 'EXPIRED', 'not run within 7 days of its due time', 'autonomy.task.expired', `auto:${o.id}`);
+            await this.finish(t, 'QUEUED', 'EXPIRED', 'not run within 7 days of its due time', 'autonomy.task.expired', `auto:${o.id}`);
             continue;
           }
           if (Date.parse(t.due) > now.getTime() || this.budgetRefusal(o)) continue;
@@ -240,14 +249,15 @@ export class AutonomyService {
         }
         if (!next) return out;
         const o = this.order(next.orderId);
-        const running = this.saveTask(next, { status: 'RUNNING' });
+        const running = this.saveTask(next, 'QUEUED', { status: 'RUNNING' });
+        if (!running) continue; // cancelled or expired while this pass was awaiting: look again, never run it
         try {
           const outcome = await this.runLocked(o, this.viaFor(running.origin), this.byFor(running.origin), running);
           out.push(outcome);
-          this.saveTask(running, { status: outcome.outcome === 'submitted' ? 'SUBMITTED' : 'QUARANTINED', artefactId: outcome.artefactId });
+          this.saveTask(running, 'RUNNING', { status: outcome.outcome === 'submitted' ? 'SUBMITTED' : 'QUARANTINED', artefactId: outcome.artefactId });
         } catch (e) {
           const msg = e instanceof OrderRefused ? e.message : (e as Error).message.slice(0, 200);
-          this.saveTask(running, { status: 'FAILED', note: `the run failed: ${msg}` });
+          this.saveTask(running, 'RUNNING', { status: 'FAILED', note: `the run failed: ${msg}` });
         }
       }
     });

@@ -213,6 +213,68 @@ describe('the task queue: pause, revoke and cancel', () => {
   });
 });
 
+describe('the task queue: concurrent changes are never overwritten', () => {
+  const noDuplicateVersions = (h: H) => {
+    const keys = (h.store.rows['autonomy_tasks'] ?? []).map((r) => `${String(r.id)}@${String(r.version)}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  };
+  /** Runs `fn` the moment the first ledger row with `action` is written: that happens while a drain or stop is awaiting. */
+  const onFirst = (h: H, action: string, fn: () => void) => {
+    const append = h.store.append;
+    let done = false;
+    h.store.append = (c, r) => {
+      append(c, r);
+      if (!done && c === 'ledger' && r.action === action) { done = true; fn(); }
+    };
+  };
+
+  it('a task cancelled while a drain is awaiting an earlier task is not run, and its CANCELLED row stands', async () => {
+    const h = setup();
+    const o = await active(h, { kind: 'request' }, { maxRunsPerDay: 3 });
+    h.clock.t = new Date('2026-11-05T09:30:00Z');
+    const stale = await h.svc.enqueue('sarah', task(o.id, { priority: 1, due: '2026-11-05T09:00:00Z' }));
+    h.clock.t = new Date(NOW);
+    const target = await h.svc.enqueue('sarah', task(o.id, { priority: 2 }));
+    let cancel: Promise<unknown> = Promise.resolve();
+    onFirst(h, 'autonomy.task.expired', () => { cancel = h.svc.cancelTask('sarah', target.id, 'Not needed any more'); });
+    expect(await h.svc.drain()).toEqual([]);
+    await cancel;
+    expect(byId(h, stale.id).status).toBe('EXPIRED');
+    expect(byId(h, target.id)).toMatchObject({ status: 'CANCELLED', note: 'Not needed any more' });
+    expect(h.runner.run).not.toHaveBeenCalled();
+    expect(count(h, 'autonomy.started')).toBe(0);
+    noDuplicateVersions(h);
+  });
+
+  it('a pause that is cancelling queued tasks does not overwrite a row a drain wrote in the meantime', async () => {
+    const h = setup();
+    const o = await active(h);
+    const first = await h.svc.enqueue('sarah', task(o.id, { priority: 1 }));
+    const second = await h.svc.enqueue('sarah', task(o.id, { priority: 2 }));
+    onFirst(h, 'autonomy.task.cancelled', () => {
+      const cur = h.store.rows['autonomy_tasks']!.filter((r) => r.id === second.id).at(-1) as unknown as Task;
+      h.store.append('autonomy_tasks', { ...cur, status: 'EXPIRED', version: cur.version + 1 } as unknown as Rec);
+    });
+    await h.svc.pause('eve', o.id, 'Reviewing the inputs');
+    expect(byId(h, first.id).status).toBe('CANCELLED');
+    expect(byId(h, second.id).status).toBe('EXPIRED');
+    expect(count(h, 'autonomy.task.cancelled')).toBe(1);
+    noDuplicateVersions(h);
+  });
+
+  it('cancelTask refuses with 409 when the task moved on while it waited', async () => {
+    const h = setup();
+    const o = await active(h);
+    const t = await h.svc.enqueue('sarah', task(o.id));
+    const a = h.svc.cancelTask('sarah', t.id, 'Not needed any more');
+    const b = await refused(h.svc.cancelTask('eve', t.id, 'Cancelled by someone'));
+    await a;
+    expect(b?.status).toBe(409);
+    expect(count(h, 'autonomy.task.cancelled')).toBe(1);
+    noDuplicateVersions(h);
+  });
+});
+
 describe('the task queue: budgets, expiry and recovery', () => {
   it('a task blocked only by the order budget stays queued and runs the next day', async () => {
     const h = setup();
