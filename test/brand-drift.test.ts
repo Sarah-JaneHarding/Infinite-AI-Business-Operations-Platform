@@ -134,7 +134,10 @@ describe('no contact details in the generated files', () => {
     expect(contactHits(`${read('../brand/brand.tokens.css')}/* ${BRAND.email} */`)).toEqual([BRAND.email]);
   });
   it('the scan can fail: an entry added to the JSON is reported by name', () => {
-    const json = read('../brand/brand.tokens.json').replace('{', `{"x": "${BRAND.address.postcode}",`);
+    const original = read('../brand/brand.tokens.json');
+    expect(original.startsWith('{')).toBe(true);
+    // Insert one entry right after the opening brace by slicing, not by string replacement.
+    const json = `{"x": "${BRAND.address.postcode}",${original.slice(1)}`;
     expect(contactHits(json)).toEqual([BRAND.address.postcode]);
   });
   it('the scan can fail: one appended string is reported for each of the 9, case-insensitively', () => {
