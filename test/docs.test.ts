@@ -24,6 +24,22 @@ describe('documentation and repository policy files', () => {
   });
 });
 
+describe('brand token docs', () => {
+  it('BRAND_TOKENS.md exists and names the files, commands and version rule', () => {
+    expect(existsSync('docs/BRAND_TOKENS.md')).toBe(true);
+    const doc = read('docs/BRAND_TOKENS.md');
+    for (const term of ['brand.tokens.json', 'brand.tokens.css', 'fonts.manifest.json', 'npm run brand:export', 'npm run brand:check', 'version']) {
+      expect(doc).toContain(term);
+    }
+  });
+  it('BRAND.md links to BRAND_TOKENS.md', () => {
+    expect(read('docs/BRAND.md')).toContain('docs/BRAND_TOKENS.md');
+  });
+  it('README.md names the export command', () => {
+    expect(read('README.md')).toContain('npm run brand:export');
+  });
+});
+
 describe('OPEN_QUESTIONS table', () => {
   it('keeps every OPQ row contiguous with the table, with the header cell count', () => {
     const lines = read('docs/OPEN_QUESTIONS.md').split('\n');

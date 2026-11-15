@@ -116,3 +116,19 @@ Not verified / known limits:
 - Not done on purpose: `npm audit fix` (it offers to downgrade `exceljs` to 3.4.0), and editing files inside `node_modules` (the patch would be lost on the next install).
 - Checked: `npm audit` reports 0 vulnerabilities (was 2 moderate); `npm ls uuid` shows `uuid@11.1.1 overridden`; `bun install --frozen-lockfile` and `npm ci` both pass on a clean copy; the full test suite (41 files, 1287 tests), `tsc --noEmit` and the build pass. The Excel export tests are part of that suite.
 - Open: `exceljs` itself still declares `uuid ^8.3.0`. If `exceljs` is upgraded or replaced later, remove the override and re-run `npm audit`.
+
+## 2026-11-15: Phase 1, brand tokens
+- Tokens: `src/brandTokens.ts` holds `BRAND_TOKENS` (15 colour roles, three fonts with stacks, `radius.card`), each value taken from `src/brand.ts` or copied from `src/index.css`, with a comment naming its source.
+- Export: `src/brandExport.ts` and `scripts/export-brand-tokens.ts` write `brand/brand.tokens.json`, `brand/brand.tokens.css` and `brand/fonts.manifest.json`. `npm run brand:export` writes; `npm run brand:check` writes nothing and exits 1 when a file differs.
+- Guards: `test/brand-tokens.test.ts`, `test/brand-export.test.ts` and `test/brand-drift.test.ts` check values against their sources and `src/index.css`, committed files against fresh output, font weights against the `index.html` link, the nine contact strings, and 13 contrast pairs at 4.5:1 or more (lowest: Neural Violet on Midnight, 5.07).
+- Docs: `docs/BRAND_TOKENS.md` (files, schema, `--iai-` variables, version rule, consumer contract for the Ecosystem), a link from `docs/BRAND.md`, a README line, and OPQ-034 and OPQ-035 in `docs/OPEN_QUESTIONS.md`. `test/docs.test.ts` checks the new docs.
+- Verified: `npx vitest run` passes, 44 files and 1358 tests (baseline before this phase's docs task: 1355). Also run before the commit: `npm run lint`, `npm run build`, `npm run brand:check`.
+- Not verified / known limits:
+  - The Ecosystem repository is not touched. `brand:sync` and its hash test are Phase 2 and do not exist yet. Phase 2 waits on OPQ-034 and OPQ-035.
+  - Fonts are not self-hosted; they load from Google Fonts.
+  - `src/index.css` is checked against the tokens but is not generated from them.
+  - The font-link parser in the drift test reads only the first Google Fonts link in `index.html`.
+  - The 4-character postcode is a substring match in the contact scan, so a future numeric token could trigger a loud false positive.
+  - Cold-start flake: one unidentified test failure in the first of six full runs on the Phase 1 baseline, none in the following five. The test name was not captured. Seen and not fixed.
+  - The contrast gate is a numeric check, not an accessibility audit.
+  - Phase 1 commits share the branch and pull request with the `uuid` override.
