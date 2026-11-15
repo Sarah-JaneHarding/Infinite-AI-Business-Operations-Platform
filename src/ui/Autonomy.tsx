@@ -32,6 +32,7 @@ export function Autonomy() {
   const { mode, actor } = useOps();
   const [st, setSt] = useState<Status | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksErr, setTasksErr] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ tone: 'ok' | 'bad'; text: string; checks?: { id: string; pass: boolean; detail: string }[] } | null>(null);
 
@@ -41,8 +42,12 @@ export function Autonomy() {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setSt((await r.json()) as Status);
       setErr(null);
-      const t = await apiFetch('/api/autonomy/tasks');
-      if (t.ok) setTasks(((await t.json()) as { tasks: Task[] }).tasks);
+      try {
+        const t = await apiFetch('/api/autonomy/tasks');
+        if (!t.ok) throw new Error(`HTTP ${t.status}`);
+        setTasks(((await t.json()) as { tasks: Task[] }).tasks);
+        setTasksErr(null);
+      } catch (e) { setTasksErr((e as Error).message); }
     } catch (e) { setErr((e as Error).message); }
   }, []);
   useEffect(() => {
@@ -98,7 +103,7 @@ export function Autonomy() {
         )}
       </Card>
 
-      <TaskQueue orders={st.orders} tasks={tasks} queued={st.queue.queued} post={post} />
+      <TaskQueue orders={st.orders} tasks={tasks} tasksErr={tasksErr} queued={st.queue.queued} post={post} />
 
       <NewOrder post={post} />
 
@@ -256,7 +261,7 @@ const TASK_TONE: Record<Task['status'], string> = { QUEUED: 'review', RUNNING: '
 const PRIORITY: Record<1 | 2 | 3, string> = { 1: '1 (most urgent)', 2: '2', 3: '3 (least urgent)' };
 const showTime = (iso: string) => `${iso.slice(0, 16).replace('T', ' ')} UTC`;
 
-function TaskQueue({ orders, tasks, queued, post }: { orders: Order[]; tasks: Task[]; queued: number; post: (path: string, body: unknown, ok: string) => Promise<boolean> }) {
+function TaskQueue({ orders, tasks, tasksErr, queued, post }: { orders: Order[]; tasks: Task[]; tasksErr: string | null; queued: number; post: (path: string, body: unknown, ok: string) => Promise<boolean> }) {
   const active = orders.filter((o) => o.status === 'ACTIVE');
   const [orderId, setOrderId] = useState('');
   const [priority, setPriority] = useState<1 | 2 | 3>(2);
@@ -311,7 +316,8 @@ function TaskQueue({ orders, tasks, queued, post }: { orders: Order[]; tasks: Ta
       </div>
       <button className="btn primary mt-3" disabled={!orderId || !Number.isFinite(dueMs)} onClick={enqueue}><Rocket size={14} /> Add to queue</button>
       <div className="mt-4 space-y-3">
-        {!tasks.length && <p className="text-sm" style={{ color: 'var(--muted)' }}>No tasks yet.</p>}
+        {tasksErr && <div role="alert" className="callout warn">Could not refresh the task list ({tasksErr}). {tasks.length ? 'The list below may be out of date.' : 'Tasks may exist that are not shown.'}</div>}
+        {!tasks.length && !tasksErr && <p className="text-sm" style={{ color: 'var(--muted)' }}>No tasks yet.</p>}
         {Object.entries(groups).map(([dept, list]) => (
           <section key={dept} aria-label={`${deptName(dept)} tasks`}>
             <h3 className="text-sm font-semibold">{deptName(dept)} ({list.length})</h3>
