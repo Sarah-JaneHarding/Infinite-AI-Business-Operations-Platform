@@ -565,7 +565,7 @@ describe('server: autonomous agents', () => {
     const { canonical } = await import('../src/core/crypto');
     const ok = { ...forged, docHash: createHash('sha256').update(canonical(doc)).digest('hex') };
     expect((await call(aBase, '/api/warehouse/artefact_versions', { token: T_SARAH, body: ok })).status).toBe(403); // only the runner may
-    for (const c of ['standing_orders', 'draft_checks']) expect((await call(aBase, `/api/warehouse/${c}`, { token: T_SARAH, body: { id: 'x' } })).status, c).toBe(404);
+    for (const c of ['standing_orders', 'draft_checks', 'autonomy_tasks']) expect((await call(aBase, `/api/warehouse/${c}`, { token: T_SARAH, body: { id: 'x' } })).status, c).toBe(404);
     for (const action of ['autonomy.started', 'autonomy.submitted', 'model.request', 'model.test']) {
       expect((await call(aBase, '/api/ledger', { token: T_SARAH, body: { input: { orgId: 'infinite-ai', actor: 'sarah', action, subject: o.id }, knownSeq: 0 } })).status, action).toBe(403);
     }

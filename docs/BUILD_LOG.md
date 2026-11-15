@@ -151,3 +151,13 @@ Not verified / known limits:
 - Added `allowTaskInputs` to orders: `Proposal` carries a boolean (default false, a non-boolean is refused with 400); on a stored `StandingOrder` it is optional, absent meaning false.
 - Tests: `test/autonomy-tasks.test.ts`; `allowTaskInputs` cases in `test/autonomy-schedule.test.ts`, where the `parseProposal` tests live.
 - Limit: `parseEnqueue` checks only that `inputs` is an object; the values are checked by `parseInputs` once the service knows the agent.
+
+## 2026-11-15: Phase 3, the task queue in the service
+- `AutonomyService` gained `enqueue`, `cancelTask`, `drain` and `tasks`; `status()` gains `queue: { queued, byDept }`. Tasks are append-only versioned rows in the server-only collection `autonomy_tasks` (latest version per id wins), added to `NEVER_MODEL_READABLE`; clients cannot write it (404).
+- Ledger: `autonomy.task.queued`, `autonomy.task.cancelled`, `autonomy.task.expired`. Runs still write `autonomy.started`, `submitted`, `quarantined` and `failed`, with `taskId` in `detail`. `autonomy.order.proposed` now records `allowTaskInputs`.
+- A person enqueues under an ACTIVE order only (403 no person, 404, 409 not active, 422 inputs not allowed or rejected, 429 at 10 queued). Task inputs are checked by `parseInputs` merged over the order's inputs; only the task's own keys are stored. `EnqueueRequest.inputs` is now `Record<string, unknown>` until parsed.
+- `tick()` and `onEvent()` queue a task (dedupe key `schedule:<slot>` or `event:<kind>`) and then call `drain()`. A schedule slot is queued once ever; an event is skipped while one with the same key is queued, and the existing cooldown still applies. `runNow` is unchanged: immediate, no task.
+- `drain()` runs inside the existing `exclusive` chain. It fails any task found RUNNING (a restart), cancels queued tasks of an order that is no longer ACTIVE, expires tasks 7 days after their due time, and runs ready tasks most urgent first. A task held back only by a budget stays QUEUED; failed and quarantined runs are final. The run code was split into `startRun` (checks) and `runLocked` (runs) so drain can call it without re-entering the chain.
+- Pausing or revoking an order cancels its queued tasks with the reason.
+- Tests: `test/autonomy-queue.test.ts` (21); `autonomy_tasks` added to `test/models-rules.test.ts` and `test/server.test.ts`.
+- Limits: the queue is not yet exposed over HTTP or the UI (later tasks). `service.ts` stays one file (about 360 lines).

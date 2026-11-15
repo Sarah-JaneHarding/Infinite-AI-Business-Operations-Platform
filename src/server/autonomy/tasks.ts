@@ -44,7 +44,8 @@ export interface EnqueueRequest {
   orderId: string;
   priority: 1 | 2 | 3;
   due: string;
-  inputs?: Record<string, string>;
+  /** Unchecked until the service parses it against the order's agent. */
+  inputs?: Record<string, unknown>;
 }
 
 const ISO =
@@ -102,7 +103,7 @@ export function parseEnqueue(body: unknown, now: Date): EnqueueRequest {
       Array.isArray(b.inputs)
     )
       throw new OrderRefused(400, "inputs must be an object");
-    req.inputs = b.inputs as Record<string, string>;
+    req.inputs = b.inputs as Record<string, unknown>;
   }
   return req;
 }
