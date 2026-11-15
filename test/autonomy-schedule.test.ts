@@ -61,6 +61,18 @@ describe('order proposals', () => {
   it('accepts a good proposal and defaults to one run a day', () => {
     expect(parseProposal(ok())).toMatchObject({ name: 'Weekly onboarding review', agentId: agent.id, maxRunsPerDay: 1, inputs });
   });
+  it('accepts allowTaskInputs and defaults it to false', () => {
+    expect(parseProposal(ok()).allowTaskInputs).toBe(false);
+    expect(parseProposal(ok({ allowTaskInputs: true })).allowTaskInputs).toBe(true);
+    expect(parseProposal(ok({ allowTaskInputs: false })).allowTaskInputs).toBe(false);
+  });
+  it('refuses a non-boolean allowTaskInputs', () => {
+    for (const v of ['true', 1, null, {}]) {
+      const r = refusal({ allowTaskInputs: v });
+      expect(r?.status).toBe(400);
+      expect(r?.message).toMatch(/allowTaskInputs/);
+    }
+  });
   it('refuses a bad name, an unknown agent, a bad trigger and a bad budget', () => {
     expect(refusal({ name: 'ab' })?.status).toBe(400);
     expect(refusal({ name: 'x'.repeat(81) })?.status).toBe(400);

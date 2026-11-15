@@ -67,7 +67,7 @@ export function makeRunner(deps: RunnerDeps) {
    * A proposed order is tried once before anyone can activate it: the agent runs on its fixed inputs in memory (nothing is
    * stored, no model is called) and the draft has to pass the acceptance suite. A bad order is refused when it is proposed.
    */
-  async function dryRun(p: Proposal): Promise<Acceptance> {
+  async function dryRun(p: Omit<Proposal, 'allowTaskInputs'>): Promise<Acceptance> {
     const agent = agentById(p.agentId);
     const requester = requesterFor('dryrun', p.name);
     if (!agent) return { passed: false, results: [{ id: 'RUN', title: 'The agent runs on these inputs', pass: false, detail: 'unknown agent' }] };

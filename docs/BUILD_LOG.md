@@ -142,3 +142,12 @@ Not verified / known limits:
 - Docs: "Standing-order templates" in `docs/AGENT_CATALOGUE.md`, "Templates" in `docs/AUTONOMY.md`.
 - Limit: no monthly trigger exists, so the month-end close template is weekly.
 
+
+## 2026-11-15: Phase 3, the task type, its parsing and its ordering
+- Added `src/server/autonomy/tasks.ts`: the `Task` type and statuses, `TASK_EXPIRY_MS` (7 days), `MAX_QUEUED_PER_ORDER` (10), `parseEnqueue` and `compareTasks`. Pure; no service or storage yet.
+- `parseEnqueue` refuses with 400, naming the field and never repeating the value: priority not 1, 2 or 3; `due` missing, not an ISO timestamp, a date that rolls over (30 February, checked by round trip), more than 90 days ahead, or more than a day before now.
+- `compareTasks` orders by priority, then earlier due, then earlier arrival, then id so the order is total.
+- Moved the input loop out of `parseProposal` into an exported `parseInputs(agent, given)` in `orders.ts`, unchanged (same messages and status codes), for tasks to reuse. `tasks.ts` imports from `orders.ts`, not the reverse.
+- Added `allowTaskInputs` to orders: `Proposal` carries a boolean (default false, a non-boolean is refused with 400); on a stored `StandingOrder` it is optional, absent meaning false.
+- Tests: `test/autonomy-tasks.test.ts`; `allowTaskInputs` cases in `test/autonomy-schedule.test.ts`, where the `parseProposal` tests live.
+- Limit: `parseEnqueue` checks only that `inputs` is an object; the values are checked by `parseInputs` once the service knows the agent.
