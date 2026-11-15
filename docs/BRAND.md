@@ -10,5 +10,9 @@ Single source: `src/brand.ts`. Everything else (UI, library renderer, brand kit,
 - Fonts: Space Grotesk, Inter, Space Mono
 - Rule: never use learner or child images.
 
+## Tokens
+
+The colours and fonts are also published as generated files in `brand/`, for other repositories to use: see `docs/BRAND_TOKENS.md`.
+
 Brand kit downloads are in `public/brand-kit/` and on the Brand Kit screen. Every library document (HTML and Word) carries the logo, tagline, address and contact line.
 Open: company registration and VAT numbers were not supplied; the Word letterhead has two blanks for them. The province is spelled in its official form, KwaZulu-Natal.

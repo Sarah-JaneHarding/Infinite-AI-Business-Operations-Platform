@@ -13,6 +13,7 @@ npm run dev              # http://127.0.0.1:3000  (server + UI, loopback only)
 npm test                 # unit + end-to-end agent tests
 npm run lint             # strict TypeScript
 npm run audit:ecosystem -- /path/to/infinite-ai-ecosystem   # refresh src/generated/ecosystem-snapshot.json
+npm run brand:export     # regenerate brand/ tokens; npm run brand:check verifies them without writing (docs/BRAND_TOKENS.md)
 ```
 
 ### Autonomous agents

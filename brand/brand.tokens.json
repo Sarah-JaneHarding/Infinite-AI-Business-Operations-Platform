@@ -1,0 +1,39 @@
+{
+  "colour": {
+    "accent": "#8D6CFF",
+    "bg": "#05070F",
+    "border": "#1E293B",
+    "borderStrong": "#334155",
+    "danger": "#FB7185",
+    "highlight": "#F5B841",
+    "primary": "#5BC8EC",
+    "primaryText": "#05070F",
+    "success": "#34D399",
+    "surface": "#0C1224",
+    "surfaceRaised": "#0B132B",
+    "text": "#F8FAFC",
+    "textMuted": "#CBD5E1",
+    "textSoft": "#E2E8F0",
+    "textSubtle": "#94A3B8"
+  },
+  "font": {
+    "body": {
+      "family": "Inter",
+      "stack": "Inter, system-ui, sans-serif"
+    },
+    "display": {
+      "family": "Space Grotesk",
+      "stack": "'Space Grotesk', system-ui, sans-serif"
+    },
+    "mono": {
+      "family": "Space Mono",
+      "stack": "'Space Mono', ui-monospace, monospace"
+    }
+  },
+  "name": "Infinite-AI",
+  "radius": {
+    "card": "14px"
+  },
+  "schema": 1,
+  "version": "75b604bbd6368008"
+}

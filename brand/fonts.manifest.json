@@ -1,0 +1,41 @@
+{
+  "fonts": [
+    {
+      "family": "Space Grotesk",
+      "licence": "SIL Open Font License 1.1",
+      "role": "display",
+      "selfHosted": false,
+      "source": "Google Fonts",
+      "weights": [
+        500,
+        600,
+        700
+      ]
+    },
+    {
+      "family": "Inter",
+      "licence": "SIL Open Font License 1.1",
+      "role": "body",
+      "selfHosted": false,
+      "source": "Google Fonts",
+      "weights": [
+        400,
+        500,
+        600,
+        700
+      ]
+    },
+    {
+      "family": "Space Mono",
+      "licence": "SIL Open Font License 1.1",
+      "role": "mono",
+      "selfHosted": false,
+      "source": "Google Fonts",
+      "weights": [
+        400,
+        700
+      ]
+    }
+  ],
+  "schema": 1
+}
