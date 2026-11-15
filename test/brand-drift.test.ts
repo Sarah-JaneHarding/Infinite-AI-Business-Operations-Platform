@@ -19,6 +19,28 @@ function assertCurrent(onDisk: string, expected: string): void {
 const mutated = (primary: string) =>
   buildTokenFile({ ...BRAND_TOKENS, colour: { ...BRAND_TOKENS.colour, primary } });
 
+/** Every contact detail in BRAND, read from the source rather than re-typed. */
+function contactStrings(): string[] {
+  return [
+    ...Object.values(BRAND.address),
+    BRAND.phone, BRAND.phoneTel, BRAND.email, BRAND.founder.name,
+  ];
+}
+
+/** Returns the contact strings found in the text (case-insensitive). */
+function contactHits(text: string): string[] {
+  const hay = text.toLowerCase();
+  return contactStrings().filter((c) => hay.includes(c.toLowerCase()));
+}
+
+/** Reuse comparison: returns the roles whose value differs from the brand palette. */
+function reuseDifferences(colour: Record<string, string>): string[] {
+  const reused: [string, keyof typeof BRAND.colours][] = [
+    ['bg', 'deepSpace'], ['surface', 'midnight'], ['primary', 'plasmaCyan'], ['accent', 'neuralViolet'], ['highlight', 'sparkGold'],
+  ];
+  return reused.filter(([role, name]) => colour[role] !== BRAND.colours[name]).map(([role]) => role);
+}
+
 interface Manifest { fonts: { family: string; weights: number[] }[] }
 
 /** Parses the Google Fonts css2 link in index.html into family -> weights. */
@@ -77,7 +99,9 @@ describe('generated brand files match the source', () => {
       expect(outOfDate(undefined, 'x')).toBe(true);
     });
     it('a mutated manifest differs from the committed one', () => {
-      const changed = read('../brand/fonts.manifest.json').replace('"Inter"', '"Intr"');
+      const original = read('../brand/fonts.manifest.json');
+      const changed = original.replace('"Inter"', '"Intr"');
+      expect(changed).not.toBe(original);
       expect(() => assertCurrent(changed, renderFontsManifest())).toThrow(STALE);
     });
   });
@@ -85,14 +109,38 @@ describe('generated brand files match the source', () => {
 
 describe('token colours reuse the brand palette', () => {
   const file = JSON.parse(read('../brand/brand.tokens.json')) as { colour: Record<string, string> };
-  const reused: [ColourRole, keyof typeof BRAND.colours][] = [
-    ['bg', 'deepSpace'], ['surface', 'midnight'], ['primary', 'plasmaCyan'], ['accent', 'neuralViolet'], ['highlight', 'sparkGold'],
-  ];
-  it.each(reused)('%s is BRAND.colours.%s', (role, name) => {
-    expect(file.colour[role]).toBe(BRAND.colours[name]);
+  it('bg, surface, primary, accent and highlight are the brand colours', () => {
+    expect(reuseDifferences(file.colour)).toEqual([]);
   });
-  it('a mutated palette copy would be caught', () => {
-    expect(mutated('#000000').colour.primary).not.toBe(BRAND.colours.plasmaCyan);
+  it('the comparison can fail: a mutated token file reports the changed role', () => {
+    expect(reuseDifferences(mutated('#000000').colour)).toEqual(['primary']);
+  });
+});
+
+describe('no contact details in the generated files', () => {
+  const files = ['../brand/brand.tokens.json', '../brand/brand.tokens.css', '../brand/fonts.manifest.json'];
+  it('contactStrings covers the 9 expected fields, each at least 3 characters', () => {
+    const list = contactStrings();
+    expect(list).toHaveLength(9);
+    for (const c of list) {
+      expect(c.length).toBeGreaterThanOrEqual(3);
+      expect(c.trim()).toBe(c);
+    }
+  });
+  it.each(files)('%s contains none of them', (rel) => {
+    expect(contactHits(read(rel))).toEqual([]);
+  });
+  it('the scan can fail: a string appended to the CSS is reported by name', () => {
+    expect(contactHits(`${read('../brand/brand.tokens.css')}/* ${BRAND.email} */`)).toEqual([BRAND.email]);
+  });
+  it('the scan can fail: an entry added to the JSON is reported by name', () => {
+    const json = read('../brand/brand.tokens.json').replace('{', `{"x": "${BRAND.address.postcode}",`);
+    expect(contactHits(json)).toEqual([BRAND.address.postcode]);
+  });
+  it('the scan can fail: one appended string is reported for each of the 9, case-insensitively', () => {
+    for (const c of contactStrings()) {
+      expect(contactHits(`some text ${c.toUpperCase()} more`)).toContain(c);
+    }
   });
 });
 
@@ -122,8 +170,10 @@ describe('contrast (WCAG AA, normal text)', () => {
   it('the check can fail: #333333 on #05070F is below 4.5', () => {
     expect(contrastRatio('#333333', '#05070F')).toBeLessThan(AA_NORMAL);
   });
-  it('the check can fail: a darkened primary on bg is below 4.5', () => {
-    expect(contrastRatio('#101830', c.bg)).toBeLessThan(AA_NORMAL);
+  it('the loop can fail: a darkened primary on bg breaks the primary/bg pair', () => {
+    const bad = { ...c, primary: '#101830' };
+    const failing = pairs.filter(([fg, bg]) => contrastRatio(bad[fg], bad[bg]) < AA_NORMAL);
+    expect(failing).toContainEqual(['primary', 'bg']);
   });
 });
 
