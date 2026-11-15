@@ -41,6 +41,10 @@ called; the draft has to pass the acceptance suite) → **ACTIVE** when a *diffe
 again, since contracts and facts may have changed). Anyone signed in can **pause** (resume later) or **revoke** (final) an
 order at once, with a reason. Every step is in the audit ledger under the person who did it.
 
+## Templates
+
+Templates pre-select an agent and a trigger; the person still types the inputs. There is one for every department (see "Standing-order templates" in [AGENT_CATALOGUE.md](AGENT_CATALOGUE.md)), and none uses an agent that needs a second approver or a professional reviewer. A template is a starting point only: proposing, dry-running and a different person activating the order work exactly as above. Limitation: triggers are daily, weekly, event or request, so there is no monthly trigger; month-end work is scheduled weekly.
+
 ## What runs, and the limits that always apply
 
 - One run at a time. The budget check and the "started" ledger entry are one step, and budgets are **counted from the

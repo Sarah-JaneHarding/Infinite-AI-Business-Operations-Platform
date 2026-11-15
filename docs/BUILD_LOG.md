@@ -134,3 +134,11 @@ Not verified / known limits:
   - Cold-start flake: one unidentified test failure in the first of six full runs on the Phase 1 baseline, none in the following five. The test name was not captured. Seen and not fixed.
   - The contrast gate is a numeric check, not an accessibility audit.
   - Phase 1 commits share the branch and pull request with the `uuid` override.
+
+## 2026-11-15: Phase 3, standing-order templates and the coverage gate
+- Added `src/departments/orderTemplates.ts`: 16 templates, one per department, each a plain-data agent and trigger (15 weekly Monday, one weekly Friday), 1 run a day, no prices or figures. Also exports `templatesFor`, `uncovered` (departments with no template) and `gatedAgents` (templates naming a `twoPerson`, `professionalReview` or unknown agent).
+- Audit: all 16 picked agents exist, are `internal` data class, and are not gated; none needed swapping. Gated agents in the repo are OPS-SEC-01, OPS-LEG-01 to OPS-LEG-05 and OPS-PPL-04.
+- Gate: `test/order-templates.test.ts` (8 tests) checks coverage, department membership, `parseProposal` admission on a neutral fixture, no gated agents, unique ids, names and no prices, and a passing dry run for every template; the failure paths call `uncovered` and `gatedAgents` with bad lists.
+- Docs: "Standing-order templates" in `docs/AGENT_CATALOGUE.md`, "Templates" in `docs/AUTONOMY.md`.
+- Limit: no monthly trigger exists, so the month-end close template is weekly.
+
