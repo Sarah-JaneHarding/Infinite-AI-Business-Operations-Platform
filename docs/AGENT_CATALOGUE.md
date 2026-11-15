@@ -416,7 +416,7 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 
 ## Standing-order templates
 
-Every department has one standing-order template (`src/departments/orderTemplates.ts`), a plain-data pairing of an agent and a trigger that a person can start an order from. Templates hold no prices and no figures, and the person still types the inputs.
+Every department has one standing-order template (`src/departments/orderTemplates.ts`), a plain-data pairing of an agent and a trigger that a person can start an order from. Templates hold no prices and no figures, and the person still types the inputs. Those inputs are fixed for every scheduled run of the order, so the two templates whose inputs are facts that go stale (devops: a restore-test date and result; support: ticket counts) are by request, not scheduled; the other 14 are weekly.
 
 | Department | Agent | Task | Trigger | Runs/day |
 |---|---|---|---|---|
@@ -430,10 +430,10 @@ Every department has one standing-order template (`src/departments/orderTemplate
 | Sales & CRM | OPS-SALES-04 | Pipeline review | Weekly, Monday 06:00 UTC | 1 |
 | Marketing & Brand | OPS-MKT-04 | Content calendar builder | Weekly, Monday 06:00 UTC | 1 |
 | Customer Success & Pilots | OPS-CS-02 | Quarterly business review | Weekly, Monday 06:00 UTC | 1 |
-| Support & Service Desk | OPS-SUP-06 | Ticket trend review | Weekly, Monday 06:00 UTC | 1 |
+| Support & Service Desk | OPS-SUP-06 | Ticket trend review | By request (typed period and counts go stale) | 1 |
 | Government & Partnerships | OPS-GOV-06 | Funding pipeline review | Weekly, Monday 06:00 UTC | 1 |
 | People & Culture | OPS-PPL-06 | Staff development plan | Weekly, Monday 06:00 UTC | 1 |
-| IT, DevOps & SRE | OPS-SRE-04 | Backup and restore test record | Weekly, Monday 05:00 UTC | 1 |
+| IT, DevOps & SRE | OPS-SRE-04 | Backup and restore test record | By request (typed date and result go stale) | 1 |
 | Procurement & Vendors | OPS-PRO-03 | Supplier review | Weekly, Monday 06:00 UTC | 1 |
 | Research, Impact & Knowledge | OPS-RES-06 | Evidence claims register | Weekly, Monday 06:00 UTC | 1 |
 

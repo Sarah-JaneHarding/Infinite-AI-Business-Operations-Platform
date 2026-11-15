@@ -673,7 +673,7 @@ describe('server: autonomous agents', () => {
     expect(made.status).toBe(200);
     const body = '{"pusher":{"name":"x"},"commits":[],"ref":"refs/heads/queue-drain"}';
     expect((await call(aBase, '/api/connector/webhook', { raw: body, headers: { 'x-hub-signature-256': sign(body), 'x-github-event': 'push', 'content-type': 'application/json' } })).status).toBe(200);
-    let draft: Record<string, any> | undefined;
+    let draft: Awaited<ReturnType<typeof draftsOf>>[number] | undefined;
     for (let i = 0; i < 80 && !draft; i++) { [draft] = await draftsOf(o.id); if (!draft) await new Promise((r) => setTimeout(r, 100)); }
     expect(draft).toMatchObject({ status: 'IN_REVIEW', requestedBy: `auto:${o.id}` });
     expect(draft!.approvedBy).toBeUndefined();

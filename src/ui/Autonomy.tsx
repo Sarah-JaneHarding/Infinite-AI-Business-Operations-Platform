@@ -85,7 +85,7 @@ export function Autonomy() {
       )}
       {st.enabled
         ? <div className="callout ok"><ShieldCheck size={14} className="mr-1 inline" />Autonomy is <b>on</b>. {st.runsToday} of {st.maxRunsPerDay} runs used today across the platform.</div>
-        : <div className="callout warn"><b>Autonomy is switched off on this server.</b> Orders can be proposed and activated, but nothing runs until an operator sets <code>OPS_AUTONOMY=on</code> in the server's <code>.env</code> and restarts it. This is the master switch.</div>}
+        : <div className="callout warn"><b>Autonomy is switched off on this server.</b> Orders can be proposed and activated, and tasks can still be queued, but none run (and they do not expire) until an operator sets <code>OPS_AUTONOMY=on</code> in the server's <code>.env</code> and restarts it. This is the master switch.</div>}
 
       <Card title="The limits that always apply">
         <ul className="list-disc space-y-1 pl-5 text-sm">
@@ -276,11 +276,11 @@ function TaskQueue({ orders, tasks, tasksErr, queued, post }: { orders: Order[];
     const given = Object.fromEntries(Object.entries(inputs).filter(([, v]) => v.trim()));
     const body: Record<string, unknown> = { orderId, priority, due: new Date(dueMs).toISOString().replace(/\.\d{3}Z$/, 'Z') };
     if (order?.allowTaskInputs && Object.keys(given).length) body.inputs = given;
-    if (await post('/api/autonomy/tasks', body, 'Task queued.')) setInputs({});
+    if (await post('/api/autonomy/tasks', body, 'Task queued. The queue is checked once a minute; it starts at the next check if autonomy is on and a budget allows.')) setInputs({});
   };
   return (
     <Card title={`Task queue (${queued} waiting)`}>
-      <p className="text-sm" style={{ color: 'var(--muted)' }}>A task is one run of an active order, queued for a time. Schedules and GitHub events add tasks here too. Tasks run most urgent first, within each order's daily budget, and only ever produce drafts.</p>
+      <p className="text-sm" style={{ color: 'var(--muted)' }}>A task is one run of an active order, queued for a time. Schedules and GitHub events add tasks here too. Tasks run most urgent first, within each order's daily budget, and only ever produce drafts. The queue is checked once a minute: a queued task starts at the next check if autonomy is on and a budget allows.</p>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <label className="space-y-1 text-sm"><span className="font-semibold">Order</span>
           <select className="input" value={orderId} onChange={(e) => { setOrderId(e.target.value); setInputs({}); }} aria-label="Task order">

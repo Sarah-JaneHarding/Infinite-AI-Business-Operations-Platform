@@ -21,7 +21,7 @@ OPS_AUTONOMY=on
 OPS_AUTONOMY_MAX_RUNS_PER_DAY=20     # platform-wide daily cap (default 20)
 ```
 
-With it off, orders can still be proposed and activated, but nothing runs and "Run now" says why. It needs `OPS_USERS`:
+With it off, orders can still be proposed and activated, but nothing runs and "Run now" says why. Tasks can still be queued, but none run, and they do not expire, until an operator switches autonomy on. It needs `OPS_USERS`:
 open dev mode has no signed-in person, so it cannot propose, activate or run orders. A bad value stops the server with a
 `FATAL:` message.
 
@@ -44,7 +44,7 @@ order at once, with a reason. Every step is in the audit ledger under the person
 
 ## Templates
 
-Templates pre-select an agent and a trigger; the person still types the inputs. There is one for every department (see "Standing-order templates" in [AGENT_CATALOGUE.md](AGENT_CATALOGUE.md)), and none uses an agent that needs a second approver or a professional reviewer. A template is a starting point only: proposing, dry-running and a different person activating the order work exactly as above. Limitation: triggers are daily, weekly, event or request, so there is no monthly trigger; month-end work is scheduled weekly.
+Templates pre-select an agent and a trigger; the person still types the inputs. There is one for every department (see "Standing-order templates" in [AGENT_CATALOGUE.md](AGENT_CATALOGUE.md)), and none uses an agent that needs a second approver or a professional reviewer. A template is a starting point only: proposing, dry-running and a different person activating the order work exactly as above. The inputs a person types when the order is made are fixed for every scheduled run of it. A period-bound order therefore needs "Allow task inputs" plus a person-queued task with new inputs, or a new order; for this reason two templates (devops and support) are by request, not scheduled. Limitation: triggers are daily, weekly, event or request, so there is no monthly trigger; month-end work is scheduled weekly.
 
 ## The task queue
 
@@ -52,13 +52,14 @@ A **task** is one queued run of an **active** standing order. Each department's 
 
 - **What queues a task.** A schedule slot that comes due, a GitHub event the order listens for, or a person (see below). A schedule slot is queued once: if its task is later cancelled or fails, the slot is not queued again. An event is not queued while a task for the same event is still waiting, and the cooldown still applies.
 - **How tasks run.** One drain runs them one at a time, most urgent first: priority 1 to 3 (1 is most urgent), then the earlier due time, then the earlier arrival. A task whose due time has not come waits. Each task goes through the same budget checks, the same agent run and the same acceptance suite as any other run. A task only ever produces a draft, and the draft takes the same path to the Review Board.
+- **When a task starts.** A person queuing a task does not start a run by itself. The next once-a-minute check, or a signed GitHub event, runs it, if autonomy is on and a budget allows. With `OPS_AUTONOMY` off, tasks can still be queued but never run and never expire; when autonomy is switched on, every task less than 7 days past its due time runs, within the budgets.
 - **"Run now" does not use the queue.** It stays immediate and still counts against the budgets.
 - **Triggers are daily or weekly only.** There is no monthly trigger, so agents whose work is month-based (the month-end close checklist) use weekly templates.
 
 What a person may queue:
 
 - A person queues a task by choosing an active order, a priority (1 to 3) and a due time. The due time is an ISO time such as `2026-11-20T08:00:00Z`, no more than 90 days ahead and no more than a day in the past.
-- An order can hold at most 10 queued tasks. A person who tries to queue an 11th is refused (429).
+- A person can queue at most 10 tasks per order; an 11th is refused (429). Schedule and event triggers may add a small number beyond that (one per schedule slot, and one per event kind while one is queued).
 - A person's task carries its own inputs **only** if the order has `allowTaskInputs` on. They are checked by the same rules as an order's inputs (no personal data, no learner identifiers, no injection text, only the agent's own fields), laid over the order's inputs for that one run, and the order itself is not changed. With `allowTaskInputs` off, a task with inputs is refused (422). **Schedule and event tasks never carry their own inputs**: they use the order's, and nothing from a trigger is put into a prompt.
 
 What happens to a task:
@@ -70,11 +71,13 @@ What happens to a task:
 | The run fails or the draft is quarantined | Final. It is not retried. |
 | The order is paused or revoked | Its queued tasks are cancelled. |
 | A person cancels it (with a reason of 5 to 300 characters) | Cancelled. Only a queued task can be cancelled. |
-| The server restarted while it was running | Marked failed and never run a second time. |
+| The server restarted while it was running | Marked FAILED by the next drain (which only runs while autonomy is on) and never run a second time. |
+
+**Limits.** The task list returns every task ever written, and the screen shows them all and refreshes every 15 seconds. 16 weekly orders produce about 830 tasks a year (the 14 weekly templates, about 730). Each run now writes three ledger rows (queued, started, final), and the ledger holds at most 20,000 records. At the platform cap of 20 runs a day with 3 rows each, that is 60 rows a day, so the ledger would fill in roughly 11 months (an estimate: other writes use it too); after that writes fail closed and autonomy stops. The planned follow-up (show queued and running tasks plus the latest finished one per department, and/or default the list to exclude old finished tasks) is not built.
 
 The queue is stored in the collection `autonomy_tasks`. It is server-only: clients cannot write it and no model can read it. Queueing, cancelling, expiring and each run are in the audit ledger.
 
-Routes (all need the usual sign-in):
+Routes (in signed-in mode all three need a token; in open dev mode the two POST routes refuse with 403 and the list does not):
 
 - `GET /api/autonomy/tasks` lists tasks, most urgent first. Optional filters: `dept` and `status`. An unknown or repeated value is a 400, not an empty list.
 - `POST /api/autonomy/tasks` queues a task (`orderId`, `priority`, `due`, and `inputs` where allowed).
