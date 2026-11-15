@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { BRAND } from './brand';
-import { BRAND_TOKENS, HEX, type BrandTokens } from './brandTokens';
+import { BRAND_TOKENS, HEX, type BrandTokens, type ColourRole } from './brandTokens';
 
 export interface TokenFile {
   schema: 1;
@@ -33,6 +33,7 @@ export function tokenVersion(t: BrandTokens): string {
 }
 
 const FORBIDDEN_STACK = /[;{}\n\r]/;
+const RADIUS = /^\d+(\.\d+)?(px|rem)$/;
 
 export function buildTokenFile(t: BrandTokens = BRAND_TOKENS): TokenFile {
   for (const [role, value] of Object.entries(t.colour)) {
@@ -40,6 +41,9 @@ export function buildTokenFile(t: BrandTokens = BRAND_TOKENS): TokenFile {
   }
   for (const [name, f] of Object.entries(t.font)) {
     if (FORBIDDEN_STACK.test(f.stack)) throw new Error(`Invalid font stack for "${name}": must not contain ";", "{", "}" or a newline`);
+  }
+  for (const [key, value] of Object.entries(t.radius)) {
+    if (!RADIUS.test(value)) throw new Error(`Invalid radius for "${key}": ${JSON.stringify(value)} is not a length such as 14px or 0.5rem`);
   }
   return {
     schema: 1,
@@ -57,7 +61,11 @@ const COLOUR_ORDER = [
   'bg', 'surface', 'surfaceRaised', 'border', 'borderStrong',
   'text', 'textSoft', 'textMuted', 'textSubtle',
   'primary', 'primaryText', 'accent', 'highlight', 'success', 'danger',
-] as const;
+] as const satisfies readonly ColourRole[];
+
+/** Compile-time check: fails to type-check when a ColourRole is missing from COLOUR_ORDER. */
+export const ALL_ROLES_LISTED: [Exclude<ColourRole, (typeof COLOUR_ORDER)[number]>] extends [never] ? true : never = true;
+
 const FONT_ORDER = ['display', 'body', 'mono'] as const;
 
 export function renderCss(file: TokenFile): string {
@@ -108,3 +116,14 @@ export function outOfDate(onDisk: string | undefined, expected: string): boolean
   if (onDisk === undefined) return true;
   return onDisk.replace(/\r\n/g, '\n') !== expected;
 }
+
+/**
+ * The text and accent pairs the contrast gate checks, as [foreground role, background role].
+ * Borders are not here: they carry no 3:1 guarantee (docs/BRAND_TOKENS.md).
+ */
+export const CONTRAST_PAIRS: readonly (readonly [ColourRole, ColourRole])[] = [
+  ['text', 'bg'], ['textSoft', 'bg'], ['textMuted', 'bg'], ['textMuted', 'surface'], ['textSubtle', 'surface'],
+  ['primary', 'bg'], ['accent', 'bg'], ['accent', 'surface'], ['highlight', 'bg'], ['success', 'bg'],
+  ['danger', 'bg'], ['danger', 'surface'], ['primaryText', 'primary'],
+  ['accent', 'surfaceRaised'], ['textSubtle', 'surfaceRaised'], ['textMuted', 'surfaceRaised'],
+];

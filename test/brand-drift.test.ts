@@ -1,15 +1,36 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/brand';
-import { BRAND_TOKENS, type ColourRole } from '../src/brandTokens';
+import { BRAND_TOKENS } from '../src/brandTokens';
 import {
-  buildTokenFile, canonicalJson, contrastRatio, outOfDate, renderCss, renderFontsManifest,
+  CONTRAST_PAIRS, buildTokenFile, canonicalJson, contrastRatio, outOfDate, renderCss, renderFontsManifest,
 } from '../src/brandExport';
 
-const read = (rel: string): string => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
-
 const STALE = 'Brand tokens are out of date. Run: npm run brand:export';
+
+/** Reads a file relative to this test. A missing file throws the one agreed stale message, not ENOENT. */
+function read(rel: string): string {
+  try {
+    return readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new Error(STALE);
+    throw error;
+  }
+}
+
+/** Parses JSON text. Invalid JSON throws the stale message, not a SyntaxError. */
+function parseOrStale<T>(text: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error(STALE);
+    throw error;
+  }
+}
+
+const readJson = <T>(rel: string): T => parseOrStale<T>(read(rel));
 
 /** Throws the one agreed message when a committed file differs from freshly generated output. */
 function assertCurrent(onDisk: string, expected: string): void {
@@ -84,6 +105,19 @@ describe('generated brand files match the source', () => {
     expect(() => assertCurrent(`${json} `, json)).toThrow(STALE);
   });
 
+  describe('a missing or malformed generated file gives the stale message, not a collection error', () => {
+    it('a missing file throws the stale message', () => {
+      expect(() => read('../brand/does-not-exist.json')).toThrow(STALE);
+    });
+    it('malformed JSON throws the stale message', () => {
+      expect(() => parseOrStale('{"colour": ')).toThrow(STALE);
+      expect(() => parseOrStale('')).toThrow(STALE);
+    });
+    it('well-formed JSON parses', () => {
+      expect(parseOrStale<{ a: number }>('{"a": 1}')).toEqual({ a: 1 });
+    });
+  });
+
   describe('the guards can fail (mutations applied in memory only)', () => {
     it('a changed primary colour is reported out of date in the JSON file', () => {
       expect(() => assertCurrent(read('../brand/brand.tokens.json'), canonicalJson(mutated('#000000')))).toThrow(STALE);
@@ -107,10 +141,44 @@ describe('generated brand files match the source', () => {
   });
 });
 
+/**
+ * The version rule exactly as docs/BRAND_TOKENS.md states it, written out independently of
+ * canonicalJson/tokenVersion: take colour, font and radius of brand.tokens.json, stringify with keys
+ * sorted at every level and a 2-space indent, add one trailing LF, SHA-256 as UTF-8, first 16 hex.
+ */
+function documentedVersion(json: string, trailingLf = true): string {
+  const sorted = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(sorted);
+    if (v !== null && typeof v === 'object') {
+      const o = v as Record<string, unknown>;
+      return Object.fromEntries(Object.keys(o).sort().map((k) => [k, sorted(o[k])]));
+    }
+    return v;
+  };
+  const { colour, font, radius } = parseOrStale<Record<string, unknown>>(json);
+  const text = JSON.stringify(sorted({ colour, font, radius }), null, 2) + (trailingLf ? '\n' : '');
+  return createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
+}
+
+describe('the version can be recomputed from the committed files using only the documented rule', () => {
+  it('equals the version in brand.tokens.json and in the header comment of brand.tokens.css', () => {
+    const json = read('../brand/brand.tokens.json');
+    const fromRule = documentedVersion(json);
+    expect(fromRule).toMatch(/^[0-9a-f]{16}$/);
+    expect(parseOrStale<{ version: string }>(json).version).toBe(fromRule);
+    expect(/ version: ([0-9a-f]{16}) \*\/\n/.exec(read('../brand/brand.tokens.css'))?.[1]).toBe(fromRule);
+  });
+  it('the recipe can fail: no trailing LF, or a changed colour, gives a different value', () => {
+    const json = read('../brand/brand.tokens.json');
+    const version = parseOrStale<{ version: string }>(json).version;
+    expect(documentedVersion(json, false)).not.toBe(version);
+    expect(documentedVersion(json.replace('#5BC8EC', '#5BC8ED'))).not.toBe(version);
+  });
+});
+
 describe('token colours reuse the brand palette', () => {
-  const file = JSON.parse(read('../brand/brand.tokens.json')) as { colour: Record<string, string> };
   it('bg, surface, primary, accent and highlight are the brand colours', () => {
-    expect(reuseDifferences(file.colour)).toEqual([]);
+    expect(reuseDifferences(readJson<{ colour: Record<string, string> }>('../brand/brand.tokens.json').colour)).toEqual([]);
   });
   it('the comparison can fail: a mutated token file reports the changed role', () => {
     expect(reuseDifferences(mutated('#000000').colour)).toEqual(['primary']);
@@ -149,7 +217,7 @@ describe('no contact details in the generated files', () => {
 
 /**
  * WCAG AA for normal text. No allow-list and no lower fallback: if a colour change breaks a pair,
- * this test fails and the owner decides. It is never loosened to pass.
+ * this test fails and the owner decides. It is never loosened to pass. The pairs are CONTRAST_PAIRS.
  *
  * Measured on the current values:
  *   text on bg 19.23          textSoft on bg 16.32      textMuted on bg 13.55
@@ -157,18 +225,27 @@ describe('no contact details in the generated files', () => {
  *   primary on bg 10.46       accent on bg 5.48         accent on surface 5.07
  *   highlight on bg 11.32     success on bg 10.47
  *   danger on bg 7.48         danger on surface 6.92    primaryText on primary 10.46
+ *   accent on surfaceRaised 5.01 (the lowest)  textSubtle on surfaceRaised 7.17  textMuted on surfaceRaised 12.38
  */
 const AA_NORMAL = 4.5;
 
 describe('contrast (WCAG AA, normal text)', () => {
   const c = BRAND_TOKENS.colour;
-  const pairs: [ColourRole, ColourRole][] = [
-    ['text', 'bg'], ['textSoft', 'bg'], ['textMuted', 'bg'], ['textMuted', 'surface'], ['textSubtle', 'surface'],
-    ['primary', 'bg'], ['accent', 'bg'], ['accent', 'surface'], ['highlight', 'bg'], ['success', 'bg'],
-    ['danger', 'bg'], ['danger', 'surface'], ['primaryText', 'primary'],
-  ];
+  const pairs = CONTRAST_PAIRS;
+  it('checks 16 pairs, including accent, textSubtle and textMuted on surfaceRaised', () => {
+    expect(pairs).toHaveLength(16);
+    expect(pairs).toContainEqual(['accent', 'surfaceRaised']);
+    expect(pairs).toContainEqual(['textSubtle', 'surfaceRaised']);
+    expect(pairs).toContainEqual(['textMuted', 'surfaceRaised']);
+  });
   it.each(pairs)('%s on %s is at least 4.5', (fg, bg) => {
     expect(contrastRatio(c[fg], c[bg])).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+  it('the lowest pair is accent on surfaceRaised at about 5.01', () => {
+    const ratios = pairs.map(([fg, bg]) => contrastRatio(c[fg], c[bg]));
+    const min = Math.min(...ratios);
+    expect(min.toFixed(2)).toBe('5.01');
+    expect(pairs[ratios.indexOf(min)]).toEqual(['accent', 'surfaceRaised']);
   });
   it('the check can fail: #333333 on #05070F is below 4.5', () => {
     expect(contrastRatio('#333333', '#05070F')).toBeLessThan(AA_NORMAL);
@@ -178,39 +255,42 @@ describe('contrast (WCAG AA, normal text)', () => {
     const failing = pairs.filter(([fg, bg]) => contrastRatio(bad[fg], bad[bg]) < AA_NORMAL);
     expect(failing).toContainEqual(['primary', 'bg']);
   });
+  it('the loop can fail: a darkened accent breaks the accent/surfaceRaised pair', () => {
+    const bad = { ...c, accent: '#5A44B0' };
+    const failing = pairs.filter(([fg, bg]) => contrastRatio(bad[fg], bad[bg]) < AA_NORMAL);
+    expect(failing).toContainEqual(['accent', 'surfaceRaised']);
+  });
 });
 
 describe('fonts', () => {
-  const manifest = JSON.parse(read('../brand/fonts.manifest.json')) as Manifest;
-  const link = googleFontsWeights(read('../index.html'));
+  const manifest = (): Manifest => readJson<Manifest>('../brand/fonts.manifest.json');
+  const link = (): Map<string, number[]> => googleFontsWeights(read('../index.html'));
 
   it('manifest families and weights equal the Google Fonts link in index.html', () => {
-    expect(fontDifferences(manifest, link)).toEqual([]);
+    expect(fontDifferences(manifest(), link())).toEqual([]);
   });
   it('the comparison can fail: a changed weight is reported', () => {
-    const copy: Manifest = { fonts: manifest.fonts.map((f) => ({ ...f, weights: [...f.weights] })) };
+    const copy: Manifest = { fonts: manifest().fonts.map((f) => ({ ...f, weights: [...f.weights] })) };
     copy.fonts[0].weights[0] = 300;
-    expect(fontDifferences(copy, link)).toEqual([`weights for ${copy.fonts[0].family}`]);
+    expect(fontDifferences(copy, link())).toEqual([`weights for ${copy.fonts[0].family}`]);
   });
   it('the comparison can fail: a missing family is reported', () => {
-    const copy: Manifest = { fonts: manifest.fonts.slice(1) };
-    expect(fontDifferences(copy, link).length).toBeGreaterThan(0);
+    const copy: Manifest = { fonts: manifest().fonts.slice(1) };
+    expect(fontDifferences(copy, link()).length).toBeGreaterThan(0);
   });
   it('the parser reads the link correctly', () => {
-    expect(link.get('Space Grotesk')).toEqual([500, 600, 700]);
-    expect(link.size).toBe(3);
+    expect(link().get('Space Grotesk')).toEqual([500, 600, 700]);
+    expect(link().size).toBe(3);
   });
 });
 
 describe('public/brand-kit/brand-tokens.json (older downloadable kit)', () => {
-  const kit = JSON.parse(read('../public/brand-kit/brand-tokens.json')) as {
-    colours: Record<string, string>; fonts: Record<string, string>;
-  };
+  const kit = () => readJson<{ colours: Record<string, string>; fonts: Record<string, string> }>('../public/brand-kit/brand-tokens.json');
   it('colours still equal BRAND.colours', () => {
-    expect(kit.colours).toEqual(BRAND.colours);
+    expect(kit().colours).toEqual(BRAND.colours);
   });
   it('fonts equal the token families', () => {
-    expect(kit.fonts).toEqual({
+    expect(kit().fonts).toEqual({
       display: BRAND_TOKENS.font.display.family,
       body: BRAND_TOKENS.font.body.family,
       mono: BRAND_TOKENS.font.mono.family,

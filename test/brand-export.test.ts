@@ -57,6 +57,22 @@ describe('buildTokenFile', () => {
     expect(() => buildTokenFile(b)).toThrow(/danger/);
   });
 
+  it('throws naming the radius key for a value that is not a length', () => {
+    for (const bad of ['14', '14px;', '', '14 px', 'px', '-1px', '14em', '1.px']) {
+      const t = clone();
+      t.radius.card = bad;
+      expect(() => buildTokenFile(t), JSON.stringify(bad)).toThrow(/radius for "card"/);
+    }
+  });
+
+  it('accepts px and rem radii', () => {
+    for (const ok of ['14px', '0.5rem', '0px', '1.25rem']) {
+      const t = clone();
+      t.radius.card = ok;
+      expect(buildTokenFile(t).radius.card).toBe(ok);
+    }
+  });
+
   it('throws naming the font for a stack with a forbidden character', () => {
     for (const bad of ['a;b', 'a{b', 'a}b', 'a\nb']) {
       const t = clone();
@@ -90,6 +106,25 @@ describe('renderCss', () => {
       '--iai-primary', '--iai-primary-text', '--iai-accent', '--iai-highlight', '--iai-success', '--iai-danger',
       '--iai-font-display', '--iai-font-body', '--iai-font-mono', '--iai-radius-card',
     ]);
+  });
+});
+
+describe('the CSS carries everything the JSON carries', () => {
+  const file = buildTokenFile();
+  const css = renderCss(file);
+  const kebab = (s: string): string => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+  const declared = new Map([...css.matchAll(/(--iai-[a-z-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2]]));
+
+  it('has one --iai- colour variable per JSON colour key, no more and no fewer', () => {
+    const colourVars = [...declared.keys()].filter((n) => !n.startsWith('--iai-font-') && n !== '--iai-radius-card').sort();
+    expect(colourVars).toEqual(Object.keys(file.colour).map((k) => `--iai-${kebab(k)}`).sort());
+  });
+  it('gives each colour variable the JSON value', () => {
+    for (const [role, value] of Object.entries(file.colour)) expect(declared.get(`--iai-${kebab(role)}`)).toBe(value);
+  });
+  it('carries the radius and the three font stacks', () => {
+    expect(declared.get('--iai-radius-card')).toBe(file.radius.card);
+    for (const name of ['display', 'body', 'mono']) expect(declared.get(`--iai-font-${name}`)).toBe(file.font[name].stack);
   });
 });
 

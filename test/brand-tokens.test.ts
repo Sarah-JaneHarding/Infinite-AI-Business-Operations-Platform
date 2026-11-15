@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { BRAND } from '../src/brand';
 import { BRAND_TOKENS, HEX, type ColourRole } from '../src/brandTokens';
 
@@ -9,7 +9,7 @@ const ROLES: ColourRole[] = [
   'textSubtle', 'primary', 'primaryText', 'accent', 'highlight', 'success', 'danger',
 ];
 
-const css = readFileSync(join(process.cwd(), 'src', 'index.css'), 'utf8');
+const css = readFileSync(fileURLToPath(new URL('../src/index.css', import.meta.url)), 'utf8');
 const rootMatch = /:root\s*\{([^}]*)\}/.exec(css);
 const rootVars = new Map<string, string>();
 for (const m of (rootMatch?.[1] ?? '').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
