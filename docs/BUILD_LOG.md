@@ -161,3 +161,8 @@ Not verified / known limits:
 - Pausing or revoking an order cancels its queued tasks with the reason.
 - Tests: `test/autonomy-queue.test.ts` (21); `autonomy_tasks` added to `test/models-rules.test.ts` and `test/server.test.ts`.
 - Limits: the queue is not yet exposed over HTTP or the UI (later tasks). `service.ts` stays one file (about 360 lines).
+
+## 2026-11-15: Phase 3, the task queue over HTTP
+- `src/server/autonomyRoutes.ts`: `GET /api/autonomy/tasks?dept=&status=` returns `{ tasks }`; `POST /api/autonomy/tasks` (`orderId`, `priority`, `due`, `inputs?`) returns the `Task`; `POST /api/autonomy/tasks/:id/cancel` (`reason`) returns the `Task`. All sit behind the `/api` auth, use the existing `wrap` error handler, and add no role requirement (any signed-in person; OPQ-037). Open dev mode gets 403 from the service.
+- An unknown or repeated `dept` or `status` query value is a 400 naming the field, never an empty list. No new timer: the minute `tick()` still drains.
+- Tests (`test/server.test.ts`, "task queue"): enqueue, list by department, cancel; the response has exactly the keys of `Task` (`inputs` only when the order allows them and a person gave them); 401 without a token, 403 in open dev mode, an `auto:` token cannot enqueue; a draft produced from a queued task is `auto:<order>`-named, in review and unapproved, and the runner actor cannot countersign or ratify it (403).

@@ -615,9 +615,90 @@ describe('server: autonomous agents', () => {
     expect((await status()).orders.find((x) => x.id === o.id)?.runsToday).toBe(1);
   }, 30_000);
 
+  it('task queue: people enqueue, list by department and cancel; the contract has exactly the keys of Task; bad filters are 400', async () => {
+    const tapi = (token: string | undefined, path: string, body?: Record<string, unknown>) => call(aBase, `/api${path}`, { token, ...(body ? { body } : {}), method: body ? 'POST' : 'GET' });
+    const o = await propose({ name: 'Queue contract order' });
+    const soon = new Date(Date.now() + 3600_000).toISOString();
+    expect((await tapi(undefined, '/autonomy/tasks')).status).toBe(401);
+    expect((await tapi(undefined, '/autonomy/tasks', { orderId: o.id, priority: 2, due: soon })).status).toBe(401);
+    expect((await tapi(T_SARAH, '/autonomy/tasks', { orderId: o.id, priority: 2, due: soon })).status).toBe(409); // not active yet
+    await activate(o.id);
+    const made = await tapi(T_SARAH, '/autonomy/tasks', { orderId: o.id, priority: 2, due: soon });
+    expect(made.status).toBe(200);
+    expect(Object.keys(made.json!).sort()).toEqual(['agentId', 'at', 'dept', 'due', 'id', 'orderId', 'origin', 'priority', 'status', 'version']); // no inputs: the order does not allow them
+    expect(made.json).toMatchObject({ orderId: o.id, agentId: 'OPS-EXEC-01', dept: 'executive', status: 'QUEUED', version: 1, origin: { kind: 'person', by: 'sarah' } });
+    const id = (made.json as { id: string }).id;
+    expect((await tapi(T_SARAH, '/autonomy/tasks', { orderId: o.id, priority: 2, due: soon, inputs: { period: 'Term 1' } })).status).toBe(422); // inputs not allowed
+    expect((await tapi(T_SARAH, '/autonomy/tasks', { orderId: o.id, priority: 9, due: soon })).status).toBe(400);
+
+    const list = await tapi(T_DAN, '/autonomy/tasks?dept=executive&status=QUEUED');
+    expect(list.status).toBe(200);
+    expect((list.json as { tasks: { id: string }[] }).tasks.some((t) => t.id === id)).toBe(true);
+    expect(((await tapi(T_DAN, '/autonomy/tasks?dept=finance')).json as { tasks: { id: string }[] }).tasks.some((t) => t.id === id)).toBe(false);
+    const badStatus = await tapi(T_DAN, '/autonomy/tasks?status=DONE');
+    expect([badStatus.status, badStatus.json?.error]).toEqual([400, expect.stringMatching(/status/)]);
+    const badDept = await tapi(T_DAN, '/autonomy/tasks?dept=nowhere');
+    expect([badDept.status, badDept.json?.error]).toEqual([400, expect.stringMatching(/dept/)]);
+    expect((await tapi(T_DAN, '/autonomy/tasks?dept=a&dept=b')).status).toBe(400);
+
+    expect((await tapi(undefined, `/autonomy/tasks/${id}/cancel`, { reason: 'No longer needed' })).status).toBe(401);
+    expect((await tapi(T_DAN, `/autonomy/tasks/${id}/cancel`, { reason: 'no' })).status).toBe(400);
+    expect((await tapi(T_DAN, '/autonomy/tasks/tsk_nope/cancel', { reason: 'No longer needed' })).status).toBe(404);
+    const cancelled = await tapi(T_DAN, `/autonomy/tasks/${id}/cancel`, { reason: 'No longer needed' });
+    expect([cancelled.status, cancelled.json]).toEqual([200, expect.objectContaining({ id, status: 'CANCELLED', version: 2, note: 'No longer needed' })]);
+    expect((await tapi(T_DAN, `/autonomy/tasks/${id}/cancel`, { reason: 'No longer needed' })).status).toBe(409);
+  }, 30_000);
+
+  it('task queue: an allowed input is stored only when a person gave it, and an auto: token cannot enqueue', async () => {
+    const tapi = (token: string | undefined, path: string, body: Record<string, unknown>) => call(aBase, `/api${path}`, { token, body });
+    const o = await propose({ name: 'Queue inputs order', allowTaskInputs: true });
+    await activate(o.id);
+    const soon = new Date(Date.now() + 3600_000).toISOString();
+    const withIn = await tapi(T_SARAH, '/autonomy/tasks', { orderId: o.id, priority: 1, due: soon, inputs: { period: 'Term 1 2027' } });
+    expect(withIn.status).toBe(200);
+    expect(Object.keys(withIn.json!).sort()).toEqual(['agentId', 'at', 'dept', 'due', 'id', 'inputs', 'orderId', 'origin', 'priority', 'status', 'version']);
+    expect(withIn.json?.inputs).toEqual({ period: 'Term 1 2027' });
+    const without = await tapi(T_SARAH, '/autonomy/tasks', { orderId: o.id, priority: 1, due: soon });
+    expect(without.json).not.toHaveProperty('inputs');
+    expect((await tapi('auto:' + o.id, '/autonomy/tasks', { orderId: o.id, priority: 1, due: soon })).status).toBe(401);
+  }, 30_000);
+
+  it('task queue: a draft made from a queued task is named for its order and the runner cannot approve, countersign or ratify it', async () => {
+    const o = await propose({ name: 'Queue draft order' });
+    await activate(o.id);
+    const watcher = await propose({ name: 'Queue drain trigger', trigger: { kind: 'event', events: ['push'], cooldownMinutes: 60 }, maxRunsPerDay: 5 });
+    await activate(watcher.id);
+    const due = new Date(Date.now() - 60_000).toISOString();
+    const made = await api(T_SARAH, '/autonomy/tasks', { orderId: o.id, priority: 1, due });
+    expect(made.status).toBe(200);
+    const body = '{"pusher":{"name":"x"},"commits":[],"ref":"refs/heads/queue-drain"}';
+    expect((await call(aBase, '/api/connector/webhook', { raw: body, headers: { 'x-hub-signature-256': sign(body), 'x-github-event': 'push', 'content-type': 'application/json' } })).status).toBe(200);
+    let draft: Record<string, any> | undefined;
+    for (let i = 0; i < 80 && !draft; i++) { [draft] = await draftsOf(o.id); if (!draft) await new Promise((r) => setTimeout(r, 100)); }
+    expect(draft).toMatchObject({ status: 'IN_REVIEW', requestedBy: `auto:${o.id}` });
+    expect(draft!.approvedBy).toBeUndefined();
+    const task = ((await call(aBase, '/api/autonomy/tasks?status=SUBMITTED', { token: T_SARAH })).json as { tasks: { id: string; artefactId?: string }[] }).tasks.find((t) => t.id === (made.json as { id: string }).id);
+    expect(task?.artefactId).toBe(draft!.id);
+
+    const runner = `auto:${o.id}`;
+    const post = (body: Record<string, unknown>) => call(aBase, '/api/warehouse/artefact_versions', { token: T_DAN, body });
+    expect((await post({ ...draft, status: 'APPROVED', approvedBy: runner })).status).toBe(403); // approve
+    expect((await draftsOf(o.id))[0]).toMatchObject({ status: 'IN_REVIEW' });
+    // a person approves for real; the runner still cannot countersign or ratify
+    const dan = await mk(T_DAN);
+    await dan.decide(draft!.id, human('dan'), 'APPROVED', 'reviewed the queued draft', AGENTS.find((x) => x.id === 'OPS-EXEC-01')!);
+    await dan.flush();
+    const cur = dan.artefact(draft!.id)!;
+    expect((await post({ ...cur, status: 'RATIFIED', countersignedBy: runner, ratifiedAt: new Date().toISOString() })).status).toBe(403); // countersign and ratify, as the runner
+    expect((await post({ ...cur, status: 'RATIFIED', countersignedBy: 'dan', ratifiedAt: new Date().toISOString() })).status).toBe(403); // the approver cannot either
+    expect((await draftsOf(o.id)).find((d) => d.id === draft!.id)).toMatchObject({ status: 'APPROVED' });
+  }, 30_000);
+
   it('open dev mode has no signed-in person, so it cannot propose, activate or run orders', async () => {
     const open = await boot(3453, { OPS_AUTONOMY: 'on' });
     expect((await call(open, '/api/autonomy/orders', { body: order() })).status).toBe(403);
+    expect((await call(open, '/api/autonomy/tasks', { body: { orderId: 'ord_x', priority: 1, due: new Date().toISOString() } })).status).toBe(403);
+    expect((await call(open, '/api/autonomy/tasks/tsk_x/cancel', { body: { reason: 'No longer needed' } })).status).toBe(403);
   }, 30_000);
 });
 
