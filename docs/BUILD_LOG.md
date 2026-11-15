@@ -120,14 +120,16 @@ Not verified / known limits:
 ## 2026-11-15: Phase 1, brand tokens
 - Tokens: `src/brandTokens.ts` holds `BRAND_TOKENS` (15 colour roles, three fonts with stacks, `radius.card`), each value taken from `src/brand.ts` or copied from `src/index.css`, with a comment naming its source.
 - Export: `src/brandExport.ts` and `scripts/export-brand-tokens.ts` write `brand/brand.tokens.json`, `brand/brand.tokens.css` and `brand/fonts.manifest.json`. `npm run brand:export` writes; `npm run brand:check` writes nothing and exits 1 when a file differs.
-- Guards: `test/brand-tokens.test.ts`, `test/brand-export.test.ts` and `test/brand-drift.test.ts` check values against their sources and `src/index.css`, committed files against fresh output, font weights against the `index.html` link, the nine contact strings, and 13 contrast pairs at 4.5:1 or more (lowest: Neural Violet on Midnight, 5.07).
-- Docs: `docs/BRAND_TOKENS.md` (files, schema, `--iai-` variables, version rule, consumer contract for the Ecosystem), a link from `docs/BRAND.md`, a README line, and OPQ-034 and OPQ-035 in `docs/OPEN_QUESTIONS.md`. `test/docs.test.ts` checks the new docs.
+- Guards: `test/brand-tokens.test.ts`, `test/brand-export.test.ts` and `test/brand-drift.test.ts` check values against their sources and `src/index.css`, committed files against fresh output, font weights against the `index.html` link, the nine contact strings, the version recomputed from the committed JSON by the documented rule, and 16 contrast pairs at 4.5:1 or more (lowest: Neural Violet on `surfaceRaised`, 5.01).
+- Docs: `docs/BRAND_TOKENS.md` (files, schema, `--iai-` variables, version rule, consumer contract for the Ecosystem), a link from `docs/BRAND.md`, a README line, and OPQ-034 to OPQ-036 in `docs/OPEN_QUESTIONS.md`. `test/docs.test.ts` checks the new docs.
 - Verified: `npx vitest run` passes, 44 files and 1358 tests (baseline before this phase's docs task: 1355). Also run before the commit: `npm run lint`, `npm run build`, `npm run brand:check`.
 - Not verified / known limits:
   - The Ecosystem repository is not touched. `brand:sync` and its hash test are Phase 2 and do not exist yet. Phase 2 waits on OPQ-034 and OPQ-035.
   - Fonts are not self-hosted; they load from Google Fonts.
   - `src/index.css` is checked against the tokens but is not generated from them.
   - The font-link parser in the drift test reads only the first Google Fonts link in `index.html`.
+  - Existing UI, measured and not changed: white text on the `.btn.primary` background (`#0284C7`) is 4.10:1, under 4.5:1, and the input border (`--line-strong`) is 1.78:1 to 1.94:1 against the surfaces, under 3:1. Listed for the Phase 2 audit in `docs/BRAND_TOKENS.md`.
+  - `fonts.manifest.json` is not covered by `version`. The generated `--iai-*` names overlap eight names in the Ecosystem's current `tokens.css`; Phase 2 must replace, not layer. See `docs/BRAND_TOKENS.md`.
   - The 4-character postcode is a substring match in the contact scan, so a future numeric token could trigger a loud false positive.
   - Cold-start flake: one unidentified test failure in the first of six full runs on the Phase 1 baseline, none in the following five. The test name was not captured. Seen and not fixed.
   - The contrast gate is a numeric check, not an accessibility audit.
