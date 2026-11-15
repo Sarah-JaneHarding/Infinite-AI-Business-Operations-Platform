@@ -95,7 +95,7 @@ Not verified / known limits:
 - Solo needs exactly one non-professional signer; any number of registered professionals may sit beside them (final review fix).
 - The single-signer report trusts stored fields that write-time validation enforces.
 - The `server.js` bundle was not regenerated.
-- The Dependabot `uuid` alert via exceljs remains an open owner decision.
+- The Dependabot `uuid` alert via exceljs (GHSA-w5hq-g745-h8pq) is handled by an npm override, see the 2026-11-15 entry below; it needs the owner's review.
 
 ## 2026-11-14: CEO Command Centre and v1.4 alignment
 - New first screen, `CEO Command Centre`: 16 department lights, one consolidated task list with status badges, a human-flag marker, and a SAST calendar of flagged tasks. Recomputed every 30 seconds from recorded data. See `docs/CEO_COMMAND_CENTRE.md`.
@@ -108,3 +108,11 @@ Not verified / known limits:
 - `checkTarget` now builds the request URL from the operator's own allow-list host string plus a validated path, so typed text never becomes the hostname. The path is checked as typed: no `.`/`..` segments (plain or percent-encoded), no encoded or raw slashes or backslashes inside a segment, no control characters, at most 512 characters. Query and fragment are dropped (webhook keys live in the path).
 - Applies to both artefact send and the CEO digest. Address checks, https-only, no redirects and the private-IP test are unchanged.
 - Still open: a hostname could change its address between the check and the connection (DNS rebinding). Closing it means connecting to the checked IP; not done here.
+
+## 2026-11-15: `uuid` override (Dependabot GHSA-w5hq-g745-h8pq)
+- Alert: `uuid` below 11.1.1 has a missing buffer bounds check in `v3`, `v5` and `v6` when a `buf` argument is passed. The only copy here is `uuid@8.3.2`, pulled in by `exceljs@4.4.0` (a runtime dependency).
+- Exposure: none that we can find. `exceljs` calls only `v4()` (to make an `x14Id`), and this repository's own code never imports `uuid`. The change removes the alert; it does not fix a reachable bug.
+- Change: `package.json` gains `"overrides": { "uuid": "^11.1.1" }`; `package-lock.json` and `bun.lock` were regenerated. `uuid@11.1.1` is the patched release on the 11.x line and still ships CommonJS, which `exceljs` needs (`uuid` 12 and later are ESM only). Licence: MIT. No new package is added; one transitive package moves from 8.3.2 to 11.1.1.
+- Not done on purpose: `npm audit fix` (it offers to downgrade `exceljs` to 3.4.0), and editing files inside `node_modules` (the patch would be lost on the next install).
+- Checked: `npm audit` reports 0 vulnerabilities (was 2 moderate); `npm ls uuid` shows `uuid@11.1.1 overridden`; `bun install --frozen-lockfile` and `npm ci` both pass on a clean copy; the full test suite (41 files, 1287 tests), `tsc --noEmit` and the build pass. The Excel export tests are part of that suite.
+- Open: `exceljs` itself still declares `uuid ^8.3.0`. If `exceljs` is upgraded or replaced later, remove the override and re-run `npm audit`.
