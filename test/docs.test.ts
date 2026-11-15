@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CONTRAST_PAIRS, contrastRatio, renderFontsManifest } from '../src/brandExport';
 import { BRAND_TOKENS } from '../src/brandTokens';
+import { ORDER_TEMPLATES } from '../src/departments/orderTemplates';
+import { MAX_QUEUED_PER_ORDER, TASK_EXPIRY_MS } from '../src/server/autonomy/tasks';
 
 const read = (p: string): string => readFileSync(p, 'utf8');
 
@@ -116,5 +118,53 @@ describe('OPEN_QUESTIONS table', () => {
       expect(lines[i - 1]?.startsWith('|'), `row not directly under a table line: ${l.slice(0, 12)}`).toBe(true);
       expect(cells(l), `cell count: ${l.slice(0, 12)}`).toBe(cells(header ?? ''));
     });
+  });
+});
+
+describe('task queue docs', () => {
+  const autonomy = read('docs/AUTONOMY.md');
+  const days = TASK_EXPIRY_MS / 86_400_000;
+
+  it('AUTONOMY.md explains the queue, task inputs, expiry and the weekly-only limit, from the code constants', () => {
+    for (const term of ['## The task queue', 'allowTaskInputs', `${days} days`, `${MAX_QUEUED_PER_ORDER} queued tasks`, 'Run now', 'autonomy_tasks', 'priority', 'weekly']) {
+      expect(autonomy).toContain(term);
+    }
+    expect(autonomy).toMatch(/no monthly trigger/i);
+  });
+  it('AUTONOMY.md names the three routes and the open dev mode behaviour', () => {
+    for (const route of ['GET /api/autonomy/tasks', 'POST /api/autonomy/tasks', 'POST /api/autonomy/tasks/:id/cancel']) expect(autonomy).toContain(route);
+    expect(autonomy).toMatch(/open dev mode[^\n]*403/i);
+    expect(autonomy).toContain('OPQ-037');
+    expect(autonomy).toContain('OPQ-038');
+  });
+  it('AUTONOMY.md no longer says fresh input is impossible for every order', () => {
+    expect(autonomy).not.toContain('Orders use fixed inputs. An agent that needs fresh human input each time cannot run on its own.');
+    expect(autonomy).toContain('Schedule and event tasks never carry their own inputs');
+  });
+  it('AGENT_CATALOGUE.md lists every template agent id and the coverage finding', () => {
+    const doc = read('docs/AGENT_CATALOGUE.md');
+    expect(ORDER_TEMPLATES).toHaveLength(16);
+    for (const t of ORDER_TEMPLATES) expect(doc, t.agentId).toContain(t.agentId);
+    expect(doc).toContain('all 100 registered agents');
+    expect(doc).toContain('task queue');
+  });
+  it('REVIEW_BOARD.md says queued drafts take the same path', () => {
+    expect(read('docs/REVIEW_BOARD.md')).toMatch(/queued task[^\n]*same path/i);
+  });
+  it('README.md mentions the task queue', () => {
+    expect(read('README.md')).toContain('task queue');
+  });
+  it('OPEN_QUESTIONS.md has OPQ-037 and OPQ-038, dated 2026-11-15', () => {
+    const doc = read('docs/OPEN_QUESTIONS.md');
+    expect(doc).toMatch(/^\| OPQ-037 \| 2026-11-15 \|/m);
+    expect(doc).toMatch(/^\| OPQ-038 \| 2026-11-15 \|/m);
+  });
+  it('BUILD_LOG.md records the exit gate and words the open dev mode refusal precisely', () => {
+    const log = read('docs/BUILD_LOG.md');
+    expect(log).toContain('Phase 3, documentation and exit gate');
+    expect(log).not.toContain('All sit behind the `/api` auth, use the existing `wrap` error handler, and add no role requirement (any signed-in person; OPQ-037). Open dev mode gets 403 from the service.');
+  });
+  it('the check can fail: a doc that omits a term does not contain it', () => {
+    expect(autonomy).not.toContain('SKIP_APPROVAL');
   });
 });

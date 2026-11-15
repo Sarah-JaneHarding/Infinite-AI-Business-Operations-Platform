@@ -437,6 +437,8 @@ Every department has one standing-order template (`src/departments/orderTemplate
 | Procurement & Vendors | OPS-PRO-03 | Supplier review | Weekly, Monday 06:00 UTC | 1 |
 | Research, Impact & Knowledge | OPS-RES-06 | Evidence claims register | Weekly, Monday 06:00 UTC | 1 |
 
+Coverage audit: all 100 registered agents across the 16 departments were already eligible for a standing order (approval required, no learner data), so no new agents were needed. Orders made from these templates can also have tasks queued under them; see "The task queue" in [AUTONOMY.md](AUTONOMY.md). The task queue is per department, and it adds no agents.
+
 Audit finding: all 16 picked agents exist, handle `internal` data, and need neither a second approver (`twoPerson`) nor a professional (`professionalReview`). The gated agents in the catalogue are OPS-SEC-01, OPS-LEG-01 to OPS-LEG-05 and OPS-PPL-04; no template may name one of them. `test/order-templates.test.ts` is the permanent coverage gate: it fails if a department has no template, if a template names a gated or unknown agent, if `parseProposal` refuses a template, or if a template's dry run fails the acceptance suite.
 
 ## Decisions for you
