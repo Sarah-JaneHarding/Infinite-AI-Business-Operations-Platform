@@ -102,3 +102,9 @@ export function contrastRatio(foreground: string, background: string): number {
   const b = luminance(background);
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
+
+/** True when a generated file is missing or differs from the expected text. Only CRLF is normalised, so Windows checkouts pass. */
+export function outOfDate(onDisk: string | undefined, expected: string): boolean {
+  if (onDisk === undefined) return true;
+  return onDisk.replace(/\r\n/g, '\n') !== expected;
+}

@@ -5,6 +5,7 @@ import {
   buildTokenFile,
   canonicalJson,
   contrastRatio,
+  outOfDate,
   renderCss,
   renderFontsManifest,
   tokenVersion,
@@ -114,5 +115,44 @@ describe('renderFontsManifest', () => {
     expect(m.fonts.find((f) => f.role === 'display')?.weights).toEqual([500, 600, 700]);
     expect(m.fonts.find((f) => f.role === 'body')?.weights).toEqual([400, 500, 600, 700]);
     expect(m.fonts.find((f) => f.role === 'mono')?.weights).toEqual([400, 700]);
+  });
+});
+
+describe('canonicalJson edge cases', () => {
+  it('keeps array order but sorts keys of objects inside arrays', () => {
+    expect(canonicalJson({ l: [{ b: 1, a: 2 }, 'z', 'a'] })).toBe('{\n  "l": [\n    {\n      "a": 2,\n      "b": 1\n    },\n    "z",\n    "a"\n  ]\n}\n');
+  });
+  it('round-trips unicode unescaped', () => {
+    const out = canonicalJson({ k: 'é·→' });
+    expect(out).toContain('"é·→"');
+    expect(out).not.toContain('\\u');
+  });
+  it('renders nested empty object and array compactly', () => {
+    expect(canonicalJson({ a: {}, b: [] })).toBe('{\n  "a": {},\n  "b": []\n}\n');
+  });
+});
+
+describe('outOfDate', () => {
+  const x = 'a: 1\nb: 2\n';
+  it('treats a missing file as out of date', () => {
+    expect(outOfDate(undefined, x)).toBe(true);
+  });
+  it('is false for identical text', () => {
+    expect(outOfDate(x, x)).toBe(false);
+  });
+  it('tolerates CRLF line endings', () => {
+    expect(outOfDate(x.replace(/\n/g, '\r\n'), x)).toBe(false);
+  });
+  it('still detects a value change when line endings also differ', () => {
+    expect(outOfDate('a: 1\r\nb: 3\r\n', x)).toBe(true);
+  });
+  it('detects a trailing space', () => {
+    expect(outOfDate('a: 1 \nb: 2\n', x)).toBe(true);
+  });
+  it('detects a missing final newline', () => {
+    expect(outOfDate('a: 1\nb: 2', x)).toBe(true);
+  });
+  it('detects a lone CR inside a line', () => {
+    expect(outOfDate('a: 1\rb: 2\n', x)).toBe(true);
   });
 });

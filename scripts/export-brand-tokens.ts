@@ -5,7 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildTokenFile, canonicalJson, renderCss, renderFontsManifest } from '../src/brandExport';
+import { buildTokenFile, canonicalJson, renderCss, outOfDate, renderFontsManifest } from '../src/brandExport';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'brand');
@@ -26,7 +26,7 @@ if (check) {
   const differing = Object.entries(outputs)
     .filter(([name, content]) => {
       const p = join(outDir, name);
-      return !existsSync(p) || readFileSync(p, 'utf8') !== content;
+      return outOfDate(existsSync(p) ? readFileSync(p, 'utf8') : undefined, content);
     })
     .map(([name]) => name);
   if (differing.length > 0) {
