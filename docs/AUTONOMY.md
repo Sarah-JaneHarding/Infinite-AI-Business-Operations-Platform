@@ -80,10 +80,10 @@ The queue is stored in the collection `autonomy_tasks`. It is server-only: clien
 Routes (in signed-in mode all three need a token; in open dev mode the two POST routes refuse with 403 and the list does not):
 
 - `GET /api/autonomy/tasks` lists tasks, most urgent first. Optional filters: `dept` and `status`. An unknown or repeated value is a 400, not an empty list.
-- `POST /api/autonomy/tasks` queues a task (`orderId`, `priority`, `due`, and `inputs` where allowed).
-- `POST /api/autonomy/tasks/:id/cancel` cancels a queued task (`reason`).
+- `POST /api/autonomy/tasks` queues a task (`orderId`, `priority`, `due`, and `inputs` where allowed). With `OPS_ROLES` set it needs the officer role (403 otherwise).
+- `POST /api/autonomy/tasks/:id/cancel` cancels a queued task (`reason`). Open to everyone signed in.
 
-Any signed-in person may queue or cancel a task. Who should be allowed to is an open question (OPQ-037), and so is whether a person may queue a task with its own inputs at all (OPQ-038). In open dev mode there is no signed-in person, so both POST routes refuse with 403. The GET list does not refuse there.
+With `OPS_ROLES` set, only an officer may queue a task (`POST /api/autonomy/tasks`); any signed-in person may cancel a task or read the list, because stopping is the safe direction (OPQ-037, resolved). With `OPS_ROLES` unset, any signed-in person may queue a task, the same interim behaviour as activating an order (OPQ-015, OPQ-019). Whether a person may queue a task with its own inputs at all is still an open question (OPQ-038). In open dev mode there is no signed-in person, so both POST routes refuse with 403. The GET list does not refuse there.
 
 ## What runs, and the limits that always apply
 

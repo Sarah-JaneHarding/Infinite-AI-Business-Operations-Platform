@@ -700,6 +700,25 @@ describe('server: autonomous agents', () => {
     expect((await call(open, '/api/autonomy/tasks', { body: { orderId: 'ord_x', priority: 1, due: new Date().toISOString() } })).status).toBe(403);
     expect((await call(open, '/api/autonomy/tasks/tsk_x/cancel', { body: { reason: 'No longer needed' } })).status).toBe(403);
   }, 30_000);
+
+  it('with roles set only an officer may queue a task, while anyone signed in may cancel one or read the list (OPQ-037)', async () => {
+    const rBase = await boot(3456, { OPS_USERS: `sarah:${T_SARAH},dan:${T_DAN}`, OPS_ROLES: 'dan:officer', OPS_AUTONOMY: 'on' });
+    const r = (token: string | undefined, path: string, body?: Record<string, unknown>) => call(rBase, `/api${path}`, { token, ...(body ? { body } : {}), method: body ? 'POST' : 'GET' });
+    const soon = new Date(Date.now() + 3600_000).toISOString();
+    const o = (await r(T_SARAH, '/autonomy/orders', order({ name: 'Officer queue order' }))).json as { id: string };
+    expect((await r(T_DAN, `/autonomy/orders/${o.id}/activate`, { note: 'checked the inputs' })).status).toBe(200);
+    const tasksNow = async () => ((await r(T_SARAH, '/autonomy/tasks')).json as { tasks: { id: string }[] }).tasks;
+    const refused = await r(T_SARAH, '/autonomy/tasks', { orderId: o.id, priority: 2, due: soon });
+    expect([refused.status, refused.json?.error]).toEqual([403, expect.stringMatching(/officer/)]);
+    expect(await tasksNow()).toHaveLength(0); // nothing was stored
+    expect((await r(undefined, '/autonomy/tasks', { orderId: o.id, priority: 2, due: soon })).status).toBe(401);
+    const made = await r(T_DAN, '/autonomy/tasks', { orderId: o.id, priority: 2, due: soon });
+    expect(made.status).toBe(200);
+    const id = (made.json as { id: string }).id;
+    expect((await tasksNow()).map((t) => t.id)).toEqual([id]); // a non-officer can read the list
+    const cancelled = await r(T_SARAH, `/autonomy/tasks/${id}/cancel`, { reason: 'No longer needed' }); // and stop a task
+    expect([cancelled.status, cancelled.json]).toEqual([200, expect.objectContaining({ id, status: 'CANCELLED' })]);
+  }, 30_000);
 });
 
 describe('server: autonomy configuration fails closed', () => {

@@ -41,6 +41,12 @@ describe('brand token docs', () => {
     expect(read('docs/BRAND_TOKENS.md')).toContain('OPQ-036');
     expect(read('docs/OPEN_QUESTIONS.md')).toMatch(/^\| OPQ-036 \|/m);
   });
+  it('OPQ-036 is resolved: a scheduled check in the Ecosystem, built in Phase 2', () => {
+    expect(read('docs/OPEN_QUESTIONS.md')).toMatch(/^\| OPQ-036 \|.*Resolved 2026-11-16.*scheduled check.*built in Phase 2/m);
+    const doc = read('docs/BRAND_TOKENS.md');
+    expect(doc).toMatch(/scheduled check[^\n]*built in Phase 2/);
+    expect(doc).not.toContain('manual check until the owner decides');
+  });
   it('BRAND.md links to BRAND_TOKENS.md', () => {
     expect(read('docs/BRAND.md')).toContain('docs/BRAND_TOKENS.md');
   });
@@ -138,6 +144,12 @@ describe('task queue docs', () => {
     expect(autonomy).toContain('OPQ-037');
     expect(autonomy).toContain('OPQ-038');
   });
+  it('"The task queue" says only an officer may queue a task once roles exist, and anyone signed in may cancel (OPQ-037)', () => {
+    const section = autonomy.slice(autonomy.indexOf('## The task queue'), autonomy.indexOf('## What runs, and the limits that always apply'));
+    expect(section).toContain('With `OPS_ROLES` set, only an officer may queue a task (`POST /api/autonomy/tasks`); any signed-in person may cancel a task or read the list');
+    expect(section).toContain('With `OPS_ROLES` unset, any signed-in person may queue a task');
+    expect(section).not.toContain('Any signed-in person may queue or cancel a task.');
+  });
   it('AUTONOMY.md no longer says fresh input is impossible for every order', () => {
     expect(autonomy).not.toContain('Orders use fixed inputs. An agent that needs fresh human input each time cannot run on its own.');
     expect(autonomy).toContain('Schedule and event tasks never carry their own inputs');
@@ -155,9 +167,9 @@ describe('task queue docs', () => {
   it('README.md mentions the task queue', () => {
     expect(read('README.md')).toContain('task queue');
   });
-  it('OPEN_QUESTIONS.md has OPQ-037 and OPQ-038, dated 2026-11-15', () => {
+  it('OPEN_QUESTIONS.md has OPQ-037 (resolved 2026-11-16) and OPQ-038, both raised 2026-11-15', () => {
     const doc = read('docs/OPEN_QUESTIONS.md');
-    expect(doc).toMatch(/^\| OPQ-037 \| 2026-11-15 \|/m);
+    expect(doc).toMatch(/^\| OPQ-037 \| 2026-11-15 \|.*Resolved 2026-11-16 \(owner approved the recommendation\):\*\* with `OPS_ROLES` set only an officer may queue a task/m);
     expect(doc).toMatch(/^\| OPQ-038 \| 2026-11-15 \|/m);
   });
   it('BUILD_LOG.md records the exit gate and words the open dev mode refusal precisely', () => {
