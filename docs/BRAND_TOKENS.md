@@ -80,7 +80,7 @@ This is the agreed design. `brand:sync` and the Ecosystem side do not exist yet;
 
 ## What is not included
 
-- The Ecosystem's eight-colour subject spectrum, spacing ladder and shadows are not defined by the Ops brand. See OPQ-034 in `docs/OPEN_QUESTIONS.md`.
+- The Ecosystem's spacing, radius and shadow scales are not defined by the Ops brand; Phase 2 keeps them. (An earlier version of this line also named an eight-colour subject spectrum. The 2026-11-16 Ecosystem audit found no such spectrum: the Ecosystem's ratified `docs/BRAND_KIT.md` retired its eight-hue draft, and `tokens.css` is stale. See OPQ-034 in `docs/OPEN_QUESTIONS.md`.)
 - Light colours. The brand defines on-light text and accent colours (`inkLight`, `cyanOnLight`, `violetOnLight`, `mutedLight`), used in the brand guidelines (`public/brand-kit/Infinite-AI-Brand-Guidelines.html`) and in Word documents. Phase 1 does not export them as tokens. No app light theme (page surfaces, borders) is defined in `BRAND`. See OPQ-035.
 - Button colours. The app's `.btn.primary` colours in `src/index.css` are not exported.
 - Fonts are listed, not self-hosted. They load from Google Fonts through the link in `index.html`. Self-hosting is a Phase 2 decision (spec 5.5). Do not assume the Google Fonts link is acceptable on learner-facing screens, because it sends requests to Google.
