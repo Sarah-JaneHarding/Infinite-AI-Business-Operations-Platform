@@ -134,3 +134,55 @@ Not verified / known limits:
   - Cold-start flake: one unidentified test failure in the first of six full runs on the Phase 1 baseline, none in the following five. The test name was not captured. Seen and not fixed.
   - The contrast gate is a numeric check, not an accessibility audit.
   - Phase 1 commits share the branch and pull request with the `uuid` override.
+
+## 2026-11-15: Phase 3, standing-order templates and the coverage gate
+- Added `src/departments/orderTemplates.ts`: 16 templates, one per department, each a plain-data agent and trigger (13 weekly Monday, one weekly Friday and, after the Phase 3 fix wave, two by request: devops and support, whose typed inputs go stale), 1 run a day, no prices or figures. Also exports `templatesFor`, `uncovered` (departments with no template) and `gatedAgents` (templates naming a `twoPerson`, `professionalReview` or unknown agent).
+- Audit: all 16 picked agents exist, are `internal` data class, and are not gated; none needed swapping. Gated agents in the repo are OPS-SEC-01, OPS-LEG-01 to OPS-LEG-05 and OPS-PPL-04.
+- Gate: `test/order-templates.test.ts` (8 tests) checks coverage, department membership, `parseProposal` admission on a neutral fixture, no gated agents, unique ids, names and no prices, and a passing dry run for every template; the failure paths call `uncovered` and `gatedAgents` with bad lists.
+- Docs: "Standing-order templates" in `docs/AGENT_CATALOGUE.md`, "Templates" in `docs/AUTONOMY.md`.
+- Limit: no monthly trigger exists, so the month-end close template is weekly.
+
+
+## 2026-11-15: Phase 3, the task type, its parsing and its ordering
+- Added `src/server/autonomy/tasks.ts`: the `Task` type and statuses, `TASK_EXPIRY_MS` (7 days), `MAX_QUEUED_PER_ORDER` (10), `parseEnqueue` and `compareTasks`. Pure; no service or storage yet.
+- `parseEnqueue` refuses with 400, naming the field and never repeating the value: priority not 1, 2 or 3; `due` missing, not an ISO timestamp, a date that rolls over (30 February, checked by round trip), more than 90 days ahead, or more than a day before now.
+- `compareTasks` orders by priority, then earlier due, then earlier arrival, then id so the order is total.
+- Moved the input loop out of `parseProposal` into an exported `parseInputs(agent, given)` in `orders.ts`, unchanged (same messages and status codes), for tasks to reuse. `tasks.ts` imports from `orders.ts`, not the reverse.
+- Added `allowTaskInputs` to orders: `Proposal` carries a boolean (default false, a non-boolean is refused with 400); on a stored `StandingOrder` it is optional, absent meaning false.
+- Tests: `test/autonomy-tasks.test.ts`; `allowTaskInputs` cases in `test/autonomy-schedule.test.ts`, where the `parseProposal` tests live.
+- Limit: `parseEnqueue` checks only that `inputs` is an object; the values are checked by `parseInputs` once the service knows the agent.
+
+## 2026-11-15: Phase 3, the task queue in the service
+- `AutonomyService` gained `enqueue`, `cancelTask`, `drain` and `tasks`; `status()` gains `queue: { queued, byDept }`. Tasks are append-only versioned rows in the server-only collection `autonomy_tasks` (latest version per id wins), added to `NEVER_MODEL_READABLE`; clients cannot write it (404).
+- Ledger: `autonomy.task.queued`, `autonomy.task.cancelled`, `autonomy.task.expired`. Runs still write `autonomy.started`, `submitted`, `quarantined` and `failed`, with `taskId` in `detail`. `autonomy.order.proposed` now records `allowTaskInputs`.
+- A person enqueues under an ACTIVE order only (403 no person, 404, 409 not active, 422 inputs not allowed or rejected, 429 at 10 queued). Task inputs are checked by `parseInputs` merged over the order's inputs; only the task's own keys are stored. `EnqueueRequest.inputs` is now `Record<string, unknown>` until parsed.
+- `tick()` and `onEvent()` queue a task (dedupe key `schedule:<slot>` or `event:<kind>`) and then call `drain()`. A schedule slot is queued once ever; an event is skipped while one with the same key is queued, and the existing cooldown still applies. `runNow` is unchanged: immediate, no task.
+- `drain()` runs inside the existing `exclusive` chain. It fails any task found RUNNING (a restart), cancels queued tasks of an order that is no longer ACTIVE, expires tasks 7 days after their due time, and runs ready tasks most urgent first. A task held back only by a budget stays QUEUED; failed and quarantined runs are final. The run code was split into `startRun` (checks) and `runLocked` (runs) so drain can call it without re-entering the chain.
+- Pausing or revoking an order cancels its queued tasks with the reason.
+- Tests: `test/autonomy-queue.test.ts` (21); `autonomy_tasks` added to `test/models-rules.test.ts` and `test/server.test.ts`.
+- Limits: the queue is not yet exposed over HTTP or the UI (later tasks). `service.ts` stays one file (about 360 lines).
+
+## 2026-11-15: Phase 3, the task queue over HTTP
+- `src/server/autonomyRoutes.ts`: `GET /api/autonomy/tasks?dept=&status=` returns `{ tasks }`; `POST /api/autonomy/tasks` (`orderId`, `priority`, `due`, `inputs?`) returns the `Task`; `POST /api/autonomy/tasks/:id/cancel` (`reason`) returns the `Task`. All sit behind the `/api` auth, use the existing `wrap` error handler, and add no role requirement (any signed-in person; OPQ-037; superseded by the 2026-11-16 entry below: `POST /api/autonomy/tasks` now needs the officer role when `OPS_ROLES` is set). In open dev mode the two POST routes get 403 from the service; the GET list does not refuse there (corrected in the Phase 3 documentation entry).
+- An unknown or repeated `dept` or `status` query value is a 400 naming the field, never an empty list. No new timer: the minute `tick()` still drains.
+- Tests (`test/server.test.ts`, "task queue"): enqueue, list by department, cancel; the response has exactly the keys of `Task` (`inputs` only when the order allows them and a person gave them); 401 without a token, 403 in open dev mode, an `auto:` token cannot enqueue; a draft produced from a queued task is `auto:<order>`-named, in review and unapproved, and the runner actor cannot countersign or ratify it (403).
+
+## 2026-11-15: Phase 3, templates and the task queue on the Autonomous Agents screen
+- `src/ui/autonomyView.ts`: `templateToForm` (a template's agent, name, trigger and runs, and an always-empty inputs map: templates pre-select, they never pre-fill) and `groupTasksByDept` (queue order within a department, empty departments omitted, an unknown department kept under its own id). Task is imported as a type only; the UI keeps its own copy of the comparator and a test holds it equal to the server's `compareTasks`. Tests: `test/autonomy-view.test.ts`.
+- `src/ui/Autonomy.tsx`: a "Use a template" picker (department, then template) that fills the proposal form and leaves the agent's inputs empty; an "Allow task inputs" checkbox (off by default, sent as `allowTaskInputs`); each order shows whether tasks may carry inputs; a "Task queue" card grouped by department with an enqueue form (ACTIVE orders only, priority 1 to 3, due date and time, optional inputs when the order allows them) and a Cancel button with a 5 to 300 character reason on each queued task. Server refusals show in the existing banner.
+- Checked in a browser at 390px and 1280px: propose from a template, activate as a second person, enqueue, cancel. No new colours, classes or dependencies.
+
+## 2026-11-15: Phase 3, documentation and exit gate
+- Docs: new "The task queue" section in `docs/AUTONOMY.md` (what a task is, what queues one, the order tasks run in, `allowTaskInputs`, the limit of 10 queued tasks per order, the due window, expiry after 7 days, final failures, cancellation on pause or revoke, restart recovery, the three routes, and that "Run now" does not use the queue); the weekly-only trigger limit is stated there and in "Templates". "What this does not do" now says fixed inputs hold for schedule and event tasks, with the one opt-in exception. `docs/AGENT_CATALOGUE.md` carries the coverage finding: all 100 registered agents across the 16 departments were already eligible, so no new agents were needed. One line in `docs/REVIEW_BOARD.md` (queued drafts take the same path) and one in `README.md`.
+- Open questions added: OPQ-037 (who may queue and cancel tasks; any signed-in person today; recommendation: officers queue, anyone cancels) and OPQ-038 (a task with its own inputs on an order that allows it; built as opt-in per order, off by default; recommendation: keep as built; owner decision).
+- Correction: the routes entry above said open dev mode gets 403. That is true of the two POST routes only. `GET /api/autonomy/tasks` has no signed-in-person check and does not refuse there. The entry now says so.
+- The new collection `autonomy_tasks` is server-only and never model-readable.
+- Tests: `test/docs.test.ts` gains 9 tests. The template agent ids, the queue limit and the expiry days are read from `ORDER_TEMPLATES`, `MAX_QUEUED_PER_ORDER` and `TASK_EXPIRY_MS`, so the docs cannot drift from the code.
+- Exit gate: `npm test` 48 files, 1443 tests, all passing; `npx tsc --noEmit` clean; `npm run build` passes (the rewritten `server.js` was reverted, not committed); `npm run brand:check` reports the tokens are up to date.
+- Phase 3 done when: every department has an eligible template (`test/order-templates.test.ts`) and the runner tests pass (`test/autonomy-queue.test.ts`).
+
+## 2026-11-16: officers queue tasks, anyone cancels (OPQ-037); OPQ-036 decision recorded
+- `server.ts`: `app.post('/api/autonomy/tasks', requireRole(roles, 'officer'))`, placed beside the activation guard and before the autonomy router is mounted. With `OPS_ROLES` set, a non-officer gets 403 and nothing is stored; cancelling a task and reading the list stay open to everyone signed in. With `OPS_ROLES` unset nothing changes: any signed-in person may queue, as with activation (OPQ-015, OPQ-019). `requireRole` is unchanged; no new role or environment variable.
+- UI: unchanged. The screen does not know the signed-in person's role, so a non-officer sees the server's 403 in the existing banner.
+- Tests: `test/server.test.ts` (roles set: 403 for a non-officer and nothing stored, an officer queues, a non-officer cancels and reads the list); `test/docs.test.ts` asserts the new wording in "The task queue" and the resolved OPQ rows.
+- Docs: `docs/AUTONOMY.md` (task queue section and routes), OPQ-037 and OPQ-036 marked resolved in `docs/OPEN_QUESTIONS.md`, `docs/BRAND_TOKENS.md` names the scheduled check as the chosen approach, built in Phase 2 (blocked on OPQ-034 and OPQ-035). No code for OPQ-036 yet.

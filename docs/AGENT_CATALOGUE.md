@@ -414,6 +414,33 @@ Roles, tasks and specialist agents for the 16 business operations departments. *
 - **Government:** Funding and partnership leads (tracker, seeded with 43 leads), Partner onboarding (checklist), Tender requirements (tracker).
 - Widgets marked “(new)” in the tables for other departments are proposed and built with their batch.
 
+## Standing-order templates
+
+Every department has one standing-order template (`src/departments/orderTemplates.ts`), a plain-data pairing of an agent and a trigger that a person can start an order from. Templates hold no prices and no figures, and the person still types the inputs. Those inputs are fixed for every scheduled run of the order, so the two templates whose inputs are facts that go stale (devops: a restore-test date and result; support: ticket counts) are by request, not scheduled; the other 14 are weekly.
+
+| Department | Agent | Task | Trigger | Runs/day |
+|---|---|---|---|---|
+| Executive & Strategy | OPS-EXEC-01 | Board update pack | Weekly, Monday 06:00 UTC | 1 |
+| Product & Engineering | OPS-PROD-04 | Release readiness checklist | Weekly, Friday 12:00 UTC | 1 |
+| Curriculum & Pedagogy QA | OPS-CURR-02 | Backward-design unit planner | Weekly, Monday 05:00 UTC | 1 |
+| AI, Brain & Evals | OPS-AI-01 | Agent roster reconciliation (no inputs needed) | Weekly, Monday 05:00 UTC | 1 |
+| Security & POPIA Compliance | OPS-SEC-05 | Access review | Weekly, Monday 05:00 UTC | 1 |
+| Legal & Contracts | OPS-LEG-06 | Obligation and renewal register | Weekly, Monday 05:00 UTC | 1 |
+| Finance | OPS-FIN-04 | Month-end close checklist (weekly: no monthly trigger exists) | Weekly, Monday 06:00 UTC | 1 |
+| Sales & CRM | OPS-SALES-04 | Pipeline review | Weekly, Monday 06:00 UTC | 1 |
+| Marketing & Brand | OPS-MKT-04 | Content calendar builder | Weekly, Monday 06:00 UTC | 1 |
+| Customer Success & Pilots | OPS-CS-02 | Quarterly business review | Weekly, Monday 06:00 UTC | 1 |
+| Support & Service Desk | OPS-SUP-06 | Ticket trend review | By request (typed period and counts go stale) | 1 |
+| Government & Partnerships | OPS-GOV-06 | Funding pipeline review | Weekly, Monday 06:00 UTC | 1 |
+| People & Culture | OPS-PPL-06 | Staff development plan | Weekly, Monday 06:00 UTC | 1 |
+| IT, DevOps & SRE | OPS-SRE-04 | Backup and restore test record | By request (typed date and result go stale) | 1 |
+| Procurement & Vendors | OPS-PRO-03 | Supplier review | Weekly, Monday 06:00 UTC | 1 |
+| Research, Impact & Knowledge | OPS-RES-06 | Evidence claims register | Weekly, Monday 06:00 UTC | 1 |
+
+Coverage audit: all 100 registered agents across the 16 departments were already eligible for a standing order (approval required, no learner data), so no new agents were needed. Orders made from these templates can also have tasks queued under them; see "The task queue" in [AUTONOMY.md](AUTONOMY.md). The task queue is per department, and it adds no agents.
+
+Audit finding: all 16 picked agents exist, handle `internal` data, and need neither a second approver (`twoPerson`) nor a professional (`professionalReview`). The gated agents in the catalogue are OPS-SEC-01, OPS-LEG-01 to OPS-LEG-05 and OPS-PPL-04; no template may name one of them. `test/order-templates.test.ts` is the permanent coverage gate: it fails if a department has no template, if a template names a gated or unknown agent, if `parseProposal` refuses a template, or if a template's dry run fails the acceptance suite.
+
 ## Decisions for you
 
 1. Do the drafted roles suit how you will run each department? Rename, merge or drop any.

@@ -2,6 +2,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CONTRAST_PAIRS, contrastRatio, renderFontsManifest } from '../src/brandExport';
 import { BRAND_TOKENS } from '../src/brandTokens';
+import { ORDER_TEMPLATES } from '../src/departments/orderTemplates';
+import { MAX_QUEUED_PER_ORDER, TASK_EXPIRY_MS } from '../src/server/autonomy/tasks';
+import { MAX_RECORDS } from '../src/server/validate';
 
 const read = (p: string): string => readFileSync(p, 'utf8');
 
@@ -37,6 +40,12 @@ describe('brand token docs', () => {
   it('BRAND_TOKENS.md points at OPQ-036, which exists in OPEN_QUESTIONS.md', () => {
     expect(read('docs/BRAND_TOKENS.md')).toContain('OPQ-036');
     expect(read('docs/OPEN_QUESTIONS.md')).toMatch(/^\| OPQ-036 \|/m);
+  });
+  it('OPQ-036 is resolved: a scheduled check in the Ecosystem, built in Phase 2', () => {
+    expect(read('docs/OPEN_QUESTIONS.md')).toMatch(/^\| OPQ-036 \|.*Resolved 2026-11-16.*scheduled check.*built in Phase 2/m);
+    const doc = read('docs/BRAND_TOKENS.md');
+    expect(doc).toMatch(/scheduled check[^\n]*built in Phase 2/);
+    expect(doc).not.toContain('manual check until the owner decides');
   });
   it('BRAND.md links to BRAND_TOKENS.md', () => {
     expect(read('docs/BRAND.md')).toContain('docs/BRAND_TOKENS.md');
@@ -116,5 +125,89 @@ describe('OPEN_QUESTIONS table', () => {
       expect(lines[i - 1]?.startsWith('|'), `row not directly under a table line: ${l.slice(0, 12)}`).toBe(true);
       expect(cells(l), `cell count: ${l.slice(0, 12)}`).toBe(cells(header ?? ''));
     });
+  });
+});
+
+describe('task queue docs', () => {
+  const autonomy = read('docs/AUTONOMY.md');
+  const days = TASK_EXPIRY_MS / 86_400_000;
+
+  it('AUTONOMY.md explains the queue, task inputs, expiry and the weekly-only limit, from the code constants', () => {
+    for (const term of ['## The task queue', 'allowTaskInputs', `${days} days`, `at most ${MAX_QUEUED_PER_ORDER} tasks per order`, 'Run now', 'autonomy_tasks', 'priority', 'weekly']) {
+      expect(autonomy).toContain(term);
+    }
+    expect(autonomy).toMatch(/no monthly trigger/i);
+  });
+  it('AUTONOMY.md names the three routes and the open dev mode behaviour', () => {
+    for (const route of ['GET /api/autonomy/tasks', 'POST /api/autonomy/tasks', 'POST /api/autonomy/tasks/:id/cancel']) expect(autonomy).toContain(route);
+    expect(autonomy).toMatch(/open dev mode[^\n]*403/i);
+    expect(autonomy).toContain('OPQ-037');
+    expect(autonomy).toContain('OPQ-038');
+  });
+  it('"The task queue" says only an officer may queue a task once roles exist, and anyone signed in may cancel (OPQ-037)', () => {
+    const section = autonomy.slice(autonomy.indexOf('## The task queue'), autonomy.indexOf('## What runs, and the limits that always apply'));
+    expect(section).toContain('With `OPS_ROLES` set, only an officer may queue a task (`POST /api/autonomy/tasks`); any signed-in person may cancel a task or read the list');
+    expect(section).toContain('With `OPS_ROLES` unset, any signed-in person may queue a task');
+    expect(section).not.toContain('Any signed-in person may queue or cancel a task.');
+  });
+  it('AUTONOMY.md no longer says fresh input is impossible for every order', () => {
+    expect(autonomy).not.toContain('Orders use fixed inputs. An agent that needs fresh human input each time cannot run on its own.');
+    expect(autonomy).toContain('Schedule and event tasks never carry their own inputs');
+  });
+  it('AGENT_CATALOGUE.md lists every template agent id and the coverage finding', () => {
+    const doc = read('docs/AGENT_CATALOGUE.md');
+    expect(ORDER_TEMPLATES).toHaveLength(16);
+    for (const t of ORDER_TEMPLATES) expect(doc, t.agentId).toContain(t.agentId);
+    expect(doc).toContain('all 100 registered agents');
+    expect(doc).toContain('task queue');
+  });
+  it('REVIEW_BOARD.md says queued drafts take the same path', () => {
+    expect(read('docs/REVIEW_BOARD.md')).toMatch(/queued task[^\n]*same path/i);
+  });
+  it('README.md mentions the task queue', () => {
+    expect(read('README.md')).toContain('task queue');
+  });
+  it('OPEN_QUESTIONS.md has OPQ-037 (resolved 2026-11-16) and OPQ-038, both raised 2026-11-15', () => {
+    const doc = read('docs/OPEN_QUESTIONS.md');
+    expect(doc).toMatch(/^\| OPQ-037 \| 2026-11-15 \|.*Resolved 2026-11-16 \(owner approved the recommendation\):\*\* with `OPS_ROLES` set only an officer may queue a task/m);
+    expect(doc).toMatch(/^\| OPQ-038 \| 2026-11-15 \|/m);
+  });
+  it('BUILD_LOG.md records the exit gate and words the open dev mode refusal precisely', () => {
+    const log = read('docs/BUILD_LOG.md');
+    expect(log).toContain('Phase 3, documentation and exit gate');
+    expect(log).not.toContain('All sit behind the `/api` auth, use the existing `wrap` error handler, and add no role requirement (any signed-in person; OPQ-037). Open dev mode gets 403 from the service.');
+  });
+  it('"The task queue" says when a task starts, and what autonomy off does to queued tasks', () => {
+    const section = autonomy.slice(autonomy.indexOf('## The task queue'), autonomy.indexOf('## What runs, and the limits that always apply'));
+    expect(section).toMatch(/does not start a run by itself/);
+    expect(section).toMatch(/once-a-minute check/);
+    expect(section).toMatch(/`OPS_AUTONOMY` off, tasks can still be queued but never run and never expire/);
+    expect(section).toContain(`less than ${days} days past its due time runs`);
+    expect(section).toMatch(/Marked FAILED by the next drain \(which only runs while autonomy is on\)/);
+  });
+  it('"The task queue" has a Limits paragraph that quotes the ledger constant from the code', () => {
+    const section = autonomy.slice(autonomy.indexOf('## The task queue'), autonomy.indexOf('## What runs, and the limits that always apply'));
+    const limits = section.slice(section.indexOf('**Limits.**'));
+    expect(limits.length).toBeGreaterThan(0);
+    expect(limits).toContain(`at most ${MAX_RECORDS.toLocaleString('en-US')} records`);
+    expect(limits).toContain(`${Math.round((MAX_RECORDS / (20 * 3)) / 30)} months`);
+    expect(limits).toMatch(/every task ever written/);
+    expect(limits).toMatch(/refreshes every 15 seconds/);
+    expect(limits).toMatch(/fail closed and autonomy stops/);
+    expect(limits).toMatch(/is not built/);
+  });
+  it('"Switching it on" says tasks queue but never run or expire while autonomy is off; "Templates" says typed inputs are fixed', () => {
+    const on = autonomy.slice(autonomy.indexOf('## Switching it on'), autonomy.indexOf('## Standing orders'));
+    expect(on).toMatch(/Tasks can still be queued, but none run, and they do not expire/);
+    const tpl = autonomy.slice(autonomy.indexOf('## Templates'), autonomy.indexOf('## The task queue'));
+    expect(tpl).toMatch(/fixed for every scheduled run/);
+    expect(tpl).toMatch(/two templates \(devops and support\) are by request/);
+  });
+  it('the by-request templates are exactly devops and support, and every template says its inputs are fixed', () => {
+    expect(ORDER_TEMPLATES.filter((t) => t.trigger.kind === 'request').map((t) => t.dept).sort()).toEqual(['devops', 'support']);
+    for (const t of ORDER_TEMPLATES) expect(t.why, t.id).toMatch(/fixed for every run/);
+  });
+  it('the check can fail: a doc that omits a term does not contain it', () => {
+    expect(autonomy).not.toContain('SKIP_APPROVAL');
   });
 });

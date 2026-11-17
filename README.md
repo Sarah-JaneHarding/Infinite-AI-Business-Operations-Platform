@@ -18,7 +18,7 @@ npm run brand:export     # regenerate brand/ tokens; npm run brand:check verifie
 
 ### Autonomous agents
 
-Agents can run on schedules and events under standing orders (proposed by one person, activated by another). They only produce drafts, tested automatically, that go to the board. Off by default: `docs/AUTONOMY.md`.
+Agents can run on schedules and events under standing orders (proposed by one person, activated by another). They only produce drafts, tested automatically, that go to the board. Triggers feed a per-department task queue that runs one task at a time, and a template is ready for every department. Off by default: `docs/AUTONOMY.md`.
 
 ### Review board
 

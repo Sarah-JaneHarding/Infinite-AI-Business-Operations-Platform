@@ -285,6 +285,9 @@ app.post('/api/ceo/digest/send', wrap(async (req, res) => {
 // Stopping things (revoke, pause) stays open to everyone signed in: it is always the safe direction.
 app.post('/api/models/providers/:id/attest', requireRole(roles, 'officer'));
 app.post('/api/autonomy/orders/:id/activate', requireRole(roles, 'officer'));
+// Queueing a task spends the order's and the platform's daily budget, so it needs the officer role once roles exist (OPQ-037).
+// Stopping stays open to everyone signed in: cancelling a task (and reading the list) is the safe direction.
+app.post('/api/autonomy/tasks', requireRole(roles, 'officer'));
 app.use('/api', modelRoutes(hub));
 
 // ---- autonomy: standing orders, runs by request, and the budgets. Agents only ever draft; people sign (docs/AUTONOMY.md). ----

@@ -1,4 +1,5 @@
 import { agentById } from '../../departments';
+import type { AgentContract } from '../../core/agent';
 import { detectPii } from '../../core/guardrails/pii';
 import { detectInjection } from '../../core/guardrails/injection';
 import { parseTrigger, TriggerInvalid, type Trigger } from './schedule';
@@ -16,6 +17,8 @@ export interface StandingOrder {
   trigger: Trigger;
   /** Fixed text typed by a person and checked once. Nothing from a trigger is ever put into a prompt. */
   inputs: Record<string, string>;
+  /** Whether a person may attach their own inputs to a task queued under this order. Absent on older orders, which means false. */
+  allowTaskInputs?: boolean;
   maxRunsPerDay: number;
   status: OrderStatus;
   proposedBy: string;
@@ -33,7 +36,30 @@ export class OrderRefused extends Error {
   }
 }
 
-export interface Proposal { name: string; agentId: string; trigger: Trigger; inputs: Record<string, string>; maxRunsPerDay: number }
+export interface Proposal { name: string; agentId: string; trigger: Trigger; inputs: Record<string, string>; allowTaskInputs: boolean; maxRunsPerDay: number }
+
+/** Checks a set of typed inputs against an agent's contract. Messages name the field and never repeat the offending text. */
+export function parseInputs(agent: AgentContract, raw: unknown): Record<string, string> {
+  const given = typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const unknown = Object.keys(given).filter((k) => !agent.inputs.some((i) => i.key === k));
+  if (unknown.length) throw new OrderRefused(400, `unknown input(s): ${unknown.join(', ')}`);
+  const inputs: Record<string, string> = {};
+  for (const f of agent.inputs) {
+    const v = given[f.key];
+    if (v === undefined || v === '') {
+      if (f.required) throw new OrderRefused(400, `the input "${f.label}" is required`);
+      continue;
+    }
+    if (typeof v !== 'string' || v.length > 1000) throw new OrderRefused(400, `the input "${f.label}" must be text of at most 1000 characters`);
+    if (f.kind === 'number' && !Number.isFinite(Number(v.replace(/[,\s]/g, '')))) throw new OrderRefused(400, `the input "${f.label}" must be a number`);
+    if (f.kind === 'select' && !(f.options ?? []).includes(v)) throw new OrderRefused(400, `the input "${f.label}" must be one of its options`);
+    if (detectPii(v).some((x) => x.kind === 'learner_identifier')) throw new OrderRefused(422, `the input "${f.label}" contains a learner identifier, which is never admitted`);
+    if (detectPii(v).length) throw new OrderRefused(422, `the input "${f.label}" contains personal data`);
+    if (detectInjection(v).length) throw new OrderRefused(422, `the input "${f.label}" looks like an attempt to override platform controls`);
+    inputs[f.key] = v;
+  }
+  return inputs;
+}
 
 /** Refuses anything an order must not contain. Messages say which field and why, never repeat the offending text. */
 export function parseProposal(body: unknown): Proposal {
@@ -53,25 +79,10 @@ export function parseProposal(body: unknown): Proposal {
     if (e instanceof TriggerInvalid) throw new OrderRefused(400, e.message);
     throw e;
   }
-  const given = typeof b.inputs === 'object' && b.inputs !== null && !Array.isArray(b.inputs) ? (b.inputs as Record<string, unknown>) : {};
-  const unknown = Object.keys(given).filter((k) => !agent.inputs.some((i) => i.key === k));
-  if (unknown.length) throw new OrderRefused(400, `unknown input(s): ${unknown.join(', ')}`);
-  const inputs: Record<string, string> = {};
-  for (const f of agent.inputs) {
-    const v = given[f.key];
-    if (v === undefined || v === '') {
-      if (f.required) throw new OrderRefused(400, `the input "${f.label}" is required`);
-      continue;
-    }
-    if (typeof v !== 'string' || v.length > 1000) throw new OrderRefused(400, `the input "${f.label}" must be text of at most 1000 characters`);
-    if (f.kind === 'number' && !Number.isFinite(Number(v.replace(/[,\s]/g, '')))) throw new OrderRefused(400, `the input "${f.label}" must be a number`);
-    if (f.kind === 'select' && !(f.options ?? []).includes(v)) throw new OrderRefused(400, `the input "${f.label}" must be one of its options`);
-    if (detectPii(v).some((x) => x.kind === 'learner_identifier')) throw new OrderRefused(422, `the input "${f.label}" contains a learner identifier, which is never admitted`);
-    if (detectPii(v).length) throw new OrderRefused(422, `the input "${f.label}" contains personal data`);
-    if (detectInjection(v).length) throw new OrderRefused(422, `the input "${f.label}" looks like an attempt to override platform controls`);
-    inputs[f.key] = v;
-  }
+  const inputs = parseInputs(agent, b.inputs);
   const runs = b.maxRunsPerDay === undefined ? 1 : b.maxRunsPerDay;
   if (typeof runs !== 'number' || !Number.isInteger(runs) || runs < 1 || runs > MAX_RUNS_PER_DAY_CEILING) throw new OrderRefused(400, `maxRunsPerDay must be a whole number from 1 to ${MAX_RUNS_PER_DAY_CEILING}`);
-  return { name, agentId: agent.id, trigger, inputs, maxRunsPerDay: runs };
+  const allowTaskInputs = b.allowTaskInputs === undefined ? false : b.allowTaskInputs;
+  if (typeof allowTaskInputs !== 'boolean') throw new OrderRefused(400, 'allowTaskInputs must be true or false');
+  return { name, agentId: agent.id, trigger, inputs, allowTaskInputs, maxRunsPerDay: runs };
 }

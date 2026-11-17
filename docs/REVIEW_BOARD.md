@@ -20,6 +20,7 @@ DRAFT ──submit──▶ IN_REVIEW ──approve──▶ APPROVED ──coun
 ## Rules (enforced on the server, not only in the browser)
 
 - No bot, agent or autonomous actor (`auto:…`) can approve, countersign, ratify or ingest.
+- A draft from a queued task (see [AUTONOMY.md](AUTONOMY.md)) takes the same path: acceptance suite, then this board, with the same signing rules.
 - The approver and the countersigner must be different people. The author may be one of the two, but nobody signs twice. This holds in dual mode and when `OPS_SIGNERS` is unset. In solo mode it is relaxed for agents that are not `twoPerson` or `professionalReview` (flagged `single-signer`); for those two kinds it holds in every mode. See "Solo signing" below.
 - A signature only counts for the exact content it was given on: the content hash must not change between approval and
   countersignature, and nothing can be edited after ratification.
