@@ -1,0 +1,1724 @@
+[
+  {
+    "blocks": "Provisioning step 7b onward",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-048a",
+    "options": ["Dedicated provisioner client", "Widen the worker's service account"],
+    "order": 1,
+    "question": "The worker's service account has no realm-management roles. Which client should create and manage Keycloak users?",
+    "raised": "2026-11-12",
+    "reason": "A client that can create users can also map roles to them, so this is a security choice. Widening the worker would give the model-facing process the power to mint identities.",
+    "recommendation": "Create the dedicated infinite-ai-provisioner client. Keep its secret (KEYCLOAK_PROVISIONER_CLIENT_SECRET) in AWS Secrets Manager, rotate it, and alert on any realm-role mapping to a platform role. Even this client can map any realm role, so the secret is as sensitive as an administrator credential.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-048",
+    "stage": "Provisioning 7",
+    "status": "open",
+    "suggestions": [
+      "A new client, infinite-ai-provisioner, holding only manage-users, query-users and view-users.",
+      "Widen the existing worker service account (fewer moving parts, much larger blast radius)."
+    ],
+    "title": "Which Keycloak client holds the power to create users?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Provisioning step 7b onward",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-048b",
+    "options": [
+      "Commit first, then call, with idp_state",
+      "Call Keycloak first, then commit"
+    ],
+    "order": 2,
+    "question": "The Keycloak Admin API call cannot share the database transaction. Which order and failure rule do we use?",
+    "raised": "2026-11-12",
+    "reason": "Calling first and committing second can leave a Keycloak user the database has never heard of. Committing first can leave a database row with no identity, which must then be visible and retryable.",
+    "recommendation": "Commit first, then call, with idp_state on the row. A failure then shows up in the admin UI instead of leaving an invisible orphan. This needs a migration with a tested rollback (rule 10).",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-048",
+    "stage": "Provisioning 7",
+    "status": "open",
+    "suggestions": [
+      "Commit first, then call Keycloak, and record idp_state (PENDING, SYNCED, FAILED) on the row so an administrator can retry.",
+      "Call Keycloak first, then commit."
+    ],
+    "title": "What happens when the Keycloak call fails after the database commit?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Provisioning step 7",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-048c",
+    "options": [
+      "Yes, disable and revoke sessions",
+      "No, rely on the ACTIVE-account gate"
+    ],
+    "order": 3,
+    "question": "When an account is suspended or offboarded, do we also disable it in Keycloak and revoke its sessions?",
+    "raised": "2026-11-12",
+    "reason": "The ACTIVE-account gate stops new requests, but only revoking sessions ends one already in flight.",
+    "recommendation": "Yes, disable and revoke. It is the only control that ends a live session, and a suspended person may still hold gate-deciding authority.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-048",
+    "stage": "Provisioning 7",
+    "status": "open",
+    "suggestions": [
+      "Disable the Keycloak user and revoke sessions on suspend and offboard.",
+      "Rely on the application's ACTIVE-account gate alone."
+    ],
+    "title": "Should suspending or offboarding also disable the user in Keycloak?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Provisioning step 7 (email)",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-048d",
+    "options": [
+      "Operator sends the first link by hand",
+      "Configure SMTP on Keycloak now"
+    ],
+    "order": 4,
+    "question": "Keycloak's execute-actions-email needs SMTP. Do we configure SMTP on Keycloak now, or have an operator send the first link by hand for the pilot?",
+    "raised": "2026-11-12",
+    "reason": "OQ-021 names a mailbox for dunning, not for Keycloak, and nobody has verified that Keycloak can use it. Three pilot schools do not justify a mail integration yet.",
+    "recommendation": "Send links by hand for the pilot. Treat SMTP as a separate, later decision once the mail provider for transactional email is chosen.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-048",
+    "stage": "Provisioning 7",
+    "status": "open",
+    "suggestions": [
+      "An operator sends the first sign-in link by hand for the pilot (already allowed in section 5 of the provisioning design).",
+      "Configure SMTP on Keycloak now and test delivery."
+    ],
+    "title": "How do pilot users receive their first sign-in link?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Serving the 80 widgets to signed-in staff",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-044",
+    "options": [
+      "Sandboxed iframe with a hash-based CSP",
+      "Stamp the nonce into the page on serve"
+    ],
+    "order": 5,
+    "question": "You decided to serve widgets from the app. The app's CSP allows scripts only with the per-request nonce plus strict-dynamic, which blocks the widgets' inline scripts. How do we serve them?",
+    "raised": "2026-11-10",
+    "reason": "Changing the CSP is a security-control change, so it needs your sign-off before anyone builds it. Today the route is also default-denied.",
+    "recommendation": "Sandboxed iframe, sandbox attribute without allow-same-origin, hash-based CSP, no network. It matches the OQ-037 decision that every public widget runs in a sandbox with no network, and leaves the app's own CSP untouched.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-044",
+    "stage": "Widgets",
+    "status": "partial",
+    "suggestions": [
+      "Serve each widget in a sandboxed iframe with its own hash-based CSP.",
+      "Stamp the per-request nonce into the widget page on serve (loosens trust in widget code)."
+    ],
+    "title": "Which CSP approach serves widgets from the ecosystem app?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "MOD-01 chaining and grounding in production (dev-only chaining works)",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-030",
+    "options": [
+      "A: per-stage ratification with an artefact store",
+      "B: one end gate, provisional chaining",
+      "C: stay dev-only"
+    ],
+    "order": 6,
+    "question": "CE-02 to CE-09 require ratified upstream artefacts, but the pipeline has one human gate at the end and no store for ratified artefacts. Which production design do we use?",
+    "raised": "2026-10-23",
+    "reason": "Option C (dev-only chaining) is built. A production design needs either more gates and an artefact store, or a change to what the prompts tell the model. Treating a draft as ratified would be a forged ratification (rule 6).",
+    "recommendation": "A, staged: GradeFramework and TermPlan first, since they gate CE-02 to CE-09. It is faithful to the prompts and to rule 6. B changes what the model is told and puts provisional content in front of teachers.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-030",
+    "stage": "111",
+    "status": "partial",
+    "suggestions": [
+      "A: each artefact gets its own human gate plus an artefact store (new constitution kinds and a migration).",
+      "B: keep one end gate, chain drafts labelled provisional, ship prompt v1.1.0.",
+      "C: stay dev-only (current state)."
+    ],
+    "title": "How should MOD-01 chain ratified artefacts in production?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Nothing; built with assumptions",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-047",
+    "options": [
+      "Keep as built, no second administrator",
+      "Require a second administrator"
+    ],
+    "order": 7,
+    "question": "You decided suspended accounts can be reinstated. I built it with assumptions you have not confirmed: same rule as suspending, roles untouched, no second administrator, audited as user_account.reinstated, only SUSPENDED goes back. Do you accept assumption 3, no second administrator?",
+    "raised": "2026-11-12",
+    "reason": "Reinstating restores the ability to decide approval gates, which is the argument for a second administrator. Suspending needed none.",
+    "recommendation": "Keep as built for the pilot. A small primary may have a single administrator, and a second-admin rule would make reinstatement impossible there. Revisit if a school group tenant is onboarded.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-047",
+    "stage": "Stage 135",
+    "status": "partial",
+    "suggestions": [
+      "Keep as built: one other administrator can reinstate.",
+      "Require a second administrator to confirm, like smt and admin grants."
+    ],
+    "title": "Is it acceptable that reinstating a suspended account needs no second administrator?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Hub fix; Azure support claim",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-043",
+    "options": ["Hub emits a working .env, fix the names", "Hub is documentation only"],
+    "order": 8,
+    "question": "The Provider Hub uses variable names that env.ts does not define (singular *_API_KEY, GEMINI_API_KEY, QWEN_BASE_URL, *_MODEL_ID). Is it meant to produce a .env? Separately, has Azure been tested against a real resource?",
+    "raised": "2026-11-06",
+    "reason": "The Setup Guide is fixed, the 300 KB Hub was left alone. No code builds Azure's /openai/deployments/<name>/ path, so Azure may not work end to end. The price card is already decided (provisional).",
+    "recommendation": "Make the Hub emit a working .env and guard it with a drift test against env.ts. Treat Azure as unsupported in all school-facing material until someone has run it against a real resource.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-043",
+    "stage": "Providers",
+    "status": "partial",
+    "suggestions": [
+      "Hub should emit a working .env: regenerate its names from env.ts and add a drift test.",
+      "Hub is documentation only: label it so and leave the names."
+    ],
+    "title": "Is the Provider Hub meant to produce a working .env file?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Wiring any of the 80 widgets",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-045",
+    "options": [],
+    "order": 9,
+    "question": "The registry refuses a release without a named, signed-in ratifier whose ratification matches the content hash. Who ratifies each module's widgets, and can the 7 deterministic classroom tools be ratified as one batch?",
+    "raised": "2026-11-10",
+    "reason": "No release of any widget exists, so nothing can be wired. Ratification is a human act, done in the Studio panel.",
+    "recommendation": "Use the role mapping above and allow the batch for the 7 deterministic tools, each tied to its SHA-256 from the archive index. Ratify everything else per module.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-045",
+    "stage": "Widgets",
+    "status": "open",
+    "suggestions": [
+      "HoD for CE, SBST lead for SA, PD coordinator for PD, teacher lead for TB.",
+      "Ratify the 7 deterministic tools (no agent, no learner data) as one batch."
+    ],
+    "title": "Who ratifies the first release of each widget?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Public widget releases",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-039",
+    "options": [],
+    "order": 10,
+    "question": "You are the sole appointed reviewer to start, with two reviewers once a second person is appointed. How is the appointed-reviewer list held and changed, and do you confirm the review checklist?",
+    "raised": "2026-10-25",
+    "reason": "The registry accepts a platform review only from an account on the list, and schools must not be able to supply that list.",
+    "recommendation": "Confirm the checklist as suggested, and hold the list as platform configuration with an audit event on every change. Add the second reviewer before the first public release.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-039",
+    "stage": "Widgets",
+    "status": "partial",
+    "suggestions": [
+      "List held as platform configuration, changed only by a platform administrator, every change audited.",
+      "Checklist: school information removed, POPIA, contract, no network or dynamic code."
+    ],
+    "title": "Who is appointed to review widgets before public release, and how is the list kept?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Publishing the marketing site; Unit Blueprint links",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-042",
+    "options": [],
+    "order": 11,
+    "question": "The marketing site is archived, not served. Who approves its claims, where is it hosted, what are the legal entity and Information Officer details for its privacy notice, and should the Unit Blueprint carry its reference links?",
+    "raised": "2026-11-05",
+    "reason": "A POPIA notice cannot name an entity or Information Officer that has not been registered, and the roadmap dates and retention period are your statements to make.",
+    "recommendation": "Keep the site archived until the entity name and Information Officer registration exist. Carry only the DBE reference links in the Unit Blueprint.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-042",
+    "stage": "Marketing",
+    "status": "open",
+    "suggestions": [
+      "Keep archived until the entity and Information Officer are registered.",
+      "Unit Blueprint carries only the three DBE links, not Scribd, YouTube or the blog."
+    ],
+    "title": "Where is the marketing site hosted, and who approves its claims?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Trusted CE output for a school (not the build)",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-002",
+    "options": [
+      "Ratify by phase, Foundation first",
+      "Whole batch with sampling",
+      "Defer to onboarding"
+    ],
+    "order": 12,
+    "question": "21 CAPS documents and 136 ATP sources are ingested, but ratifiedBy is null on every SourceRef. Who countersigns, and in what batches? Five IP-MULTI stubs also wait for DBE topic data.",
+    "raised": "2026-07-28",
+    "reason": "Ratification is a human act and curriculum policy may not be invented. The five stubs wait on DBE publishing data nobody here controls.",
+    "recommendation": "Name one ratifier per phase and ratify Foundation first, since it is where Benjamin Pine starts. The five stubs need no decision, only DBE data.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-002",
+    "stage": "08",
+    "status": "partial",
+    "suggestions": [
+      "The HoD countersigns by phase: Foundation, Intermediate, Senior.",
+      "The principal countersigns everything with a sampling check per phase.",
+      "Ratify only what pilot school #1 uses, at onboarding."
+    ],
+    "title": "Who countersigns the ingested CAPS and ATP sources?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Unit blueprint, assessment task, rubric and parent report agents for this school",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-003",
+    "options": ["Request now, with a date", "Wait for onboarding"],
+    "order": 13,
+    "question": "The school still needs to supply its unit blueprint, assessment task, rubric/marking memo and parent progress report templates. The lesson plan template is ingested but not countersigned (ratifiedAt null). By when?",
+    "raised": "2026-07-28",
+    "reason": "Only the school can supply its own templates, and the principal or designate must countersign them. You deferred this to onboarding on 2026-11-05 with an instruction to ask with a date.",
+    "recommendation": "Send the request now with a date, and ask for the lesson-plan countersignature and the content or safeguarding policy (OQ-015) in the same conversation.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-003",
+    "stage": "08",
+    "status": "partial",
+    "suggestions": [
+      "Send the principal a written request now, with a date.",
+      "Wait until onboarding."
+    ],
+    "title": "When will Benjamin Pine supply the four missing templates?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Calibrated age-appropriateness checking",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-015",
+    "options": [],
+    "order": 14,
+    "question": "You decided to use the school's own policy, by grade band, as the checker. It has not been supplied. Who supplies it, and what if the school has none?",
+    "raised": "2026-08-05",
+    "reason": "The gateway judge works from 206 paraphrased DBE clauses and is uncalibrated (OQ-016). A school policy would be the authoritative checker, and inventing one is forbidden.",
+    "recommendation": "Ask in the same conversation as OQ-003. Meanwhile keep the Brain-clause judge as a first line of defence and describe its refusals as uncalibrated.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-015",
+    "stage": "06",
+    "status": "open",
+    "suggestions": [
+      "Request the policy from the principal.",
+      "If none exists, the SBST drafts a short policy that a human adopts."
+    ],
+    "title": "What is Benjamin Pine's content or safeguarding policy by grade band?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Trusting llm_judge results for promotion decisions",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-016",
+    "options": [],
+    "order": 15,
+    "question": "A spreadsheet of 50 real outputs per module is to be labelled over the December holiday by two Primary staff. Who are they, which dates, and what agreement threshold will you accept?",
+    "raised": "2026-08-06",
+    "reason": "No human-labelled calibration set exists. The threshold must be fixed before labelling, or it will be fitted to the result. The spreadsheet itself is not made yet.",
+    "recommendation": "Name the two labellers and dates now, and agree the agreement threshold before labelling begins. Claude can then build the spreadsheet from de-identified outputs only.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-016",
+    "stage": "07",
+    "status": "partial",
+    "suggestions": [
+      "Two named staff label independently, then reconcile.",
+      "Use the 31 constructed age-appropriateness cases as a warm-up only."
+    ],
+    "title": "Who labels 50 outputs per module, and what agreement counts as good enough?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "k6 load and spike tests before GA",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-017",
+    "options": [],
+    "order": 16,
+    "question": "You decided to apply Terraform to a small staging environment in November and December, then run k6. Do you approve the apply, and what spend limit applies?",
+    "raised": "2026-08-12",
+    "reason": "Applying infrastructure creates cost and cannot be undone by Claude. Resources must also sit in the project's single AWS Region.",
+    "recommendation": "Provision small staging with a spend limit, run the k6 peak and spike tests, then tear it down and keep the results in the stage log.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-017",
+    "stage": "18",
+    "status": "partial",
+    "suggestions": [
+      "Small staging, a spend limit set in AWS Settings, torn down after the run.",
+      "Keep staging running through the pilot."
+    ],
+    "title": "Do you approve applying Terraform to a staging environment, and with what budget cap?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "SMT Tiers page; SMT PD page (with OQ-006)",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-031",
+    "options": [],
+    "order": 17,
+    "question": "HoD Coverage and SBST Meetings (minutes only) can start. SMT Tiers needs the tier rule and a counting rule. Which source document defines them?",
+    "raised": "2026-10-01",
+    "reason": "These pages will not be built over invented data. SIAS process steps may not be guessed.",
+    "recommendation": "Build HoD Coverage and SBST Meetings now. Hold SMT Tiers until the tier and counting rules arrive in a supplied document.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-031",
+    "stage": "SMT",
+    "status": "partial",
+    "suggestions": [
+      "Supply the SIAS document or the school's own SBST policy that defines the tiers.",
+      "Build the two unblocked pages first."
+    ],
+    "title": "What are the SIAS/MTSS tier rule and the school-level counting rule?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "MOD-05 automatic point logging; SMT PD page",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-006",
+    "options": ["Manual entry only until supplied", "Hold PD point logging entirely"],
+    "order": 18,
+    "question": "The supplied SACE schedule gives 150 points per cycle across three activity types only. Where do the Type 1 activity-level tables and provider-accreditation criteria come from?",
+    "raised": "2026-07-29",
+    "reason": "They are not available yet and the system must not compute CPTD points it cannot source.",
+    "recommendation": "Ship MOD-05 point logging as manual entry only, with no computation, until the tables are supplied.",
+    "recommendedIndex": 0,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-006",
+    "stage": "12",
+    "status": "partial",
+    "suggestions": [
+      "Ask SACE or the provider-accreditation office for the schedules.",
+      "Let teachers type points from their provider certificate meanwhile."
+    ],
+    "title": "Where do the SACE activity-level point tables come from?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Ratifying Sepedi, Sesotho, Setswana (and the next seven) content",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-013",
+    "options": [],
+    "order": 19,
+    "question": "Sepedi, Sesotho and Setswana Home Language R-3 are ingested as English paraphrase and each needs a first-language reviewer. Seven more Foundation Phase languages are supplied and next. Who reviews each?",
+    "raised": "2026-08-05",
+    "reason": "Nobody can ratify a paraphrase they cannot read in the source language. Intermediate and Senior Phase languages and Grades 10-12 are still missing.",
+    "recommendation": "Name one reviewer per language before ingesting the next seven, so review queues do not pile up. Show language coverage in the UI, as you decided.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-013",
+    "stage": "08",
+    "status": "partial",
+    "suggestions": [
+      "Ask Benjamin Pine staff who speak each language.",
+      "Ask DBE language subject advisors."
+    ],
+    "title": "Who reviews the African-language CAPS content, language by language?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "A precise post-pilot pricing decision",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-018",
+    "options": [],
+    "order": 20,
+    "question": "After the first pilot month, does cost follow learners or educators?",
+    "raised": "2026-08-12",
+    "reason": "COST_MODEL.md uses estimated token counts. Decision recorded: log tokens per agent and per tenant from day one, then check after month one. Waiting on pilot data.",
+    "recommendation": "No action now. When month one closes, ask Claude to recalibrate the per-artefact estimates and test the R4.00 per-learner and R75 per-educator terms against real usage.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-018",
+    "stage": "18",
+    "status": "parked",
+    "suggestions": [
+      "Compare tenant_metering_event totals against learner and educator counts after month one."
+    ],
+    "title": "What drives cost: learners or educators?",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Stage 18 step 7",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-020",
+    "options": [],
+    "order": 21,
+    "question": "A human must record a 30 to 45 minute screen-and-audio walkthrough in December, using HOW_TO_ADD_AN_AGENT.md.",
+    "raised": "2026-08-12",
+    "reason": "Claude cannot record. The decision is made; this waits on a person and a date.",
+    "recommendation": "Put a date in your December calendar. Claude can prepare a talk-through outline from the manual on request.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-020",
+    "stage": "18",
+    "status": "parked",
+    "suggestions": [
+      "Cover the nine layers, the four invariants, the test strategy and the feature-flag procedure."
+    ],
+    "title": "Architecture walkthrough recording",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Nothing",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-034",
+    "options": [],
+    "order": 22,
+    "question": "Does the product want a district rollup at all?",
+    "raised": "2026-10-08",
+    "reason": "Parked on 2026-11-05: no district page until a district office exists as a role. If revived, schools publish their own aggregates upward and the minimum group size is a policy number someone must supply.",
+    "recommendation": "Leave parked. Do not build it speculatively.",
+    "recommendedIndex": null,
+    "source": "docs/OPEN_QUESTIONS.md · OQ-034",
+    "stage": "Analytics",
+    "status": "parked",
+    "suggestions": ["Revisit when a district office becomes a customer or a role."],
+    "title": "District rollup",
+    "repo": "ecosystem"
+  },
+  {
+    "blocks": "Budget alerts reaching the founder",
+    "history": [
+      {
+        "at": "2026-11-24T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-050",
+    "options": [
+      "Supply contact details and run the publish test before the first production apply",
+      "Rely on the ops mailbox until the test passes"
+    ],
+    "order": 23,
+    "question": "Monthly AWS budgets are provisional and in rand (staging R10,000, production R13,000 at 18.5 rand per US dollar). The owner decided the founder is alerted by email and text message. The founder's email address and mobile number are not in the repository or Terraform state, so only the ops mailbox is alerted until they are subscribed to the SNS topic by hand.",
+    "raised": "2026-11-15",
+    "reason": "Two things are unverified until the step-6 publish test runs: that SNS can text South African numbers from af-south-1 (the account starts in the SNS SMS sandbox, so the number must be verified and an origination identity may be needed), and that AWS Budgets can publish to a topic in an opt-in Region. If either fails the founder gets no alert.",
+    "recommendation": "Supply the contact details to the step-6 operator and run the publish test before the first production apply. Until it passes, treat the ops mailbox as the only working alert.",
+    "recommendedIndex": 0,
+    "repo": "ecosystem",
+    "source": "docs/OPEN_QUESTIONS.md · OQ-050",
+    "stage": "AWS",
+    "status": "partial",
+    "suggestions": [
+      "Give the founder's email and mobile number to whoever runs docs/RUNBOOKS/aws-setup.md step 6, not into the repository.",
+      "Run the step-6 publish test before the first production apply.",
+      "Keep the figures provisional until the k6 run in OQ-017, then reset both limits from the real bill.",
+      "Update zar_per_usd if the rand moves materially."
+    ],
+    "title": "What are the founder's alert contact details, and can SNS text South African numbers?"
+  },
+  {
+    "blocks": "A second person getting access to the Terraform state bucket",
+    "history": [
+      {
+        "at": "2026-11-24T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-051",
+    "options": [
+      "Accept for the pilot; move before a second person gets state access",
+      "Move to empty shells set out-of-band now",
+      "Use RDS-managed rotation where supported"
+    ],
+    "order": 24,
+    "question": "The cache, langfuse, clickhouse and database modules create Secrets Manager secret versions from generated values, so those values sit in the Terraform state file. The new app-secrets module avoids this by creating empty shells.",
+    "raised": "2026-11-15",
+    "reason": "The state bucket is private and encrypted, which is tolerable for a pilot with one operator, but access to the bucket is access to those secrets.",
+    "recommendation": "Accept it for the pilot while there is one operator, and decide on empty shells or RDS-managed rotation before anyone else gets state access.",
+    "recommendedIndex": 0,
+    "repo": "ecosystem",
+    "source": "docs/OPEN_QUESTIONS.md · OQ-051",
+    "stage": "AWS",
+    "status": "open",
+    "suggestions": [
+      "Move these to empty shells that are set out-of-band, as modules/app-secrets already does.",
+      "Use RDS-managed rotation where the service supports it.",
+      "Accept the current arrangement for the pilot with one operator."
+    ],
+    "title": "Should generated passwords move out of Terraform state before a second person gets state access?"
+  },
+  {
+    "blocks": "Second school onboarding; first production apply of the budget",
+    "history": [
+      {
+        "at": "2026-11-24T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-052",
+    "options": [
+      "Stay on the AWS-managed key for the pilot",
+      "Move to a customer-managed key now"
+    ],
+    "order": 25,
+    "question": "(a) Secrets Manager uses the AWS-managed key. A customer-managed key adds key-policy control and an audit trail of who decrypted what, at about $1 a month, but needs a key-policy change on every execution role. (b) Creating the budget as a non-root role may need the root user to activate \"IAM user and role access to Billing information\".",
+    "raised": "2026-11-15",
+    "reason": "Part (b) could not be checked without AWS credentials. Part (a) is a cost and control trade-off for the owner.",
+    "recommendation": "Stay on the AWS-managed key for the pilot and revisit with the second school. Check the Billing access setting before the first production apply.",
+    "recommendedIndex": 0,
+    "repo": "ecosystem",
+    "source": "docs/OPEN_QUESTIONS.md · OQ-052",
+    "stage": "AWS",
+    "status": "open",
+    "suggestions": [
+      "Stay on the AWS-managed key for the pilot and revisit with the second school.",
+      "Move to a customer-managed key now.",
+      "If apply is refused for the budget, have the root user activate IAM access to Billing information (see docs/RUNBOOKS/aws-setup.md step 6)."
+    ],
+    "title": "Do you need a customer-managed KMS key, and is Billing access on for the apply role?"
+  },
+  {
+    "blocks": "Rotating DB_ENCRYPTION_KEY, including after a suspected exposure; production go-live",
+    "history": [
+      {
+        "at": "2026-11-24T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      }
+    ],
+    "id": "OQ-053",
+    "options": [
+      "Design and test the procedure before production go-live",
+      "Defer until a rotation is needed"
+    ],
+    "order": 26,
+    "question": "docs/RUNBOOKS/secrets-rotation.md tells the operator never to rotate DB_ENCRYPTION_KEY, because replacing it makes every encrypted identifier undecryptable and nothing describes re-encrypting them.",
+    "raised": "2026-11-15",
+    "reason": "The key can never be rotated, even after a suspected exposure, until a written and tested re-encryption procedure exists. It would use DB_ENCRYPTION_KEY_VERSION, run per tenant and be resumable if interrupted.",
+    "recommendation": "Design and test it before production go-live, so a suspected exposure never leaves you unable to rotate.",
+    "recommendedIndex": 0,
+    "repo": "ecosystem",
+    "source": "docs/OPEN_QUESTIONS.md · OQ-053",
+    "stage": "Security",
+    "status": "open",
+    "suggestions": [
+      "Design and test the re-encryption procedure before production go-live.",
+      "Defer until a rotation is actually needed."
+    ],
+    "title": "How will learner data be re-encrypted if DB_ENCRYPTION_KEY ever has to change?"
+  },
+  {
+    "blocks": "Live connector, webhook and narrative",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-001",
+    "options": [],
+    "order": 100,
+    "question": "Which GitHub token (fine-grained, read-only on the ecosystem repo) and which Anthropic API key should the server use, and who holds them?",
+    "raised": "2026-10-24",
+    "reason": "Not set. The connector falls back to the committed snapshot and lists its errors, and narrative uses the local deterministic engine.",
+    "recBy": "source",
+    "recommendation": "Create both as described, keep them in .env or the host's secret store, never paste them in chat or commit them. Decide who holds the keys. Nothing changes in code; you restart and attest in the Model Hub.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-001 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Setup",
+    "status": "open",
+    "suggestions": [
+      "Fine-grained read-only token on the ecosystem repo only (Contents, Pull requests, Issues, Actions: read), 90-day expiry.",
+      "A dedicated Anthropic workspace key with a monthly spend limit."
+    ],
+    "title": "Which GitHub token and Anthropic key should the server use?"
+  },
+  {
+    "blocks": "Any public exposure; roles for approvals",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-002",
+    "options": [
+      "Tokens for the pilot, Keycloak OIDC before wider rollout",
+      "Move to OIDC now"
+    ],
+    "order": 101,
+    "question": "How should staff authenticate? Still open: SSO (Keycloak?), token rotation and revocation, and roles (who may approve what).",
+    "raised": "2026-10-24",
+    "reason": "Interim OPS_USERS tokens derive the actor server-side and publishing needs an authenticated user, but the site must not be exposed publicly until this is decided.",
+    "recBy": "source",
+    "recommendation": "Keep tokens and roles for the pilot, do not expose the site publicly, and move to Keycloak OIDC before wider rollout, with Security enforcing MFA in the realm first. OIDC login with per-user sessions and expiry is a stage of its own.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-002 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Security",
+    "status": "partial",
+    "suggestions": [
+      "Keep OPS_USERS and OPS_ROLES for the pilot, rotate tokens quarterly.",
+      "Move to Keycloak OIDC (the ecosystem already runs it) before any wider rollout."
+    ],
+    "title": "How should staff sign in (SSO)?"
+  },
+  {
+    "blocks": "Any outbound channel",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-003",
+    "options": [
+      "Keep off",
+      "Enable for organisations and staff after opt-in records exist"
+    ],
+    "order": 102,
+    "question": "Should the platform ever send email, WhatsApp or post to social channels?",
+    "raised": "2026-10-24",
+    "reason": "POPIA s69 and consent evidence are needed first. Today drafts are downloaded and sent by a human.",
+    "recBy": "source",
+    "recommendation": "Keep it off. Legal decides what consent evidence is required before it is ever enabled.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-003 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Scope",
+    "status": "open",
+    "suggestions": [
+      "Keep off.",
+      "If enabled: only to organisations and staff, never learners or parents, and only after an opt-in record exists."
+    ],
+    "title": "Should the platform ever send email, WhatsApp or post to social?"
+  },
+  {
+    "blocks": "Anything beyond calculators",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-004",
+    "options": ["Defer", "Start with a read-only accounting import"],
+    "order": 103,
+    "question": "Which payment and invoicing provider, and which VAT treatment, should the platform use?",
+    "raised": "2026-10-24",
+    "reason": "Finance currently models from typed inputs only. Money movement is irreversible, and VAT treatment is for the accountant.",
+    "recBy": "source",
+    "recommendation": "Defer. If it becomes necessary, begin with a read-only accounting import and leave VAT treatment to your accountant.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-004 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Scope",
+    "status": "open",
+    "suggestions": ["Defer.", "If needed, start with a read-only accounting import."],
+    "title": "Which provider and VAT treatment for payments and invoicing?"
+  },
+  {
+    "blocks": "Any external claim about the agent count",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-005",
+    "options": ["Code is authoritative", "Documents are authoritative"],
+    "order": 104,
+    "question": "56 contract files are counted in packages/agents, docs/AGENTS.md says fifty-five, and a marketing artefact says 46. Which is authoritative?",
+    "raised": "2026-10-24",
+    "reason": "The Command centre shows a warning and OPS-AI-01 drafts the reconciliation, but no external claim should be made until it is settled.",
+    "recBy": "source",
+    "recommendation": "Code is authoritative because it is what runs. Let OPS-AI-01 draft the document correction, and stop quoting a count externally until reconciled.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-005 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Docs",
+    "status": "open",
+    "suggestions": [
+      "Treat the contract files in code as authoritative.",
+      "Treat the documents as authoritative."
+    ],
+    "title": "How many agents are there: 56, 55 or 46?"
+  },
+  {
+    "blocks": "Marketing claims",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-006",
+    "options": [],
+    "order": 105,
+    "question": "How should pricing language in the marketing artefacts be reconciled with the approved price list?",
+    "raised": "2026-10-24",
+    "reason": "The platform generates no prices. This is a commercial decision, not an engineering one.",
+    "recBy": "source",
+    "recommendation": "Keep the platform price-free, reconcile in the marketing source, and have a commercial owner sign it. The ecosystem's price card (its OQ-043, provisional) is the reference.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-006 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Commercial",
+    "status": "open",
+    "suggestions": [
+      "Reconcile in the marketing source and have a commercial owner sign it."
+    ],
+    "title": "Which pricing language is approved?"
+  },
+  {
+    "blocks": "Any tenant data path",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-007",
+    "options": [],
+    "order": 106,
+    "question": "Should aggregate (not learner-level) usage ever flow from tenants to the platform?",
+    "raised": "2026-10-24",
+    "reason": "It needs a new de-identification path and a POPIA assessment. Today the connector reads the repository only and refuses learner data.",
+    "recBy": "source",
+    "recommendation": "Stay out of scope until there is a de-identification design with a minimum group size and a POPIA impact assessment. Aggregates can re-identify small groups.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-007 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Privacy",
+    "status": "open",
+    "suggestions": [
+      "Stay out of scope.",
+      "Design a minimum group size (no figure for fewer than N schools) and a POPIA impact assessment first."
+    ],
+    "title": "Should any aggregate tenant usage ever flow to the platform?"
+  },
+  {
+    "blocks": "OPS_ALLOW_ECOSYSTEM_WRITES",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-008",
+    "options": ["Keep off until roles are on", "Enable now"],
+    "order": 107,
+    "question": "Should OPS_ALLOW_ECOSYSTEM_WRITES be enabled so an approved proposal can open an issue?",
+    "raised": "2026-10-24",
+    "reason": "It needs Issues: write on the token. It is disabled by default, and downloading the issue text always works.",
+    "recBy": "source",
+    "recommendation": "Keep it off until roles are on, then enable and watch a fortnight of ratified proposals. The write path already needs two signers; roles tighten who.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-008 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Integration",
+    "status": "open",
+    "suggestions": [
+      "Keep off until roles are on and the token has Issues: write on that one repo.",
+      "Enable now."
+    ],
+    "title": "Enable ecosystem writes so an approved proposal can open an issue?"
+  },
+  {
+    "blocks": "Nothing today",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-009",
+    "options": ["Keep print-to-PDF", "Server-rendered PDFs"],
+    "order": 108,
+    "question": "Is \"print to PDF\" from HTML acceptable, or should the server render PDFs?",
+    "raised": "2026-10-24",
+    "reason": "A server renderer adds a browser dependency and attack surface.",
+    "recBy": "source",
+    "recommendation": "Keep print-to-PDF. Revisit only if customers need PDFs generated automatically.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-009 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Scope",
+    "status": "open",
+    "suggestions": ["Keep print-to-PDF.", "Server-rendered PDFs."],
+    "title": "Is print-to-PDF acceptable, or should the server render PDFs?"
+  },
+  {
+    "blocks": "Durability, backup, multi-user access",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-010",
+    "options": [
+      "JSON-lines for the pilot, Postgres before a second team",
+      "Move to Postgres now"
+    ],
+    "order": 109,
+    "question": "Should the warehouse of record stay JSON-lines files, or move to the ecosystem's Postgres with row-level security?",
+    "raised": "2026-10-24",
+    "reason": "JSON-lines is fine for one instance. Backup, point-in-time restore and scoped reads need a real database.",
+    "recBy": "source",
+    "recommendation": "Keep JSON-lines for the pilot and move to Postgres with row-level security before a second team uses it or anything needs backup. Keep the ledger append-only by trigger. This is a stage of its own.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-010 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Data",
+    "status": "open",
+    "suggestions": [
+      "Keep JSON-lines for the one-instance pilot.",
+      "Move to Postgres with RLS now."
+    ],
+    "title": "Keep JSON-lines files or move to Postgres with row-level security?"
+  },
+  {
+    "blocks": "School admin account security",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-011",
+    "options": [],
+    "order": 110,
+    "question": "The ecosystem's OQ-036 says MFA is not shown as enforced in the Keycloak realm. Does Security own the follow-up?",
+    "raised": "2026-10-24",
+    "reason": "It affects the security of school admin accounts. The platform surfaces it in Security widgets and OPS-SEC-03 drafts the control mapping.",
+    "recBy": "source",
+    "recommendation": "Name the Security owner now and enforce MFA in the realm before the Keycloak OIDC move (OPQ-002). The ecosystem repo has this as OQ-036, built second in your 2026-11-05 order.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-011 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Security",
+    "status": "open",
+    "suggestions": [
+      "Name the Security owner for it.",
+      "Have Security enforce MFA in the realm before any OIDC rollout."
+    ],
+    "title": "Who owns the follow-up to ecosystem OQ-036 (MFA not shown as enforced)?"
+  },
+  {
+    "blocks": "Erasure policy",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-013",
+    "options": [],
+    "order": 111,
+    "question": "Erasure requests are built with a default (anyone raises, a different person decides). Should only certain roles decide, how are POPIA response deadlines handled, and how is data already held removed?",
+    "raised": "2026-10-25",
+    "reason": "Deadlines and removal scope are legal determinations. A tombstone blocks future processing only; removing existing artefacts and Brain facts is a manual step.",
+    "recBy": "source",
+    "recommendation": "Restrict deciding to officers once OPS_ROLES is set, get a response target from the Information Officer or attorney so reminders can be modelled, and write the removal runbook so a checklist step can be added.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-013 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "POPIA",
+    "status": "partial",
+    "suggestions": [
+      "Restrict deciding to the Information Officer (needs roles).",
+      "Ask your Information Officer or attorney for an internal response target.",
+      "Write a runbook for removing data already held."
+    ],
+    "title": "Who decides erasure requests, and what is the response deadline?"
+  },
+  {
+    "blocks": "Trust in drafted documents",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-014",
+    "options": [
+      "Blanks that name the source needed",
+      "Source from a ratified Brain fact",
+      "Keep, flagged as illustrative"
+    ],
+    "order": 112,
+    "question": "The deterministic engine contains made-up specifics (sample school names, preset numbers, an 18.50 exchange rate, \"approx R850/mo\" hosting, an af-south-1 claim) that \"Apply to Form\" can still copy into a draft. Remove them, replace with blanks that name the source, or source them from a ratified Brain fact?",
+    "raised": "2026-11-12",
+    "reason": "The platform's own rule is no invented numbers. A placeholder that looks like data is how invented numbers get ratified.",
+    "recBy": "source",
+    "recommendation": "Replace them with blanks that name the source needed (for example \"Number of schools: from the CRM export, dated…\") and remove Apply to Form copying of illustrative values. Small change in local.ts and the tool defaults.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-014 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Integrity",
+    "status": "open",
+    "suggestions": [
+      "Blanks that name the source needed.",
+      "Source from a ratified Brain fact.",
+      "Keep, flagged as illustrative."
+    ],
+    "title": "What replaces the made-up sample values in tool defaults?"
+  },
+  {
+    "blocks": "Provider attestation",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-015",
+    "options": [
+      "Officers only, one attestation",
+      "Officers only, two people attest",
+      "Anyone signed in"
+    ],
+    "order": 113,
+    "question": "Anyone signed in can attest or revoke a provider today. Restrict it to certain roles such as the Information Officer, and should attesting need two people?",
+    "raised": "2026-11-12",
+    "reason": "Provider terms are a legal and security judgement. The mechanism is built: with OPS_ROLES set, only officers can attest. Who the officers are is yours to decide.",
+    "recBy": "source",
+    "recommendation": "Name your Information Officer and one deputy, set OPS_ROLES, and let officers attest. One attestation is enough because the ledger records who and when. Keep stopping things (revoke, pause) open to everyone.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-015 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Governance",
+    "status": "partial",
+    "suggestions": [
+      "Officers only, one attestation is enough.",
+      "Officers only, two people attest.",
+      "Anyone signed in (current)."
+    ],
+    "title": "Who may attest or revoke a model provider?"
+  },
+  {
+    "blocks": "Any real provider use",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-016",
+    "options": [],
+    "order": 114,
+    "question": "The adapters have only been tested against local stand-ins. Who runs the hub's Test button against live Anthropic and Gemini accounts, and what is the correct current default Gemini model?",
+    "raised": "2026-11-12",
+    "reason": "Request shapes could differ from the live APIs. The default Gemini model is unverified.",
+    "recBy": "source",
+    "recommendation": "Before anything else uses a provider, run Test against the live Anthropic account, then Gemini if you want it at all, and pin GEMINI_MODEL from your console. I will fix any request-shape differences the Test reveals.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-016 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Providers",
+    "status": "open",
+    "suggestions": [
+      "Run Test on Anthropic first, then Gemini if used.",
+      "Pin GEMINI_MODEL to a model name copied from your own console."
+    ],
+    "title": "Who runs Test against the live providers, and what is the right Gemini model?"
+  },
+  {
+    "blocks": "Four-eyes policy",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-017",
+    "options": [
+      "Two tiers, independent signers for high-stakes agents",
+      "Keep as is",
+      "Bar the author everywhere"
+    ],
+    "order": 115,
+    "question": "Approver and countersigner must be different people but the author may be one. Should the author be barred, or a third person required for finance, legal and security agents?",
+    "raised": "2026-11-12",
+    "reason": "Four-eyes versus workable for a small team. A temporary solo-signing relaxation (OPS_SIGNING_MODE=solo) was approved on 2026-11-14, with hard exceptions for twoPerson and professionalReview agents.",
+    "recBy": "source",
+    "recommendation": "Two tiers. Default stays two distinct people. For finance, legal, security and government agents the author may neither approve nor countersign. Add a contract field signers: 'two' | 'independent'.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-017 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Governance",
+    "status": "partial",
+    "suggestions": [
+      "Two tiers: independent third person for finance, legal, security and government.",
+      "Keep as is.",
+      "Bar the author everywhere."
+    ],
+    "title": "Should the author be barred from signing their own work?"
+  },
+  {
+    "blocks": "Library and Brain noise",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-018",
+    "options": [],
+    "order": 116,
+    "question": "Every ratified artefact is ingested unless its contract says ingestion: 'none'. Which agents should opt out?",
+    "raised": "2026-11-12",
+    "reason": "The library and Brain should hold knowledge, not noise. No agent opts out yet.",
+    "recBy": "source",
+    "recommendation": "Ingest what you would want to recall in a year and opt out the one-off kinds listed. You confirm the agent list; I can propose one by agent id.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-018 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Knowledge",
+    "status": "open",
+    "suggestions": [
+      "Ingest policies, SOPs, decisions, research, plans and reports.",
+      "Opt out one-off outbound messages, social post drafts, meeting agendas and checklists."
+    ],
+    "title": "Which agents' output should not be ingested?"
+  },
+  {
+    "blocks": "Standing orders",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-019",
+    "options": [
+      "Contract field with never/allowed lists, officer activation",
+      "Anyone but the proposer (current)"
+    ],
+    "order": 117,
+    "question": "Anyone but the proposer can activate a standing order. Limit activation to roles, and should some agents never run autonomously?",
+    "raised": "2026-11-12",
+    "reason": "Autonomy multiplies the effect of one mistake. With OPS_ROLES set, only an officer can activate; pause and revoke stay open to everyone.",
+    "recBy": "source",
+    "recommendation": "Add the contract field. Never: legal, finance, security response, people/HR, government relations. Allowed: digests, status reports, research summaries, roster reconciliation. Activation by an officer.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-019 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Governance",
+    "status": "partial",
+    "suggestions": [
+      "autonomy: 'allowed' | 'never' per contract, activation by an officer.",
+      "Leave as is."
+    ],
+    "title": "Who may run autonomy, and which agents may never?"
+  },
+  {
+    "blocks": "Autonomous run design",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-020",
+    "options": [
+      "Keep fixed inputs",
+      "Allow reviewed, de-identified trigger data for chosen agents"
+    ],
+    "order": 118,
+    "question": "Autonomous runs use only the inputs typed when the order was made, so a GitHub event cannot steer them. Is that right, or should reviewed, de-identified trigger data be allowed for chosen agents?",
+    "raised": "2026-11-12",
+    "reason": "Prompt-injection safety versus usefulness: agents that need fresh input each time cannot run on their own.",
+    "recBy": "source",
+    "recommendation": "Keep fixed inputs. If fresh data is needed later, add a separate reviewed input channel that a person approves.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-020 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Safety",
+    "status": "open",
+    "suggestions": [
+      "Keep fixed inputs.",
+      "Add a reviewed input channel where a person approves each data snapshot."
+    ],
+    "title": "Are fixed inputs the right trade for autonomous runs?"
+  },
+  {
+    "blocks": "Board clutter",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-021",
+    "options": ["Auto-pause after 3 quarantined runs", "Leave manual"],
+    "order": 119,
+    "question": "A failed draft stays a draft. Should repeated failures from one order pause it automatically?",
+    "raised": "2026-11-12",
+    "reason": "It stops a broken order filling the board.",
+    "recBy": "source",
+    "recommendation": "Auto-pause after 3 consecutive quarantined runs, show why, and let a human resume it.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-021 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Operations",
+    "status": "open",
+    "suggestions": [
+      "Auto-pause after 3 consecutive quarantined runs and show why.",
+      "Leave manual."
+    ],
+    "title": "Should repeated failures pause an order automatically?"
+  },
+  {
+    "blocks": "Accountability for drafts",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-022",
+    "options": [],
+    "order": 120,
+    "question": "Each contract names an accountable owner role, defaulting to the department head, which is a placeholder. Who owns each agent, and the cross-cutting AI and Security ones?",
+    "raised": "2026-11-12",
+    "reason": "An owner is who answers for an agent's drafts. The check only requires that a role, not a person, is named.",
+    "recBy": "source",
+    "recommendation": "Accept the placeholder \"Head of <dept>\" now and send a table (department to real role title) when you can. I will replace the placeholders from it.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-022 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Governance",
+    "status": "open",
+    "suggestions": ["Supply a table of department to role title."],
+    "title": "Who really owns each agent?"
+  },
+  {
+    "blocks": "Provider restrictions",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-023",
+    "options": [],
+    "order": 121,
+    "question": "The contract can restrict an agent to named providers but none does. Which agents (legal, finance, security) should be limited to a provider whose terms you have reviewed?",
+    "raised": "2026-11-12",
+    "reason": "Provider terms differ on retention and training use. That is for you and your attorney; the platform will not assert what any provider's terms say.",
+    "recBy": "source",
+    "recommendation": "Restrict legal, finance, security and people agents to a provider whose written terms you have reviewed for retention and training use.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-023 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Governance",
+    "status": "open",
+    "suggestions": ["Restrict models for legal, finance, security and people agents."],
+    "title": "Which agents are limited to a reviewed provider?"
+  },
+  {
+    "blocks": "Using any of the 65 draft legal documents",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-024",
+    "options": [],
+    "order": 122,
+    "question": "65 of the 120 library documents name a reviewer (attorney, Information Officer, tax adviser, labour-law practitioner, security lead, safeguarding lead). Who are they?",
+    "raised": "2026-11-13",
+    "reason": "Contracts, notices and POPIA documents must not be used unreviewed. They are marked DRAFT and nothing is approved for use.",
+    "recBy": "claude",
+    "recommendation": "Name the Information Officer first, since it unblocks OPQ-013, 015 and 019, then the attorney and the tax adviser. This is a legal appointment for you to make.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-024 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Legal",
+    "status": "open",
+    "suggestions": [
+      "Name each person and their registration, feeding OPS_SIGNERS (see OPQ-033)."
+    ],
+    "title": "Who is the attorney, tax adviser and Information Officer?"
+  },
+  {
+    "blocks": "Nothing",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-025",
+    "options": ["Manual and idempotent", "Seed on first start"],
+    "order": 123,
+    "question": "npm run seed:library is run by hand. Should the server seed on first start, or only on an administrator's request?",
+    "raised": "2026-11-13",
+    "reason": "Seeding on start is convenient but writes to the warehouse without a person choosing to.",
+    "recBy": "claude",
+    "recommendation": "Keep it manual and idempotent. A write to the warehouse should be a person's choice.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-025 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Operations",
+    "status": "open",
+    "suggestions": ["Manual and idempotent (current).", "Seed on first start."],
+    "title": "Should the library seed on first start or only on request?"
+  },
+  {
+    "blocks": "Quotes and invoices",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-026",
+    "options": [],
+    "order": 124,
+    "question": "Quote rates are the proposed school pricing (ecosystem decision D-1, provisional) and tax-invoice wording depends on VAT registration (D-6). Do you confirm both?",
+    "raised": "2026-11-13",
+    "reason": "A quote or invoice is a commitment. The calculator says \"Provisional pricing\" and the invoice template says to use it only once VAT-registered.",
+    "recBy": "claude",
+    "recommendation": "Do not send a quote or tax invoice to a school until D-1 is confirmed and the accountant has confirmed VAT registration.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-026 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Commercial",
+    "status": "open",
+    "suggestions": [
+      "Confirm after three schools have seen the price.",
+      "Confirm VAT registration with the accountant."
+    ],
+    "title": "Confirm the provisional prices and VAT wording before documents reach a school"
+  },
+  {
+    "blocks": "Calendar write-back, Slack and Teams",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-027",
+    "options": [],
+    "order": 125,
+    "question": "Calendar write-back, Slack and Teams apps need OAuth and a token store. Where should tokens live, and which provider first?",
+    "raised": "2026-11-14",
+    "reason": "A token store is a security decision. Calendar feed (.ics), signed inbound webhook and outgoing digest work today.",
+    "recBy": "claude",
+    "recommendation": "Keep tokens in a secrets manager, never in the warehouse, and build one provider first. You choose which.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-027 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Integration",
+    "status": "open",
+    "suggestions": ["A secrets manager, not the warehouse.", "Pick one provider first."],
+    "title": "Where do OAuth tokens live, and which connector comes first?"
+  },
+  {
+    "blocks": "Roster count (OPQ-005)",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-028",
+    "options": ["Keep as a service agent", "Add to the roster"],
+    "order": 126,
+    "question": "OPS-CEO-01 is a service agent outside the 100-agent roster so the count in OPQ-005 is untouched. Should it join the roster?",
+    "raised": "2026-11-14",
+    "reason": "Any external claim about the number of agents depends on it.",
+    "recBy": "claude",
+    "recommendation": "Keep it outside the roster until OPQ-005 is reconciled, then decide once.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-028 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Docs",
+    "status": "open",
+    "suggestions": ["Keep as a service agent.", "Add to the roster."],
+    "title": "Should OPS-CEO-01 join the agent roster?"
+  },
+  {
+    "blocks": "Calendar realism",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-029",
+    "options": [
+      "Optional estimate, 30 minutes as labelled fallback",
+      "Keep a fixed 30 minutes"
+    ],
+    "order": 127,
+    "question": "Every task is booked as a fixed 30 minutes, a placeholder rather than an estimate. Should tasks carry an estimate?",
+    "raised": "2026-11-14",
+    "reason": "A fixed block is not realistic, but an estimate field adds data someone must supply.",
+    "recBy": "claude",
+    "recommendation": "Add an optional per-task estimate and fall back to 30 minutes, labelled as a placeholder, when none is given.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-029 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Calendar",
+    "status": "open",
+    "suggestions": ["Add an optional estimate field per task.", "Keep 30 minutes."],
+    "title": "Should calendar tasks carry an estimate instead of a fixed 30 minutes?"
+  },
+  {
+    "blocks": "CEO calendar volume",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-030",
+    "options": ["Confirm: all flagged for a person", "Name tasks an agent may close"],
+    "order": 128,
+    "question": "Every checklist item and plan decision is flagged \"needs a person\". Confirm, or name tasks an agent may close.",
+    "raised": "2026-11-14",
+    "reason": "The CEO calendar fills with flagged tasks, but closing a decision without a human conflicts with the human-in-the-loop rule.",
+    "recBy": "claude",
+    "recommendation": "Confirm as is. If the volume is a problem, name specific low-risk task types an agent may close rather than loosening the rule.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-030 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Operations",
+    "status": "open",
+    "suggestions": ["Confirm as is.", "Name specific low-risk tasks an agent may close."],
+    "title": "Does every unticked or undecided item need a person?"
+  },
+  {
+    "blocks": "Nothing",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-031",
+    "options": ["Manual and idempotent", "Seed on first start"],
+    "order": 129,
+    "question": "npm run seed:business is manual, like OPQ-025. Seed on start?",
+    "raised": "2026-11-14",
+    "reason": "Seeding on start writes without a person choosing to.",
+    "recBy": "claude",
+    "recommendation": "Answer it the same way as OPQ-025: keep it manual and idempotent.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-031 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Operations",
+    "status": "open",
+    "suggestions": ["Manual and idempotent (current).", "Seed on first start."],
+    "title": "Should the business data seed on first start?"
+  },
+  {
+    "blocks": "Ratifying legal and tax artefacts",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      }
+    ],
+    "id": "OPQ-033",
+    "options": [],
+    "order": 130,
+    "question": "Beyond legal, should finance, tax, contracts, procurement agents and library policy documents need a registered attorney, accountant or tax practitioner, or two different persons? Who are they, and how are registrations verified? Also confirm how legal artefacts ratified before the change are treated, and whether the ledger should record registration text.",
+    "raised": "2026-11-14",
+    "reason": "The platform stores registration text but cannot check it. With no OPS_SIGNERS registry nobody holds a profession, so legal artefacts cannot be ratified. A plan conflict was resolved the safe way and needs your confirmation.",
+    "recBy": "claude",
+    "recommendation": "Register the professionals and a second signer before ratifying any legal artefact, and confirm the safe reading (no grandfathering of earlier legal ratifications). Verification of registrations stays a human step.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-033 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Governance",
+    "status": "partial",
+    "suggestions": [
+      "Register one attorney and a second signer.",
+      "Accept that the attorney runs the agent and the owner approves."
+    ],
+    "title": "Which agents need a registered professional or two persons?"
+  },
+  {
+    "blocks": "Phase 2 (re-skinning the Ecosystem)",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      },
+      {
+        "at": "2026-11-24T00:00:00.000Z",
+        "kind": "updated",
+        "text": "Synced from the platform repo's docs/OPEN_QUESTIONS.md: correction 2026-11-16. The Ecosystem's BRAND_KIT.md was ratified on 2026-08-26 and already uses the Ops-matching direction, so there are no subject colours to keep. Keep the spacing, radius and shadow scales; the owner ratifies in solo mode. The owner approved the recommendations on 2026-11-16, but they were written on the wrong premise, so the owner still has to confirm the corrected reading."
+      }
+    ],
+    "id": "OPQ-034",
+    "options": [],
+    "order": 131,
+    "question": "The Ecosystem's eight-hue subject spectrum, spacing, radius and shadow ladders and light theme are not in the Ops brand. Which to keep, which to adapt for dark surfaces, and who ratifies, given the Ecosystem's kit is \"candidate, pending Stage 14 ratification\"?",
+    "raised": "2026-11-15",
+    "reason": "The original premise was wrong: the Ecosystem's brand kit is already ratified and matches the Ops direction. The owner approved the recommendations on 2026-11-16, but they were written on that premise, so the corrected reading still needs the owner's confirmation.",
+    "recBy": "claude",
+    "recommendation": "Wait for the Ecosystem's Stage 14 ratification before adopting anything, so you do not copy an unratified kit. Then decide the ratifier once for both repos.",
+    "recommendedIndex": null,
+    "repo": "platform",
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-034 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Brand",
+    "status": "partial",
+    "suggestions": [
+      "Adopt the spectrum and ladders as-is.",
+      "Adapt them for dark surfaces.",
+      "Wait for the Ecosystem's Stage 14 ratification."
+    ],
+    "title": "Which of the Ecosystem's visual system does the Ops brand adopt?"
+  },
+  {
+    "blocks": "Phase 2",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      },
+      {
+        "at": "2026-11-24T00:00:00.000Z",
+        "kind": "resolved",
+        "text": "Synced from the platform repo's docs/OPEN_QUESTIONS.md: resolved 2026-11-16, owner approved the recommendation. Switchable, dark default, contrast-tested both ways in Phase 2; the light theme's page surfaces and borders go to the owner to ratify before they merge."
+      }
+    ],
+    "id": "OPQ-035",
+    "options": ["Switchable, dark default", "Dark only", "Light only"],
+    "order": 132,
+    "question": "Should screens used by primary-school children be dark-only, light-only or switchable, given the Ops brand is dark?",
+    "raised": "2026-11-15",
+    "reason": "No app light theme exists and contrast has been checked only for 16 dark-surface pairs.",
+    "recBy": "source",
+    "recommendation": "Switchable with dark as the default, contrast-tested both ways in Phase 2.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "review": {
+      "actions": [
+        "Marked resolved to match the markdown register, which is authoritative."
+      ],
+      "at": "2026-11-24T00:00:00.000Z",
+      "summary": "Synced from the platform repo's docs/OPEN_QUESTIONS.md: resolved 2026-11-16, owner approved the recommendation. Switchable, dark default, contrast-tested both ways in Phase 2; the light theme's page surfaces and borders go to the owner to ratify before they merge. This was resolved in the repository, not through this page.",
+      "verdict": "accepted"
+    },
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-035 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Brand",
+    "status": "resolved",
+    "suggestions": ["Switchable, dark default.", "Dark only.", "Light only."],
+    "title": "Dark, light or switchable for learner-facing screens?"
+  },
+  {
+    "blocks": "Token drift between repos",
+    "history": [
+      {
+        "at": "2026-11-15T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from the platform repo's docs/OPEN_QUESTIONS.md."
+      },
+      {
+        "at": "2026-11-24T00:00:00.000Z",
+        "kind": "resolved",
+        "text": "Synced from the platform repo's docs/OPEN_QUESTIONS.md: resolved 2026-11-16, owner approved the recommendation. The Ecosystem's CI will run a scheduled check of its vendored token version against the Ops repository's main. It needs a read-only credential that only the owner can create, and the check is built in Phase 2."
+      }
+    ],
+    "id": "OPQ-036",
+    "options": ["(a) Scheduled CI check", "(b) Manual check on each change"],
+    "order": 133,
+    "question": "Nothing tells the Ecosystem that the Ops brand version changed. (a) A scheduled CI check in the Ecosystem comparing its vendored version with the Ops repo's main (needs read access, so a credential), or (b) a manual check on each Ops brand change?",
+    "raised": "2026-11-15",
+    "reason": "Without one of these the two copies can diverge unnoticed after brand:sync. Option (a) needs a credential and a cross-repository read.",
+    "recBy": "source",
+    "recommendation": "(a), the scheduled check. Both repos are public, so the read may not need a credential at all; confirm that before creating one.",
+    "recommendedIndex": 0,
+    "repo": "platform",
+    "review": {
+      "actions": [
+        "Marked resolved to match the markdown register, which is authoritative."
+      ],
+      "at": "2026-11-24T00:00:00.000Z",
+      "summary": "Synced from the platform repo's docs/OPEN_QUESTIONS.md: resolved 2026-11-16, owner approved the recommendation. The Ecosystem's CI will run a scheduled check of its vendored token version against the Ops repository's main. It needs a read-only credential that only the owner can create, and the check is built in Phase 2. This was resolved in the repository, not through this page.",
+      "verdict": "accepted"
+    },
+    "source": "Infinite-AI-Business-Operations-Platform · docs/OPEN_QUESTIONS.md · OPQ-036 · docs/OPQ_RECOMMENDATIONS.md",
+    "stage": "Brand",
+    "status": "resolved",
+    "suggestions": [
+      "(a) Scheduled CI check with a read credential.",
+      "(b) Manual check."
+    ],
+    "title": "How does the Ecosystem's CI learn that the Ops tokens moved on?"
+  }
+]
