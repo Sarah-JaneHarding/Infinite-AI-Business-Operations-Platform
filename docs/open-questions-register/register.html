@@ -1,0 +1,1553 @@
+<title>Open Questions Register</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+/>
+<style>
+  /* Layout: one narrow ledger column. Summary and filters on top, each question a collapsible entry,
+   the owner's answer form at the foot of the open entry. */
+  :root {
+    --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --ink: #18212d;
+    --muted: #566274;
+    --line: #d9dee6;
+    --accent: #0e6e7e;
+    --accent-ink: #ffffff;
+    --rec-bg: #e6f3f1;
+    --rec-line: #9fd0c9;
+    --danger: #a1262f;
+    --s-open-fg: #9a4a06;
+    --s-open-bg: #fdefdc;
+    --s-partial-fg: #1f5fae;
+    --s-partial-bg: #e5eefb;
+    --s-answered-fg: #6b3fa0;
+    --s-answered-bg: #eee7f8;
+    --s-followup-fg: #a1262f;
+    --s-followup-bg: #fbe7ea;
+    --s-resolved-fg: #1d7a46;
+    --s-resolved-bg: #e2f4e9;
+    --s-parked-fg: #566274;
+    --s-parked-bg: #e9ecf1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #11161d;
+      --surface: #19202a;
+      --ink: #e8ecf2;
+      --muted: #9aa5b4;
+      --line: #2a3340;
+      --accent: #55bccb;
+      --accent-ink: #0a1b1f;
+      --rec-bg: #14302e;
+      --rec-line: #2f6963;
+      --danger: #f08a92;
+      --s-open-fg: #f2a65e;
+      --s-open-bg: #3a2915;
+      --s-partial-fg: #86b4f2;
+      --s-partial-bg: #172a44;
+      --s-answered-fg: #bf9fe9;
+      --s-answered-bg: #2b2040;
+      --s-followup-fg: #f08a92;
+      --s-followup-bg: #40191d;
+      --s-resolved-fg: #70d098;
+      --s-resolved-bg: #153325;
+      --s-parked-fg: #9aa5b4;
+      --s-parked-bg: #232b35;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --bg: #11161d;
+    --surface: #19202a;
+    --ink: #e8ecf2;
+    --muted: #9aa5b4;
+    --line: #2a3340;
+    --accent: #55bccb;
+    --accent-ink: #0a1b1f;
+    --rec-bg: #14302e;
+    --rec-line: #2f6963;
+    --danger: #f08a92;
+    --s-open-fg: #f2a65e;
+    --s-open-bg: #3a2915;
+    --s-partial-fg: #86b4f2;
+    --s-partial-bg: #172a44;
+    --s-answered-fg: #bf9fe9;
+    --s-answered-bg: #2b2040;
+    --s-followup-fg: #f08a92;
+    --s-followup-bg: #40191d;
+    --s-resolved-fg: #70d098;
+    --s-resolved-bg: #153325;
+    --s-parked-fg: #9aa5b4;
+    --s-parked-bg: #232b35;
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 24px 64px;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  h1 {
+    font-size: 26px;
+    line-height: 1.2;
+    margin: 0;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  .sub {
+    color: var(--muted);
+    margin: 0;
+    max-width: 62ch;
+  }
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .live[data-state='live'] .dot {
+    background: var(--s-resolved-fg);
+  }
+  .live[data-state='error'] .dot {
+    background: var(--danger);
+  }
+  .summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .summary b {
+    color: var(--ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .banner {
+    border: 1px solid var(--s-answered-fg);
+    background: var(--s-answered-bg);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+  .chip {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .chip[aria-pressed='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  .chip span {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
+    margin-left: 4px;
+  }
+  input[type='search'],
+  input[type='text'],
+  textarea,
+  select {
+    font: inherit;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 10px;
+    width: 100%;
+  }
+  input[type='search'] {
+    flex: 1 1 180px;
+    max-width: 260px;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 72px;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .q {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    min-width: 0;
+  }
+  .q-head {
+    all: unset;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 4px 12px;
+    align-items: start;
+    width: 100%;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+  .q-head:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: 8px;
+  }
+  .qid {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--muted);
+    padding-top: 2px;
+    white-space: nowrap;
+  }
+  .qtitle {
+    font-weight: 600;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .qmeta {
+    grid-column: 2 / 4;
+    color: var(--muted);
+    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+  }
+  .pill {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+  }
+  .pill[data-s='open'] {
+    color: var(--s-open-fg);
+    background: var(--s-open-bg);
+  }
+  .pill[data-s='partial'] {
+    color: var(--s-partial-fg);
+    background: var(--s-partial-bg);
+  }
+  .pill[data-s='answered'] {
+    color: var(--s-answered-fg);
+    background: var(--s-answered-bg);
+  }
+  .pill[data-s='followup'] {
+    color: var(--s-followup-fg);
+    background: var(--s-followup-bg);
+  }
+  .pill[data-s='resolved'] {
+    color: var(--s-resolved-fg);
+    background: var(--s-resolved-bg);
+  }
+  .pill[data-s='parked'] {
+    color: var(--s-parked-fg);
+    background: var(--s-parked-bg);
+  }
+  .repo {
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .q-body {
+    border-top: 1px solid var(--line);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) {
+    .cols {
+      grid-template-columns: 1fr;
+    }
+    .q-head {
+      grid-template-columns: 1fr auto;
+    }
+    .qid {
+      grid-column: 1 / 3;
+    }
+    .qtitle {
+      grid-column: 1;
+    }
+    .pill {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .qmeta {
+      grid-column: 1 / 3;
+    }
+  }
+  .sec {
+    min-width: 0;
+  }
+  .sec h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 0 0 4px;
+    font-weight: 600;
+  }
+  .sec p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+  .sec ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .sec li {
+    margin-bottom: 3px;
+    overflow-wrap: anywhere;
+  }
+  .rec {
+    background: var(--rec-bg);
+    border: 1px solid var(--rec-line);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .answerbox,
+  .reviewbox {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .reviewbox[data-v='accepted'] {
+    border-color: var(--s-resolved-fg);
+  }
+  .reviewbox[data-v='followup'],
+  .reviewbox[data-v='conflict'] {
+    border-color: var(--s-followup-fg);
+  }
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .form label {
+    font-size: 13px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 3px;
+  }
+  .form .hint {
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .opt {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 14px;
+    font-weight: 400 !important;
+    margin: 0 !important;
+    padding: 6px 0;
+    cursor: pointer;
+  }
+  .opt input {
+    margin-top: 4px;
+    accent-color: var(--accent);
+  }
+  .opt em {
+    font-style: normal;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  button.btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    cursor: pointer;
+  }
+  button.btn.ghost {
+    background: transparent;
+    color: var(--accent);
+  }
+  button.btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  .msg {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .msg.err {
+    color: var(--danger);
+  }
+  .hist {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .hist summary {
+    cursor: pointer;
+  }
+  .hist ol {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  .empty {
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 28px 18px;
+    color: var(--muted);
+    text-align: center;
+  }
+  details.add {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  details.add summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  details.add .form {
+    padding: 0 14px 14px;
+  }
+  code,
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      scroll-behavior: auto !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Open Questions Register</h1>
+    <p class="sub">
+      Every question that is waiting on a person, with why it is open, what to consider,
+      and what Claude recommends. Record an answer and Claude checks it against the manual
+      and the project rules.
+    </p>
+    <span class="live" id="live" data-state="wait"
+      ><span class="dot"></span><span id="live-text">Connecting</span></span
+    >
+  </header>
+
+  <div class="summary" id="summary" aria-live="polite"></div>
+  <div class="banner" id="banner" hidden></div>
+
+  <div class="toolbar">
+    <div class="chips" id="chips" role="group" aria-label="Filter by status"></div>
+    <div class="chips" id="repos" role="group" aria-label="Filter by repository"></div>
+    <input
+      type="search"
+      id="search"
+      placeholder="Search id, title, text"
+      aria-label="Search questions"
+    />
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <details class="add" id="add-wrap" hidden>
+    <summary>Add a question</summary>
+    <div class="form">
+      <div class="cols">
+        <div>
+          <label for="n-id">ID</label><input type="text" id="n-id" placeholder="OQ-049" />
+        </div>
+        <div>
+          <label for="n-stage">Stage <span class="hint">(optional)</span></label
+          ><input type="text" id="n-stage" placeholder="e.g. 12" />
+        </div>
+      </div>
+      <div>
+        <label for="n-repo">Repository</label
+        ><select id="n-repo">
+          <option value="ecosystem">infinite-ai-ecosystem</option>
+          <option value="platform">Infinite-AI-Business-Operations-Platform</option>
+        </select>
+      </div>
+      <div>
+        <label for="n-title">Title</label
+        ><input type="text" id="n-title" placeholder="One line, phrased as a question" />
+      </div>
+      <div><label for="n-q">Question</label><textarea id="n-q"></textarea></div>
+      <div>
+        <label for="n-reason">Why it is open</label><textarea id="n-reason"></textarea>
+      </div>
+      <div>
+        <label for="n-blocks">What it blocks <span class="hint">(optional)</span></label
+        ><input type="text" id="n-blocks" />
+      </div>
+      <div class="row">
+        <button class="btn" id="n-save" type="button">Add to register</button
+        ><span class="msg" id="n-msg"></span>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+  (function () {
+    'use strict';
+    var STATUS = {
+      open: 'Open',
+      partial: 'Partly answered',
+      answered: "Awaiting Claude's check",
+      followup: 'Follow-up needed',
+      resolved: 'Resolved',
+      parked: 'Parked',
+    };
+    var TABS = [
+      { key: 'needs', label: 'Needs an answer', match: ['open', 'partial', 'followup'] },
+      { key: 'answered', label: 'Awaiting Claude', match: ['answered'] },
+      { key: 'parked', label: 'Parked', match: ['parked'] },
+      { key: 'resolved', label: 'Resolved', match: ['resolved'] },
+      { key: 'all', label: 'All', match: null },
+    ];
+    var REPOS = {
+      ecosystem: { label: 'Ecosystem', short: 'infinite-ai-ecosystem' },
+      platform: {
+        label: 'Operations Platform',
+        short: 'Infinite-AI-Business-Operations-Platform',
+      },
+    };
+    function repoOf(q) {
+      return REPOS[q.repo] ? q.repo : 'ecosystem';
+    }
+    var GROUP = { followup: 0, open: 1, partial: 2, answered: 3, parked: 4, resolved: 5 };
+
+    var db = null,
+      user = null,
+      comments = null,
+      canEdit = false,
+      myId = null;
+    var questions = []; // plain objects, sorted
+    var names = {}; // user id -> display name
+    var tab = 'needs',
+      query = '',
+      repoFilter = 'all';
+    var openIds = {}; // expanded entries
+    var drafts = {}; // id -> {choice, text, reason}
+    var flash = {}; // id -> {text, err}
+    var busy = {}; // id -> true while a write is running
+    var loaded = false;
+
+    function h(tag, props) {
+      var e = document.createElement(tag);
+      var p = props || {};
+      for (var k in p) {
+        var v = p[k];
+        if (v == null || v === false) continue;
+        if (k === 'class') e.className = v;
+        else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+        else if (v === true) e.setAttribute(k, '');
+        else e.setAttribute(k, v);
+      }
+      for (var i = 2; i < arguments.length; i++) append(e, arguments[i]);
+      return e;
+    }
+    function append(e, c) {
+      if (c == null || c === false) return;
+      if (Array.isArray(c)) {
+        c.forEach(function (x) {
+          append(e, x);
+        });
+        return;
+      }
+      e.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    function $(id) {
+      return document.getElementById(id);
+    }
+    function fmt(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d)) return String(iso).slice(0, 10);
+      return d.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+    function who(id) {
+      if (!id) return 'someone';
+      if (id === myId) return 'you';
+      return names[id] || 'a team member';
+    }
+    function clip(s, n) {
+      s = String(s || '');
+      return s.length > n ? s.slice(0, n - 1) + '…' : s;
+    }
+
+    /* ---------- derived data ---------- */
+    function visible() {
+      var tabDef = TABS.filter(function (t) {
+        return t.key === tab;
+      })[0];
+      var q = query.trim().toLowerCase();
+      return questions.filter(function (x) {
+        if (repoFilter !== 'all' && repoOf(x) !== repoFilter) return false;
+        if (tabDef.match && tabDef.match.indexOf(x.status) < 0) return false;
+        if (!q) return true;
+        return (
+          (
+            x.id +
+            ' ' +
+            x.title +
+            ' ' +
+            x.question +
+            ' ' +
+            x.reason +
+            ' ' +
+            (x.blocks || '')
+          )
+            .toLowerCase()
+            .indexOf(q) >= 0
+        );
+      });
+    }
+    function count(match) {
+      return questions.filter(function (x) {
+        return (
+          (repoFilter === 'all' || repoOf(x) === repoFilter) &&
+          (!match || match.indexOf(x.status) >= 0)
+        );
+      }).length;
+    }
+
+    /* ---------- rendering ---------- */
+    function renderChrome() {
+      var needs = count(['open', 'partial', 'followup']);
+      var ans = count(['answered']);
+      $('summary').replaceChildren(
+        h('span', null, h('b', null, needs), ' need an answer'),
+        h('span', null, h('b', null, ans), ' awaiting Claude'),
+        h('span', null, h('b', null, count(['parked'])), ' parked'),
+        h('span', null, h('b', null, count(['resolved'])), ' resolved'),
+      );
+      var b = $('banner');
+      if (ans > 0) {
+        b.hidden = false;
+        b.textContent =
+          ans === 1
+            ? '1 answer is waiting for Claude to check it. Claude is notified when you record an answer; if the note on the entry says it was not, tell Claude in the session to check pending answers.'
+            : ans +
+              ' answers are waiting for Claude to check them. Claude is notified when you record an answer; if the note on an entry says it was not, tell Claude in the session to check pending answers.';
+      } else {
+        b.hidden = true;
+      }
+      $('chips').replaceChildren.apply(
+        $('chips'),
+        TABS.map(function (t) {
+          return h(
+            'button',
+            {
+              class: 'chip',
+              type: 'button',
+              'aria-pressed': String(t.key === tab),
+              onclick: function () {
+                tab = t.key;
+                render();
+              },
+            },
+            t.label,
+            h('span', null, count(t.match)),
+          );
+        }),
+      );
+      var rc = [{ key: 'all', label: 'Both repositories', n: questions.length }].concat(
+        Object.keys(REPOS).map(function (k) {
+          return {
+            key: k,
+            label: REPOS[k].label,
+            n: questions.filter(function (x) {
+              return repoOf(x) === k;
+            }).length,
+          };
+        }),
+      );
+      $('repos').replaceChildren.apply(
+        $('repos'),
+        rc.map(function (r) {
+          return h(
+            'button',
+            {
+              class: 'chip',
+              type: 'button',
+              'aria-pressed': String(r.key === repoFilter),
+              onclick: function () {
+                repoFilter = r.key;
+                render();
+              },
+            },
+            r.label,
+            h('span', null, r.n),
+          );
+        }),
+      );
+      $('add-wrap').hidden = !canEdit;
+    }
+
+    function section(title, body) {
+      return h('div', { class: 'sec' }, h('h3', null, title), body);
+    }
+
+    function render() {
+      renderChrome();
+      var list = $('list');
+      var items = visible();
+      if (!loaded) {
+        list.replaceChildren(h('div', { class: 'empty' }, 'Loading the register…'));
+        return;
+      }
+      if (!questions.length) {
+        list.replaceChildren(
+          h(
+            'div',
+            { class: 'empty' },
+            'The register is empty. Questions appear here when Claude or you add them. Use “Add a question” below, or ask Claude to load the questions from docs/OPEN_QUESTIONS.md.',
+          ),
+        );
+        return;
+      }
+      if (!items.length) {
+        list.replaceChildren(
+          h(
+            'div',
+            { class: 'empty' },
+            query
+              ? 'No question matches that search.'
+              : tab === 'resolved'
+                ? 'Nothing is resolved here yet. A question moves here after Claude checks your answer and accepts it.'
+                : 'Nothing in this view.',
+          ),
+        );
+        return;
+      }
+      list.replaceChildren.apply(list, items.map(card));
+    }
+
+    function card(q) {
+      var open = !!openIds[q.id];
+      var head = h(
+        'button',
+        {
+          class: 'q-head',
+          type: 'button',
+          'aria-expanded': String(open),
+          onclick: function () {
+            openIds[q.id] = !openIds[q.id];
+            render();
+          },
+        },
+        h('span', { class: 'qid' }, q.id),
+        h('span', { class: 'qtitle' }, q.title),
+        h('span', { class: 'pill', 'data-s': q.status }, STATUS[q.status] || q.status),
+        h(
+          'span',
+          { class: 'qmeta' },
+          h('span', { class: 'repo', 'data-r': repoOf(q) }, REPOS[repoOf(q)].label),
+          q.stage
+            ? h('span', null, (repoOf(q) === 'ecosystem' ? 'Stage ' : '') + q.stage)
+            : null,
+          h('span', null, 'Raised ' + fmt(q.raised)),
+          q.blocks ? h('span', null, 'Blocks: ' + clip(q.blocks, 90)) : null,
+        ),
+      );
+      var el = h('article', { class: 'q', id: 'q-' + q.id }, head);
+      if (open) el.append(body(q, el));
+      return el;
+    }
+
+    function body(q, cardEl) {
+      var parts = [];
+      parts.push(
+        h(
+          'div',
+          { class: 'cols' },
+          section('The question', h('p', null, q.question)),
+          section('Why it is open', h('p', null, q.reason)),
+        ),
+      );
+      var sug = q.suggestions || [];
+      var recBox = q.recommendation
+        ? h(
+            'div',
+            { class: 'rec' },
+            h(
+              'div',
+              { class: 'sec' },
+              h(
+                'h3',
+                null,
+                q.recBy === 'source'
+                  ? "Recommendation from the repository's recommendations file"
+                  : 'Claude recommends',
+              ),
+              h('p', null, q.recommendation),
+            ),
+          )
+        : null;
+      parts.push(
+        h(
+          'div',
+          { class: 'cols' },
+          sug.length
+            ? section(
+                'Options to consider',
+                h(
+                  'ul',
+                  null,
+                  sug.map(function (s) {
+                    return h('li', null, s);
+                  }),
+                ),
+              )
+            : h('div'),
+          recBox || h('div'),
+        ),
+      );
+      if (q.source)
+        parts.push(h('div', { class: 'msg' }, 'Source: ', h('code', null, q.source)));
+
+      if (q.answer) parts.push(answerView(q, cardEl));
+      if (q.review) parts.push(reviewView(q));
+      if (
+        canEdit &&
+        (q.status === 'open' || q.status === 'partial' || q.status === 'followup')
+      )
+        parts.push(answerForm(q, cardEl));
+      else if (
+        !canEdit &&
+        (q.status === 'open' || q.status === 'partial' || q.status === 'followup')
+      )
+        parts.push(
+          h(
+            'div',
+            { class: 'msg' },
+            'You can read this register. Only editors can record answers.',
+          ),
+        );
+
+      if (canEdit && (q.status === 'resolved' || q.status === 'parked')) {
+        parts.push(
+          h(
+            'div',
+            { class: 'row' },
+            h(
+              'button',
+              {
+                class: 'btn ghost',
+                type: 'button',
+                onclick: function () {
+                  reopen(q, 'reopened');
+                },
+              },
+              'Reopen this question',
+            ),
+          ),
+        );
+      }
+      if (q.history && q.history.length) {
+        parts.push(
+          h(
+            'details',
+            { class: 'hist' },
+            h('summary', null, 'History (' + q.history.length + ')'),
+            h(
+              'ol',
+              null,
+              q.history.map(function (e) {
+                return h(
+                  'li',
+                  null,
+                  fmt(e.at) +
+                    ' · ' +
+                    (e.kind || '') +
+                    (e.by ? ' · ' + who(e.by) : '') +
+                    (e.text ? ': ' + clip(e.text, 240) : ''),
+                );
+              }),
+            ),
+          ),
+        );
+      }
+      var f = flash[q.id];
+      if (f)
+        parts.push(
+          h('div', { class: 'msg' + (f.err ? ' err' : ''), role: 'status' }, f.text),
+        );
+      return h('div', { class: 'q-body' }, parts);
+    }
+
+    function answerView(q, cardEl) {
+      var a = q.answer;
+      var rows = [
+        h(
+          'div',
+          { class: 'sec' },
+          h('h3', null, 'Recorded answer · ' + fmt(a.at) + ' · ' + who(a.by)),
+          a.choice ? h('p', null, h('b', null, a.choice)) : null,
+          a.text ? h('p', null, a.text) : null,
+        ),
+      ];
+      if (a.reason)
+        rows.push(
+          h('div', { class: 'sec' }, h('h3', null, 'Reason'), h('p', null, a.reason)),
+        );
+      if (q.status === 'answered') {
+        var note =
+          q.notify === 'sent'
+            ? 'Claude was notified and will check this.'
+            : 'Claude was not notified from this page' +
+              (q.notifyWhy ? ' (' + q.notifyWhy + ')' : '') +
+              '. Tell Claude in the session: “check pending answers in the register”.';
+        rows.push(h('div', { class: 'msg' }, note));
+        if (canEdit)
+          rows.push(
+            h(
+              'div',
+              { class: 'row' },
+              h(
+                'button',
+                {
+                  class: 'btn ghost',
+                  type: 'button',
+                  disabled: !!busy[q.id],
+                  onclick: function () {
+                    askAgain(q, cardEl);
+                  },
+                },
+                'Ask Claude to check again',
+              ),
+              h(
+                'button',
+                {
+                  class: 'btn ghost',
+                  type: 'button',
+                  disabled: !!busy[q.id],
+                  onclick: function () {
+                    reopen(q, 'withdrawn');
+                  },
+                },
+                'Withdraw answer',
+              ),
+            ),
+          );
+      }
+      return h('div', { class: 'answerbox' }, rows);
+    }
+
+    function reviewView(q) {
+      var r = q.review;
+      var label =
+        r.verdict === 'accepted'
+          ? 'Claude checked: accepted'
+          : r.verdict === 'conflict'
+            ? 'Claude checked: conflicts with a rule'
+            : 'Claude checked: needs follow-up';
+      var rows = [
+        h(
+          'div',
+          { class: 'sec' },
+          h('h3', null, label + ' · ' + fmt(r.at)),
+          h('p', null, r.summary || ''),
+        ),
+      ];
+      if (r.actions && r.actions.length)
+        rows.push(
+          h(
+            'div',
+            { class: 'sec' },
+            h('h3', null, 'What Claude did or needs next'),
+            h(
+              'ul',
+              null,
+              r.actions.map(function (x) {
+                return h('li', null, x);
+              }),
+            ),
+          ),
+        );
+      return h('div', { class: 'reviewbox', 'data-v': r.verdict || 'followup' }, rows);
+    }
+
+    function answerForm(q, cardEl) {
+      var d = drafts[q.id] || (drafts[q.id] = { choice: '', text: '', reason: '' });
+      var opts = q.options || [];
+      var rec = typeof q.recommendedIndex === 'number' ? q.recommendedIndex : -1;
+      var kids = [];
+      if (opts.length) {
+        kids.push(
+          h(
+            'div',
+            null,
+            h('label', null, 'Your decision'),
+            opts.map(function (o, i) {
+              var inp = h('input', {
+                type: 'radio',
+                name: 'opt-' + q.id,
+                value: String(i),
+                onchange: function () {
+                  d.choice = String(i);
+                  updateReasonHint();
+                },
+              });
+              if (d.choice === String(i)) inp.checked = true;
+              return h(
+                'label',
+                { class: 'opt' },
+                inp,
+                h('span', null, o, i === rec ? h('em', null, 'Recommended') : null),
+              );
+            }),
+          ),
+        );
+      }
+      var reasonHint = h('span', { class: 'hint' });
+      var ta = h('textarea', {
+        id: 'ans-' + q.id,
+        oninput: function (e) {
+          d.text = e.target.value;
+        },
+      });
+      ta.value = d.text;
+      var tr = h('textarea', {
+        id: 'rsn-' + q.id,
+        oninput: function (e) {
+          d.reason = e.target.value;
+        },
+      });
+      tr.value = d.reason;
+      function departs() {
+        return opts.length && rec >= 0 && d.choice !== '' && Number(d.choice) !== rec;
+      }
+      function updateReasonHint() {
+        reasonHint.textContent = departs()
+          ? ' (required, because this departs from the recommendation)'
+          : ' (optional)';
+      }
+      updateReasonHint();
+      kids.push(
+        h(
+          'div',
+          null,
+          h(
+            'label',
+            { for: 'ans-' + q.id },
+            opts.length ? 'Anything to add' : 'Your answer',
+            opts.length ? h('span', { class: 'hint' }, ' (optional)') : null,
+          ),
+          ta,
+        ),
+      );
+      kids.push(
+        h('div', null, h('label', { for: 'rsn-' + q.id }, 'Reason', reasonHint), tr),
+      );
+      var btn = h(
+        'button',
+        {
+          class: 'btn',
+          type: 'button',
+          disabled: !!busy[q.id],
+          onclick: function () {
+            submit(q, cardEl, departs());
+          },
+        },
+        'Record answer and ask Claude to check',
+      );
+      kids.push(h('div', { class: 'row' }, btn));
+      return h('div', { class: 'form' }, kids);
+    }
+
+    /* ---------- writes ---------- */
+    function setFlash(id, text, err) {
+      flash[id] = { text: text, err: !!err };
+      render();
+    }
+    function ref(id) {
+      return db.collection('questions').doc(id);
+    }
+    function cloneQ(q) {
+      return JSON.parse(JSON.stringify(q));
+    }
+    function pushHist(q, entry) {
+      return (q.history || []).concat([entry]);
+    }
+
+    function claudeText(q, a, again) {
+      var lines = [
+        '[Open Questions Register] ' +
+          (again ? 'Please check again: ' : 'Answer recorded for ') +
+          q.id +
+          ' — ' +
+          q.title +
+          ' (repository: ' +
+          REPOS[repoOf(q)].short +
+          ')',
+        '',
+        a.choice ? 'Decision: ' + clip(a.choice, 400) : null,
+        a.text ? 'Answer: ' + clip(a.text, 1200) : null,
+        a.reason ? 'Reason: ' + clip(a.reason, 1200) : null,
+        '',
+        'Please check this against CLAUDE.md and docs/OPEN_QUESTIONS.md, then write your verdict to the question document (collection questions, doc ' +
+          q.id +
+          ", field review: verdict accepted | followup | conflict, summary, actions). Set status to resolved if accepted, followup otherwise, and update docs/OPEN_QUESTIONS.md in that question's repository (if you cannot push there, say so and give the exact edit).",
+      ];
+      return lines
+        .filter(function (x) {
+          return x !== null;
+        })
+        .join('\n');
+    }
+
+    function notify(q, text, cardEl) {
+      if (!comments)
+        return Promise.resolve({ ok: false, why: 'comments unavailable here' });
+      return comments
+        .canSendToClaude()
+        .then(function (s) {
+          if (s !== 'available')
+            return {
+              ok: false,
+              why: s === 'no_session' ? 'no Claude session is watching' : s,
+            };
+          var viaThread = q.thread
+            ? comments
+                .sendToClaude({ threadId: q.thread, text: text })
+                .catch(function (e) {
+                  if (e && e.code === 'not_found') return null;
+                  throw e;
+                })
+            : Promise.resolve(null);
+          return viaThread
+            .then(function (res) {
+              if (res) return res;
+              return comments.anchorFor(cardEl).then(function (anchor) {
+                return comments.sendToClaude({ anchor: anchor, text: text });
+              });
+            })
+            .then(function (res) {
+              return { ok: true, thread: res.threadId };
+            });
+        })
+        .catch(function (e) {
+          return { ok: false, why: (e && e.code) || 'error' };
+        });
+    }
+
+    function submit(q, cardEl, needReason) {
+      var d = drafts[q.id] || {};
+      var opts = q.options || [];
+      var choice =
+        d.choice !== '' && d.choice != null && opts.length ? opts[Number(d.choice)] : '';
+      var text = (d.text || '').trim(),
+        reason = (d.reason || '').trim();
+      if (opts.length && !choice)
+        return setFlash(q.id, 'Pick one of the options first.', true);
+      if (!opts.length && !text) return setFlash(q.id, 'Write your answer first.', true);
+      if (needReason && !reason)
+        return setFlash(
+          q.id,
+          'Give a reason, because this departs from the recommendation.',
+          true,
+        );
+      var a = {
+        choice: choice,
+        text: text,
+        reason: reason,
+        at: new Date().toISOString(),
+        by: myId,
+      };
+      busy[q.id] = true;
+      setFlash(q.id, 'Saving…', false);
+      var nextHist = pushHist(q, {
+        at: a.at,
+        kind: 'answered',
+        by: myId,
+        text: (choice ? choice + '. ' : '') + text,
+      });
+      var sendP = notify(q, claudeText(q, a, false), cardEl);
+      var writeP = ref(q.id).update({
+        status: 'answered',
+        answer: a,
+        review: null,
+        history: nextHist,
+        notify: 'pending',
+      });
+      Promise.all([
+        sendP,
+        writeP.then(
+          function () {
+            return true;
+          },
+          function (e) {
+            return e;
+          },
+        ),
+      ])
+        .then(function (r) {
+          var n = r[0],
+            w = r[1];
+          if (w !== true) {
+            busy[q.id] = false;
+            return setFlash(
+              q.id,
+              'The answer was not saved (' +
+                ((w && w.code) || 'error') +
+                '). Nothing changed.',
+              true,
+            );
+          }
+          var patch = {
+            notify: n.ok ? 'sent' : 'not-sent',
+            notifyWhy: n.ok ? null : n.why,
+          };
+          if (n.thread) patch.thread = n.thread;
+          return ref(q.id)
+            .update(patch)
+            .then(function () {
+              busy[q.id] = false;
+              delete drafts[q.id];
+              setFlash(
+                q.id,
+                n.ok
+                  ? 'Saved. Claude has been told and will check it.'
+                  : 'Saved. Claude was not notified from here.',
+                false,
+              );
+            });
+        })
+        .catch(function () {
+          busy[q.id] = false;
+          setFlash(
+            q.id,
+            'Saved, but the notification state could not be recorded.',
+            true,
+          );
+        });
+    }
+
+    function askAgain(q, cardEl) {
+      busy[q.id] = true;
+      setFlash(q.id, 'Asking Claude…', false);
+      notify(q, claudeText(q, q.answer, true), cardEl)
+        .then(function (n) {
+          var patch = {
+            notify: n.ok ? 'sent' : 'not-sent',
+            notifyWhy: n.ok ? null : n.why,
+          };
+          if (n.thread) patch.thread = n.thread;
+          return ref(q.id)
+            .update(patch)
+            .then(function () {
+              busy[q.id] = false;
+              setFlash(
+                q.id,
+                n.ok
+                  ? 'Claude has been told again.'
+                  : 'Claude could not be reached from this page (' + n.why + ').',
+                !n.ok,
+              );
+            });
+        })
+        .catch(function () {
+          busy[q.id] = false;
+          setFlash(q.id, 'Could not ask Claude.', true);
+        });
+    }
+
+    function reopen(q, kind) {
+      var next = cloneQ(q);
+      delete next.answer;
+      delete next.review;
+      delete next.notify;
+      delete next.notifyWhy;
+      next.status = 'open';
+      next.history = pushHist(q, {
+        at: new Date().toISOString(),
+        kind: kind,
+        by: myId,
+        text: q.answer
+          ? 'Previous answer kept in history: ' +
+            clip((q.answer.choice || '') + ' ' + (q.answer.text || ''), 200)
+          : '',
+      });
+      ref(q.id)
+        .set(next)
+        .then(
+          function () {
+            setFlash(
+              q.id,
+              kind === 'withdrawn' ? 'Answer withdrawn.' : 'Question reopened.',
+              false,
+            );
+          },
+          function (e) {
+            setFlash(
+              q.id,
+              'Could not update (' + ((e && e.code) || 'error') + ').',
+              true,
+            );
+          },
+        );
+    }
+
+    function addQuestion() {
+      var id = $('n-id').value.trim(),
+        title = $('n-title').value.trim(),
+        qq = $('n-q').value.trim(),
+        reason = $('n-reason').value.trim();
+      var msg = $('n-msg');
+      msg.className = 'msg';
+      if (!/^[A-Za-z0-9._-]{2,40}$/.test(id)) {
+        msg.className = 'msg err';
+        msg.textContent = 'Use an ID like OQ-049 (letters, digits, dash).';
+        return;
+      }
+      if (
+        questions.some(function (x) {
+          return x.id === id;
+        })
+      ) {
+        msg.className = 'msg err';
+        msg.textContent = id + ' already exists.';
+        return;
+      }
+      if (!title || !qq || !reason) {
+        msg.className = 'msg err';
+        msg.textContent = 'Title, question and reason are required.';
+        return;
+      }
+      var minOrder = questions.reduce(function (m, x) {
+        return Math.min(m, x.order == null ? 0 : x.order);
+      }, 0);
+      var now = new Date().toISOString();
+      var doc = {
+        id: id,
+        repo: $('n-repo').value,
+        order: minOrder - 1,
+        title: title,
+        stage: $('n-stage').value.trim(),
+        raised: now.slice(0, 10),
+        status: 'open',
+        blocks: $('n-blocks').value.trim(),
+        question: qq,
+        reason: reason,
+        suggestions: [],
+        recommendation: '',
+        options: [],
+        recommendedIndex: null,
+        history: [
+          { at: now, kind: 'raised', by: myId, text: 'Added from the register.' },
+        ],
+      };
+      ref(id)
+        .set(doc)
+        .then(
+          function () {
+            msg.textContent =
+              id +
+              ' added. Claude will add suggestions and a recommendation when it next reads the register.';
+            ['n-id', 'n-stage', 'n-title', 'n-q', 'n-reason', 'n-blocks'].forEach(
+              function (k) {
+                $(k).value = '';
+              },
+            );
+          },
+          function (e) {
+            msg.className = 'msg err';
+            msg.textContent = 'Could not add (' + ((e && e.code) || 'error') + ').';
+          },
+        );
+    }
+
+    /* ---------- data ---------- */
+    function setLive(state, text) {
+      $('live').setAttribute('data-state', state);
+      $('live-text').textContent = text;
+    }
+
+    function resolveNames() {
+      if (!user || !user.profiles) return;
+      var ids = {};
+      questions.forEach(function (q) {
+        if (q.answer && q.answer.by) ids[q.answer.by] = 1;
+        (q.history || []).forEach(function (e) {
+          if (e.by) ids[e.by] = 1;
+        });
+      });
+      var need = Object.keys(ids)
+        .filter(function (i) {
+          return !(i in names) && i !== myId;
+        })
+        .slice(0, 64);
+      if (!need.length) return;
+      user.profiles(need).then(
+        function (p) {
+          need.forEach(function (i) {
+            names[i] = (p && p[i] && p[i].name) || '';
+          });
+          render();
+        },
+        function () {},
+      );
+    }
+
+    function start() {
+      $('search').addEventListener('input', function (e) {
+        query = e.target.value;
+        render();
+      });
+      $('n-save').addEventListener('click', addQuestion);
+      render();
+      var timer = setTimeout(function () {
+        setLive('error', 'Cannot reach the register yet');
+      }, 10000);
+      var cv = window.claude && window.claude.use;
+      if (!cv) {
+        clearTimeout(timer);
+        setLive('error', 'Open this page in Claude to use the live register');
+        loaded = true;
+        render();
+        return;
+      }
+      Promise.all([
+        window.claude.use('db'),
+        window.claude.use('user'),
+        window.claude.use('comments'),
+      ]).then(function (r) {
+        db = r[0];
+        user = r[1];
+        comments = r[2];
+        if (!db) {
+          clearTimeout(timer);
+          loaded = true;
+          setLive('error', 'Sign in to see the live register');
+          render();
+          return;
+        }
+        try {
+          canEdit = !!(user && user.canEdit());
+        } catch (e) {
+          canEdit = false;
+        }
+        if (user && user.id)
+          user.id().then(
+            function (id) {
+              myId = id;
+              render();
+            },
+            function () {},
+          );
+        db.collection('questions').onSnapshot(
+          function (snap) {
+            questions = snap.docs.map(function (d) {
+              var x = d.data();
+              x.id = x.id || d.id;
+              return x;
+            });
+            questions.sort(function (a, b) {
+              var ga = GROUP[a.status] == null ? 9 : GROUP[a.status],
+                gb = GROUP[b.status] == null ? 9 : GROUP[b.status];
+              if (ga !== gb) return ga - gb;
+              return (a.order == null ? 0 : a.order) - (b.order == null ? 0 : b.order);
+            });
+            loaded = true;
+            if (!snap.metadata.fromCache) {
+              clearTimeout(timer);
+              setLive('live', 'Live · updates as Claude and you write');
+            }
+            render();
+            resolveNames();
+          },
+          function () {
+            clearTimeout(timer);
+            loaded = true;
+            setLive('error', 'The register could not be read');
+            render();
+          },
+        );
+      });
+    }
+    if (document.readyState === 'loading')
+      document.addEventListener('DOMContentLoaded', start);
+    else start();
+  })();
+</script>
