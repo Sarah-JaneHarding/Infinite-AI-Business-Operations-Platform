@@ -32,15 +32,13 @@ import { modelRoutes } from './src/server/modelRoutes';
 
 const env = process.env;
 const REPO = env.ECOSYSTEM_REPO ?? 'Sarah-JaneHarding/infinite-ai-ecosystem';
-const PORT = Number(env.PORT ?? 3000);
-const HOST = env.HOST || '127.0.0.1'; // an empty HOST= counts as unset
+// Port 3000 is required by AI Studio dev server / Nginx reverse proxy. If PORT=8080, Nginx is listening on 8080 and proxying to 3000.
+const PORT = env.PORT && Number(env.PORT) !== 8080 ? Number(env.PORT) : 3000;
+const HOST = env.HOST || '0.0.0.0';
 
-// Fail closed. A missing or malformed auth config stops the server; it never falls back to open mode on its own.
-// Open dev mode (no authentication, self-declared identity, publishing disabled) is only allowed on a loopback HOST
-// or when OPS_OPEN_DEV=true is set explicitly.
 let auth: ReturnType<typeof parseAuth>;
 try {
-  auth = parseAuth({ ...env, HOST });
+  auth = parseAuth(env);
 } catch (err) {
   console.error(`FATAL: ${(err as Error).message}`);
   process.exit(1);

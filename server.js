@@ -2982,24 +2982,8 @@ var OrderRefused = class extends Error {
     this.checks = checks;
   }
 };
-function parseProposal(body) {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new OrderRefused(400, "the order must be an object");
-  const b = body;
-  const name = typeof b.name === "string" ? b.name.trim() : "";
-  if (name.length < 3 || name.length > 80) throw new OrderRefused(400, "the name must be 3 to 80 characters");
-  if (detectPii(name).length) throw new OrderRefused(422, "the name must not contain personal data");
-  const agent = typeof b.agentId === "string" ? agentById(b.agentId) : void 0;
-  if (!agent) throw new OrderRefused(404, "unknown agent");
-  if (agent.dataClass === "learner") throw new OrderRefused(422, "this agent handles learner data, which is never admitted");
-  if (agent.requiresApproval !== true) throw new OrderRefused(422, "this agent does not require approval, so it cannot run autonomously");
-  let trigger;
-  try {
-    trigger = parseTrigger(b.trigger);
-  } catch (e) {
-    if (e instanceof TriggerInvalid) throw new OrderRefused(400, e.message);
-    throw e;
-  }
-  const given = typeof b.inputs === "object" && b.inputs !== null && !Array.isArray(b.inputs) ? b.inputs : {};
+function parseInputs(agent, raw) {
+  const given = typeof raw === "object" && raw !== null && !Array.isArray(raw) ? raw : {};
   const unknown = Object.keys(given).filter((k) => !agent.inputs.some((i) => i.key === k));
   if (unknown.length) throw new OrderRefused(400, `unknown input(s): ${unknown.join(", ")}`);
   const inputs = {};
@@ -3017,10 +3001,78 @@ function parseProposal(body) {
     if (detectInjection(v2).length) throw new OrderRefused(422, `the input "${f.label}" looks like an attempt to override platform controls`);
     inputs[f.key] = v2;
   }
+  return inputs;
+}
+function parseProposal(body) {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new OrderRefused(400, "the order must be an object");
+  const b = body;
+  const name = typeof b.name === "string" ? b.name.trim() : "";
+  if (name.length < 3 || name.length > 80) throw new OrderRefused(400, "the name must be 3 to 80 characters");
+  if (detectPii(name).length) throw new OrderRefused(422, "the name must not contain personal data");
+  const agent = typeof b.agentId === "string" ? agentById(b.agentId) : void 0;
+  if (!agent) throw new OrderRefused(404, "unknown agent");
+  if (agent.dataClass === "learner") throw new OrderRefused(422, "this agent handles learner data, which is never admitted");
+  if (agent.requiresApproval !== true) throw new OrderRefused(422, "this agent does not require approval, so it cannot run autonomously");
+  let trigger;
+  try {
+    trigger = parseTrigger(b.trigger);
+  } catch (e) {
+    if (e instanceof TriggerInvalid) throw new OrderRefused(400, e.message);
+    throw e;
+  }
+  const inputs = parseInputs(agent, b.inputs);
   const runs = b.maxRunsPerDay === void 0 ? 1 : b.maxRunsPerDay;
   if (typeof runs !== "number" || !Number.isInteger(runs) || runs < 1 || runs > MAX_RUNS_PER_DAY_CEILING) throw new OrderRefused(400, `maxRunsPerDay must be a whole number from 1 to ${MAX_RUNS_PER_DAY_CEILING}`);
-  return { name, agentId: agent.id, trigger, inputs, maxRunsPerDay: runs };
+  const allowTaskInputs = b.allowTaskInputs === void 0 ? false : b.allowTaskInputs;
+  if (typeof allowTaskInputs !== "boolean") throw new OrderRefused(400, "allowTaskInputs must be true or false");
+  return { name, agentId: agent.id, trigger, inputs, allowTaskInputs, maxRunsPerDay: runs };
 }
+
+// src/server/autonomy/tasks.ts
+var DAY_MS = 24 * 60 * 60 * 1e3;
+var TASK_EXPIRY_MS = 7 * DAY_MS;
+var MAX_QUEUED_PER_ORDER = 10;
+var DUE_AHEAD_MS = 90 * DAY_MS;
+var DUE_BEHIND_MS = DAY_MS;
+var ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/;
+function validIso(v2) {
+  const m = ISO.exec(v2);
+  if (!m) return false;
+  const ms = Date.parse(v2);
+  if (!Number.isFinite(ms)) return false;
+  const [, y, mo, d, h, mi, s, zone] = m;
+  const shifted = zone === "Z" ? 0 : (zone.startsWith("-") ? -1 : 1) * (Number(zone.slice(1, 3)) * 60 + Number(zone.slice(4, 6))) * 6e4;
+  const local = new Date(ms + shifted);
+  return local.getUTCFullYear() === Number(y) && local.getUTCMonth() + 1 === Number(mo) && local.getUTCDate() === Number(d) && local.getUTCHours() === Number(h) && local.getUTCMinutes() === Number(mi) && local.getUTCSeconds() === Number(s);
+}
+function parseEnqueue(body, now) {
+  if (typeof body !== "object" || body === null || Array.isArray(body))
+    throw new OrderRefused(400, "the task must be an object");
+  const b = body;
+  if (typeof b.orderId !== "string" || b.orderId.trim() === "")
+    throw new OrderRefused(400, "orderId is required");
+  const p = b.priority;
+  if (p !== 1 && p !== 2 && p !== 3)
+    throw new OrderRefused(400, "priority must be 1, 2 or 3");
+  if (typeof b.due !== "string" || !validIso(b.due))
+    throw new OrderRefused(
+      400,
+      "due must be an ISO time such as 2026-11-20T08:00:00Z"
+    );
+  const due = Date.parse(b.due);
+  if (due > now.getTime() + DUE_AHEAD_MS)
+    throw new OrderRefused(400, "due must be no more than 90 days ahead");
+  if (due < now.getTime() - DUE_BEHIND_MS)
+    throw new OrderRefused(400, "due must not be more than a day in the past");
+  const req = { orderId: b.orderId, priority: p, due: b.due };
+  if (b.inputs !== void 0) {
+    if (typeof b.inputs !== "object" || b.inputs === null || Array.isArray(b.inputs))
+      throw new OrderRefused(400, "inputs must be an object");
+    req.inputs = b.inputs;
+  }
+  return req;
+}
+var compareTasks = (a, b) => a.priority - b.priority || Date.parse(a.due) - Date.parse(b.due) || Date.parse(a.at) - Date.parse(b.at) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 // src/server/autonomy/service.ts
 var DAY = 864e5;
@@ -3091,7 +3143,7 @@ var AutonomyService = class {
     if (!dry.passed) throw this.dryRunFailure(dry);
     const o = { id: newId("ord"), ...p, status: "PROPOSED", proposedBy: by, version: 1, at: this.now().toISOString() };
     this.deps.store.append("standing_orders", o);
-    await this.audit("autonomy.order.proposed", by, o.id, { agentId: o.agentId, trigger: o.trigger.kind, maxRunsPerDay: o.maxRunsPerDay });
+    await this.audit("autonomy.order.proposed", by, o.id, { agentId: o.agentId, trigger: o.trigger.kind, maxRunsPerDay: o.maxRunsPerDay, allowTaskInputs: o.allowTaskInputs });
     return o;
   }
   /** A different person activates it, and it is dry-run again first: contracts and facts may have changed since it was proposed. */
@@ -3121,7 +3173,136 @@ var AutonomyService = class {
     if (o.status === "REVOKED" || status === "PAUSED" && o.status !== "ACTIVE") throw new OrderRefused(409, `the order is ${o.status.toLowerCase()}`);
     const next = this.save(o, { status, statusNote: r });
     await this.audit(action, by, id, { reason: r });
+    for (const t of this.tasks()) if (t.orderId === id && t.status === "QUEUED") await this.finish(t, "QUEUED", "CANCELLED", r, "autonomy.task.cancelled", by);
     return next;
+  }
+  // -------------------------------------------------------------- tasks
+  latestTasks() {
+    const m = /* @__PURE__ */ new Map();
+    for (const r of this.deps.store.list("autonomy_tasks")) m.set(String(r.id), r);
+    return [...m.values()];
+  }
+  /** The latest version of each task, most urgent first. */
+  tasks(filter = {}) {
+    return this.latestTasks().filter((t) => (!filter.dept || t.dept === filter.dept) && (!filter.status || t.status === filter.status)).sort(compareTasks);
+  }
+  /**
+   * Appends the next version of a task, but only if its latest stored version is still in the state the caller saw. Callers hold
+   * snapshots across awaits, so this re-read is what stops one transition overwriting another (a cancel undone by a run).
+   * It is synchronous with the write, so nothing can slip in between. Returns null when the task has moved on.
+   */
+  saveTask(t, from, patch) {
+    const cur = this.latestTasks().find((x) => x.id === t.id);
+    if (!cur || cur.status !== from) return null;
+    const { note: _drop, ...keep } = cur;
+    const next = { ...keep, ...patch, version: cur.version + 1, at: this.now().toISOString() };
+    if (next.note === void 0) delete next.note;
+    this.deps.store.append("autonomy_tasks", next);
+    return next;
+  }
+  /** Moves a task to a final state and says so in the ledger. */
+  async finish(t, from, status, note, action, by) {
+    const next = this.saveTask(t, from, { status, note });
+    if (next) await this.audit(action, by, t.orderId, { taskId: t.id, note });
+    return next;
+  }
+  queue(o, req) {
+    const agent = agentById(o.agentId);
+    if (!agent) throw new OrderRefused(409, "the order names an agent that is no longer registered");
+    const t = { id: newId("tsk"), orderId: o.id, agentId: o.agentId, dept: agent.dept, priority: req.priority, due: req.due, ...req.inputs ? { inputs: req.inputs } : {}, origin: req.origin, ...req.dedupeKey ? { dedupeKey: req.dedupeKey } : {}, status: "QUEUED", version: 1, at: this.now().toISOString() };
+    this.deps.store.append("autonomy_tasks", t);
+    return t;
+  }
+  /** A person queues work under an ACTIVE order. Their inputs, if the order allows any, are checked like the order's own. */
+  async enqueue(actor, body) {
+    const by = this.human(actor);
+    const req = parseEnqueue(body, this.now());
+    const o = this.order(req.orderId);
+    if (o.status !== "ACTIVE") throw new OrderRefused(409, `the order is ${o.status.toLowerCase()}`);
+    const agent = agentById(o.agentId);
+    if (!agent) throw new OrderRefused(409, "the order names an agent that is no longer registered");
+    const given = req.inputs ?? {};
+    let own;
+    if (Object.keys(given).length) {
+      if (!o.allowTaskInputs) throw new OrderRefused(422, "this order does not accept inputs on a task");
+      const parsed = parseInputs(agent, { ...o.inputs, ...given });
+      own = Object.fromEntries(Object.keys(given).filter((k) => k in parsed).map((k) => [k, parsed[k]]));
+    }
+    if (this.latestTasks().filter((t2) => t2.orderId === o.id && t2.status === "QUEUED").length >= MAX_QUEUED_PER_ORDER) throw new OrderRefused(429, `This order already has ${MAX_QUEUED_PER_ORDER} queued tasks.`);
+    const t = this.queue(o, { priority: req.priority, due: req.due, ...own && Object.keys(own).length ? { inputs: own } : {}, origin: { kind: "person", by } });
+    await this.audit("autonomy.task.queued", by, o.id, { taskId: t.id, priority: t.priority, due: t.due, origin: "person" });
+    return t;
+  }
+  async cancelTask(actor, id, reason) {
+    const by = this.human(actor);
+    const t = this.latestTasks().find((x) => x.id === id);
+    if (!t) throw new OrderRefused(404, "unknown task");
+    const r = (reason ?? "").trim();
+    if (r.length < 5 || r.length > 300) throw new OrderRefused(400, "Give a reason, in 5 to 300 characters.");
+    if (t.status !== "QUEUED") throw new OrderRefused(409, `the task is ${t.status.toLowerCase()}`);
+    const next = await this.finish(t, "QUEUED", "CANCELLED", r, "autonomy.task.cancelled", by);
+    if (!next) throw new OrderRefused(409, "the task is no longer queued");
+    return next;
+  }
+  /** A trigger asks for a task. Nothing from the trigger but its kind, slot or event name is kept. Returns null when one is already there. */
+  async enqueueFromTrigger(o, origin) {
+    const dedupeKey = origin.kind === "schedule" ? `schedule:${origin.slot}` : `event:${origin.event}`;
+    const mine = this.latestTasks().filter((t2) => t2.orderId === o.id && t2.dedupeKey === dedupeKey);
+    if (origin.kind === "schedule" ? mine.length : mine.some((t2) => t2.status === "QUEUED")) return null;
+    const t = this.queue(o, { priority: 2, due: this.now().toISOString(), origin, dedupeKey });
+    await this.audit("autonomy.task.queued", `auto:${o.id}`, o.id, { taskId: t.id, priority: t.priority, due: t.due, origin: origin.kind });
+    return t;
+  }
+  budgetRefusal(o) {
+    if (this.runsToday(o.id) >= o.maxRunsPerDay) return new OrderRefused(429, `This order has used its ${o.maxRunsPerDay} run(s) for today.`);
+    if (this.runsToday() >= this.maxRunsPerDay) return new OrderRefused(429, `The platform's autonomous runs for today (${this.maxRunsPerDay}) are used up.`);
+    return null;
+  }
+  /**
+   * Runs ready tasks one at a time, most urgent first. Anything left RUNNING was cut off by a restart: it is failed, never rerun.
+   * A task held back only by a budget stays queued; failed and quarantined runs are final.
+   */
+  drain(now = this.now()) {
+    if (!this.enabled) return Promise.resolve([]);
+    return this.exclusive(async () => {
+      for (const t of this.latestTasks().filter((x) => x.status === "RUNNING")) await this.finish(t, "RUNNING", "FAILED", "interrupted by a restart; not retried", "autonomy.failed", `auto:${t.orderId}`);
+      const out = [];
+      for (; ; ) {
+        let next;
+        for (const t of this.tasks({ status: "QUEUED" })) {
+          const o2 = this.orders().find((x) => x.id === t.orderId);
+          if (!o2 || o2.status !== "ACTIVE") {
+            await this.finish(t, "QUEUED", "CANCELLED", `the order is ${(o2?.status ?? "missing").toLowerCase()}`, "autonomy.task.cancelled", `auto:${t.orderId}`);
+            continue;
+          }
+          if (now.getTime() - Date.parse(t.due) > TASK_EXPIRY_MS) {
+            await this.finish(t, "QUEUED", "EXPIRED", "not run within 7 days of its due time", "autonomy.task.expired", `auto:${o2.id}`);
+            continue;
+          }
+          if (Date.parse(t.due) > now.getTime() || this.budgetRefusal(o2)) continue;
+          next = t;
+          break;
+        }
+        if (!next) return out;
+        const o = this.order(next.orderId);
+        const running = this.saveTask(next, "QUEUED", { status: "RUNNING" });
+        if (!running) continue;
+        try {
+          const outcome = await this.runLocked(o, this.viaFor(running.origin), this.byFor(running.origin), running);
+          out.push(outcome);
+          this.saveTask(running, "RUNNING", { status: outcome.outcome === "submitted" ? "SUBMITTED" : "QUARANTINED", artefactId: outcome.artefactId });
+        } catch (e) {
+          const msg = e instanceof OrderRefused ? e.message : e.message.slice(0, 200);
+          this.saveTask(running, "RUNNING", { status: "FAILED", note: `the run failed: ${msg}` });
+        }
+      }
+    });
+  }
+  byFor(origin) {
+    return origin.kind === "person" ? origin.by : origin.kind === "event" ? "webhook" : "schedule";
+  }
+  viaFor(origin) {
+    return origin.kind === "person" ? { kind: "request", by: origin.by } : origin;
   }
   // --------------------------------------------------------------- runs
   /** One run at a time, and the budget check and the "started" record are one step, so two triggers cannot both squeeze under a limit. */
@@ -3130,69 +3311,72 @@ var AutonomyService = class {
     this.chain = run.catch(() => void 0);
     return run;
   }
-  async startRun(orderId, via, by) {
-    return this.exclusive(async () => {
+  startRun(orderId, via, by) {
+    return this.exclusive(() => {
       if (!this.enabled) throw new OrderRefused(503, "Autonomy is switched off. The operator enables it with OPS_AUTONOMY=on.");
       const o = this.order(orderId);
       if (o.status !== "ACTIVE") throw new OrderRefused(409, `the order is ${o.status.toLowerCase()}`);
-      const perOrder = this.runsToday(o.id);
-      if (perOrder >= o.maxRunsPerDay) throw new OrderRefused(429, `This order has used its ${o.maxRunsPerDay} run(s) for today.`);
-      if (this.runsToday() >= this.maxRunsPerDay) throw new OrderRefused(429, `The platform's autonomous runs for today (${this.maxRunsPerDay}) are used up.`);
-      const actor = `auto:${o.id}`;
-      await this.audit("autonomy.started", actor, o.id, { via, by });
-      let outcome;
-      try {
-        outcome = await Promise.race([
-          this.deps.runner.run(o, via),
-          new Promise((_, rej) => setTimeout(() => rej(new Error("the run took too long")), RUN_TIMEOUT_MS).unref())
-        ]);
-      } catch (e) {
-        await this.audit("autonomy.failed", actor, o.id, { error: e.message.slice(0, 200) }).catch(() => void 0);
-        throw e;
-      }
-      await this.audit(outcome.outcome === "submitted" ? "autonomy.submitted" : "autonomy.quarantined", actor, o.id, { artefactId: outcome.artefactId, failed: failedChecks({ passed: false, results: outcome.checks }).map((c) => c.id) });
-      return outcome;
+      const refusal = this.budgetRefusal(o);
+      if (refusal) throw refusal;
+      return this.runLocked(o, via, by);
     });
+  }
+  /** Must be called inside `exclusive` with the budgets already checked. A task's own inputs go to the runner; the stored order is not touched. */
+  async runLocked(o, via, by, task) {
+    const actor = `auto:${o.id}`;
+    const extra = task ? { taskId: task.id } : {};
+    await this.audit("autonomy.started", actor, o.id, { via, by, ...extra });
+    let outcome;
+    try {
+      outcome = await Promise.race([
+        this.deps.runner.run(task?.inputs ? { ...o, inputs: { ...o.inputs, ...task.inputs } } : o, via),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("the run took too long")), RUN_TIMEOUT_MS).unref())
+      ]);
+    } catch (e) {
+      await this.audit("autonomy.failed", actor, o.id, { error: e.message.slice(0, 200), ...extra }).catch(() => void 0);
+      throw e;
+    }
+    await this.audit(outcome.outcome === "submitted" ? "autonomy.submitted" : "autonomy.quarantined", actor, o.id, { artefactId: outcome.artefactId, failed: failedChecks({ passed: false, results: outcome.checks }).map((c) => c.id), ...extra });
+    return outcome;
   }
   /** By request: a person asks an active order to run now. It still counts against the budgets. */
   async runNow(actor, id) {
     const by = this.human(actor);
     return this.startRun(id, { kind: "request", by }, by);
   }
-  /** Called when a signed webhook event arrives. Only active orders listening for it run, no more than once per cooldown. */
+  /** Called when a signed webhook event arrives. Only active orders listening for it queue a task, no more than once per cooldown. */
   async onEvent(kind) {
     if (!this.enabled) return [];
-    const out = [];
     for (const o of this.orders()) {
       if (o.status !== "ACTIVE" || o.trigger.kind !== "event" || !o.trigger.events.includes(kind)) continue;
       const cool = new Date(this.now().getTime() - o.trigger.cooldownMinutes * 6e4);
       if (this.since("autonomy.started", cool, o.id).length) continue;
-      try {
-        out.push(await this.startRun(o.id, { kind: "event", event: kind }, "webhook"));
-      } catch (e) {
-        if (!(e instanceof OrderRefused)) await this.audit("autonomy.failed", `auto:${o.id}`, o.id, { error: e.message.slice(0, 200) }).catch(() => void 0);
-      }
+      await this.enqueueFromTrigger(o, { kind: "event", event: kind }).catch((e) => this.triggerFailed(o, e));
     }
-    return out;
+    return this.drain();
   }
-  /** Called every minute. Runs each scheduled order whose slot is due and has not run, one after another. */
+  /** Called every minute. Queues each scheduled order whose slot is due and has not been queued or run, then drains. */
   async tick(now = this.now()) {
     if (!this.enabled) return [];
-    const out = [];
     for (const o of this.orders()) {
       if (o.status !== "ACTIVE" || o.trigger.kind !== "schedule") continue;
       const ran = new Set(this.since("autonomy.started", new Date(now.getTime() - 9 * DAY - CATCH_UP_MS), o.id).map((e) => String(e.detail.via?.slot ?? "")));
       const slot = dueSlot(o.trigger, now, ran);
       if (!slot) continue;
-      try {
-        out.push(await this.startRun(o.id, { kind: "schedule", slot }, "schedule"));
-      } catch (e) {
-        if (!(e instanceof OrderRefused)) await this.audit("autonomy.failed", `auto:${o.id}`, o.id, { error: e.message.slice(0, 200) }).catch(() => void 0);
-      }
+      await this.enqueueFromTrigger(o, { kind: "schedule", slot }).catch((e) => this.triggerFailed(o, e));
     }
-    return out;
+    return this.drain(now);
+  }
+  async triggerFailed(o, e) {
+    if (!(e instanceof OrderRefused)) await this.audit("autonomy.failed", `auto:${o.id}`, o.id, { error: e.message.slice(0, 200) }).catch(() => void 0);
   }
   // ------------------------------------------------------------- status
+  queueSummary() {
+    const byDept = {};
+    const queued = this.tasks({ status: "QUEUED" });
+    for (const t of queued) byDept[t.dept] = (byDept[t.dept] ?? 0) + 1;
+    return { queued: queued.length, byDept };
+  }
   status() {
     const day = this.startOfDay();
     const orders = this.orders().map((o) => ({ ...o, runsToday: this.runsToday(o.id), lastRunAt: this.since("autonomy.started", new Date(this.now().getTime() - 30 * DAY), o.id)[0]?.at ?? null }));
@@ -3202,7 +3386,7 @@ var AutonomyService = class {
       const e = ledger[i];
       if (/^autonomy\.(submitted|quarantined|failed)$/.test(String(e.action))) recent.push({ at: String(e.at), action: String(e.action), orderId: String(e.subject), detail: e.detail });
     }
-    return { enabled: this.enabled, maxRunsPerDay: this.maxRunsPerDay, runsToday: this.runsToday(), since: day.toISOString(), orders, recent };
+    return { enabled: this.enabled, maxRunsPerDay: this.maxRunsPerDay, runsToday: this.runsToday(), since: day.toISOString(), orders, recent, queue: this.queueSummary() };
   }
 };
 
@@ -3953,6 +4137,13 @@ function makeRunner(deps) {
 
 // src/server/autonomyRoutes.ts
 import { Router } from "express";
+var TASK_STATUSES = ["QUEUED", "RUNNING", "SUBMITTED", "QUARANTINED", "FAILED", "CANCELLED", "EXPIRED"];
+function oneOf(field, v2, allowed) {
+  if (v2 === void 0) return void 0;
+  const hit = typeof v2 === "string" ? allowed.find((a) => a === v2) : void 0;
+  if (!hit) throw new OrderRefused(400, `${field} is not one of: ${allowed.join(", ")}`);
+  return hit;
+}
 function autonomyRoutes(autonomy2) {
   const r = Router();
   const actorOf2 = (res) => res.locals.actor;
@@ -3969,6 +4160,13 @@ function autonomyRoutes(autonomy2) {
   r.post("/autonomy/orders/:id/pause", wrap2(async (req, res) => res.json(await autonomy2.pause(actorOf2(res), req.params.id, String(req.body?.reason ?? "")))));
   r.post("/autonomy/orders/:id/revoke", wrap2(async (req, res) => res.json(await autonomy2.revoke(actorOf2(res), req.params.id, String(req.body?.reason ?? "")))));
   r.post("/autonomy/orders/:id/run", wrap2(async (req, res) => res.json(await autonomy2.runNow(actorOf2(res), req.params.id))));
+  r.get("/autonomy/tasks", wrap2((req, res) => {
+    const dept = oneOf("dept", req.query.dept, DEPARTMENTS.map((d) => d.id));
+    const status = oneOf("status", req.query.status, TASK_STATUSES);
+    res.json({ tasks: autonomy2.tasks({ ...dept ? { dept } : {}, ...status ? { status } : {} }) });
+  }));
+  r.post("/autonomy/tasks", wrap2(async (req, res) => res.json(await autonomy2.enqueue(actorOf2(res), req.body))));
+  r.post("/autonomy/tasks/:id/cancel", wrap2(async (req, res) => res.json(await autonomy2.cancelTask(actorOf2(res), req.params.id, String(req.body?.reason ?? "")))));
   return r;
 }
 
@@ -5352,7 +5550,7 @@ var LIMITS = {
   maxToolTurns: 3,
   maxOutputTokens: 1024
 };
-var NEVER_MODEL_READABLE = /* @__PURE__ */ new Set(["ledger", "tombstones", "erasure_requests", "integration_settings", "chat_log", "connector_events", "approvals", "brain", "model_attestations", "custom_defs", "standing_orders", "draft_checks"]);
+var NEVER_MODEL_READABLE = /* @__PURE__ */ new Set(["ledger", "tombstones", "erasure_requests", "integration_settings", "chat_log", "connector_events", "approvals", "brain", "model_attestations", "custom_defs", "standing_orders", "draft_checks", "autonomy_tasks"]);
 var ModelRefused = class extends Error {
   constructor(rule, message, status = 422) {
     super(message);
@@ -6173,11 +6371,11 @@ function modelRoutes(hub2) {
 // server.ts
 var env = process.env;
 var REPO = env.ECOSYSTEM_REPO ?? "Sarah-JaneHarding/infinite-ai-ecosystem";
-var PORT = Number(env.PORT ?? 3e3);
-var HOST = env.HOST || "127.0.0.1";
+var PORT = env.PORT && Number(env.PORT) !== 8080 ? Number(env.PORT) : 3e3;
+var HOST = env.HOST || "0.0.0.0";
 var auth;
 try {
-  auth = parseAuth({ ...env, HOST });
+  auth = parseAuth(env);
 } catch (err) {
   console.error(`FATAL: ${err.message}`);
   process.exit(1);
@@ -6392,6 +6590,7 @@ app.post("/api/ceo/digest/send", wrap(async (req, res) => {
 }));
 app.post("/api/models/providers/:id/attest", requireRole(roles, "officer"));
 app.post("/api/autonomy/orders/:id/activate", requireRole(roles, "officer"));
+app.post("/api/autonomy/tasks", requireRole(roles, "officer"));
 app.use("/api", modelRoutes(hub));
 app.use("/api", autonomyRoutes(autonomy));
 app.post("/api/ledger", wrap(async (req, res) => {
