@@ -224,9 +224,6 @@ This initial baseline draft specifies the operating procedures and governance in
     } catch {}
   };
 
-  const totalPolicies = documents.length;
-  const currentRatified = ratifiedCount;
-  const percentRatified = totalPolicies > 0 ? Math.round((currentRatified / totalPolicies) * 100) : 0;
 
   const handleContentChange = (val: string) => {
     setEditedContent(val);
@@ -503,16 +500,10 @@ Document description and operational scope...`;
             </button>
           )}
 
-          <div className="card p-3 min-w-[260px] space-y-1.5">
+          <div className="card p-3 min-w-[260px]">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#CBD5E1] font-mono">Policies Ratified:</span>
-              <strong className="text-cyan-400 font-mono">{currentRatified} / {totalPolicies} ({percentRatified}%)</strong>
-            </div>
-            <div className="w-full bg-[#0E1830] h-2 rounded-full overflow-hidden border border-[rgba(148,163,255,0.1)]">
-              <div 
-                className="h-full bg-gradient-to-r from-purple-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-500"
-                style={{ width: `${percentRatified}%` }}
-              />
+              <span className="text-[#CBD5E1] font-mono">Ratified on the Review Board:</span>
+              <strong className="text-cyan-400 font-mono">{ratifiedCount}</strong>
             </div>
           </div>
         </div>

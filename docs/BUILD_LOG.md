@@ -233,3 +233,8 @@ Not verified / known limits:
 - The Studio shows the reason and minutes left, and, for the approver in solo mode, the same token field the Review Board uses. The field and the `withReauth` wrapper moved to `src/ui/ReauthInput.tsx` (`ReauthInput`, `countersignWith`) so the Board and the Studio share one mechanism; the request carries the signer's own token in `x-ops-reauth`. `decide`, `countersign` and the server checks are unchanged.
 - `test/app-contract.test.ts` now looks for the token field and `withReauth(` in `ReauthInput.tsx` (same assertions, new file) and for `<ReauthInput` and `countersignWith(` in the Board.
 - Tests: `test/countersign-state.test.ts` (8). The "known limit" in the earlier library entry is closed.
+
+## 2026-11-26: saved copies keep the needs-review mark; the meaningless ratio is gone
+- A saved copy of a `needs-review` artefact (both "Save in chosen type" and "Save copy to library") now carries the scan note `NEEDS_REVIEW_MARK` ("Needs review by a qualified professional (marked on the artefact)"), built by the pure `scanNotesFor` in `src/core/notice.ts`, so `needsReview(saved)` is true and the Library shows the notice. Both store the artefact's own `doc`; the notice is added only on export, print and view. Unflagged artefacts are unchanged.
+- `DocsAndRatify` no longer shows "n / total (%)" or a progress bar (platform artefacts were divided by the legacy sample list). It shows "Ratified on the Review Board: n".
+- Tests: 3 added to `test/save-export.test.ts`, 1 to `test/studio-honesty.test.ts`.

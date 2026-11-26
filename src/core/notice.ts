@@ -16,3 +16,12 @@ export function withNotice(doc: Doc, notice: string | null): Doc {
   if (first && first.type === 'callout' && first.text === notice) return doc;
   return { ...doc, blocks: [{ type: 'callout', tone: 'warn', text: notice }, ...doc.blocks] };
 }
+
+/** Scan note put on a saved copy of a flagged artefact. It must start with "Needs review by": that is what `needsReview` reads. */
+export const NEEDS_REVIEW_MARK = 'Needs review by a qualified professional (marked on the artefact)';
+
+/** Scan notes for a saved copy: the given notes, plus the review mark when the notice applies and no mark is there yet. Pure. */
+export function scanNotesFor(notice: string | null, notes: readonly string[]): string[] {
+  const has = notes.some((n) => n.startsWith('Needs review by'));
+  return notice && !has ? [...notes, NEEDS_REVIEW_MARK] : [...notes];
+}

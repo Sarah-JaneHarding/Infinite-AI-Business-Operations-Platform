@@ -12,7 +12,7 @@ import type { Block, Doc } from '../core/types';
 import { download } from './primitives';
 import { ExportBar } from './ExportBar';
 import { newDocId, saveExport, saveRecord } from '../core/documents';
-import { noticeFor, withNotice } from '../core/notice';
+import { noticeFor, scanNotesFor, withNotice } from '../core/notice';
 import { countersignState } from './boardGate';
 import { ReauthInput, countersignWith } from './ReauthInput';
 import { proposalFromArtefact } from '../connector/proposals';
@@ -94,7 +94,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
       <Card title="Download, print or save">
         <ExportBar doc={a.doc} notice={notice}
           onSaveExport={async (f) => { await saveExport(p!.warehouse, { id: a.id, title: a.title, origin: 'saved', doc: a.doc, scan: { scanned: true, notes: [] }, by: actor.name, at: a.at }, f, actor.name, undefined, notice); setMsg({ tone: 'ok', text: `Saved in the library as ${FORMAT_LABEL[f]}.` }); bump(); }}
-          onSave={async () => { await saveRecord(p!.warehouse, { id: newDocId(), title: a.title, origin: 'saved', doc: shownDoc, scan: { scanned: true, notes: [`Copy of ${a.id} v${a.version}`] }, by: actor.name, at: new Date().toISOString() }); setMsg({ tone: 'ok', text: 'Copy saved to the library.' }); }} />
+          onSave={async () => { await saveRecord(p!.warehouse, { id: newDocId(), title: a.title, origin: 'saved', doc: a.doc, scan: { scanned: true, notes: scanNotesFor(notice, [`Copy of ${a.id} v${a.version}`]) }, by: actor.name, at: new Date().toISOString() }); setMsg({ tone: 'ok', text: 'Copy saved to the library.' }); }} />
       </Card>
 
       <Card title="Human decision">

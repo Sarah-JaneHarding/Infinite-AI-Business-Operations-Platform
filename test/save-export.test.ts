@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Warehouse } from '../src/core/warehouse';
-import { importFile, saveExport, saveRecord, listDocuments, loadOriginal, exportFile, type DocRecord } from '../src/core/documents';
-import { NEEDS_REVIEW_NOTICE, noticeFor, withNotice } from '../src/core/notice';
+import { importFile, needsReview, saveExport, saveRecord, listDocuments, loadOriginal, exportFile, type DocRecord } from '../src/core/documents';
+import { NEEDS_REVIEW_MARK, NEEDS_REVIEW_NOTICE, noticeFor, scanNotesFor, withNotice } from '../src/core/notice';
 import { toHtml, toMarkdown } from '../src/core/artefacts/render';
 import type { ArtefactFormat, Doc } from '../src/core/types';
 
@@ -103,5 +103,36 @@ describe('withNotice', () => {
     expect(toHtml(n)).toContain(NEEDS_REVIEW_NOTICE);
     expect(toMarkdown(n)).toContain(NEEDS_REVIEW_NOTICE);
     expect(toHtml(doc)).not.toContain(NEEDS_REVIEW_NOTICE);
+  });
+});
+
+describe('a saved copy of a flagged artefact stays recognised as needs-review', () => {
+  const asRecord = (flags: string[]): DocRecord => ({ id: 'art-1', title: 'Supplier terms', origin: 'saved', doc, scan: { scanned: true, notes: scanNotesFor(noticeFor(flags), ['Copy of art-1 v1']) }, by: 'sarah', at: '2026-01-01T00:00:00.000Z' });
+  it('plain copy: flagged gets the mark and the stored doc has no notice block', async () => {
+    const store = await new Warehouse().init();
+    const saved = await saveRecord(store, asRecord(['needs-review']));
+    expect(needsReview(saved)).toBe(true);
+    expect(JSON.stringify(saved.doc)).not.toContain(NEEDS_REVIEW_NOTICE);
+    const again = await saveExport(store, saved, 'md', 'sarah');
+    expect(new TextDecoder().decode(loadOriginal(store, again.id)!)).toContain(NEEDS_REVIEW_NOTICE);
+    expect(toHtml(withNotice(saved.doc!, needsReview(saved) ? NEEDS_REVIEW_NOTICE : null))).toContain(NEEDS_REVIEW_NOTICE);
+    expect(needsReview(again)).toBe(true);
+  });
+  it('file-type save of an artefact copy (explicit notice) carries the mark and re-exports with the notice', async () => {
+    const store = await new Warehouse().init();
+    const artefactCopy: DocRecord = { id: 'art-1', title: 'Supplier terms', origin: 'saved', doc, scan: { scanned: true, notes: [] }, by: 'sarah', at: '2026-01-01T00:00:00.000Z' };
+    const saved = await saveExport(store, artefactCopy, 'html', 'sarah', undefined, NEEDS_REVIEW_NOTICE);
+    expect(needsReview(saved)).toBe(true);
+    expect(JSON.stringify(saved.doc)).not.toContain(NEEDS_REVIEW_NOTICE);
+    const again = await saveExport(store, saved, 'html', 'sarah');
+    expect(new TextDecoder().decode(loadOriginal(store, again.id)!)).toContain(NEEDS_REVIEW_NOTICE);
+  });
+  it('unflagged artefacts get no mark', async () => {
+    const store = await new Warehouse().init();
+    expect(needsReview(await saveRecord(store, asRecord([])))).toBe(false);
+    const saved = await saveExport(store, { ...asRecord([]), scan: { scanned: true, notes: [] } }, 'md', 'sarah', undefined, null);
+    expect(saved.scan.notes.some((n) => n.startsWith('Needs review by'))).toBe(false);
+    expect(scanNotesFor(null, ['x'])).toEqual(['x']);
+    expect(scanNotesFor(NEEDS_REVIEW_NOTICE, [NEEDS_REVIEW_MARK]).length).toBe(1);
   });
 });

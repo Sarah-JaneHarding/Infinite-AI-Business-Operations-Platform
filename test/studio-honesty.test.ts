@@ -26,6 +26,10 @@ describe('the studio shows no invented numbers or people', () => {
     for (const person of ['Sarah-Jane Harding', 'Peter Thorne', 'Van Zyl']) expect(legacy).not.toContain(person);
     expect(legacy).toMatch(/signerName/);
   });
+  it('the legacy screen divides nothing by its own sample list', () => {
+    expect(legacy).not.toMatch(/percentRatified|totalPolicies/);
+    expect(legacy).toContain('Ratified on the Review Board:');
+  });
   it('the legacy ratify button no longer marks a document ratified by itself', () => {
     expect(legacy).not.toMatch(/status: 'RATIFIED' as const/);
     expect(legacy).not.toMatch(/ia_warehouse_audit_log/);

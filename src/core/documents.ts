@@ -11,7 +11,7 @@
  */
 import type { ArtefactFormat, Block, Doc } from './types';
 import { fileName, MIME, render } from './artefacts/render';
-import { NEEDS_REVIEW_NOTICE, withNotice } from './notice';
+import { NEEDS_REVIEW_NOTICE, scanNotesFor, withNotice } from './notice';
 import { checkInput } from './guardrails/engine';
 import { detectPii } from './guardrails/pii';
 
@@ -374,8 +374,9 @@ export async function exportFile(doc: Doc, f: ArtefactFormat): Promise<ExportedF
 export async function saveExport(store: Store, rec: DocRecord, format: ArtefactFormat, by: string, at: string = new Date().toISOString(), notice?: string | null): Promise<DocRecord> {
   if (format === 'pdf') throw new Error('PDF is produced by printing; use Print');
   if (!rec.doc) throw new Error('This file is stored as uploaded and cannot be re-saved in another type.');
-  const flagged = rec.scan.notes.filter((n) => n.startsWith('Needs review by'));
-  const file = await exportFile(withNotice(rec.doc, notice !== undefined ? notice : needsReview(rec) ? NEEDS_REVIEW_NOTICE : null), format);
+  const effective = notice !== undefined ? notice : needsReview(rec) ? NEEDS_REVIEW_NOTICE : null;
+  const flagged = scanNotesFor(effective, rec.scan.notes.filter((n) => n.startsWith('Needs review by')));
+  const file = await exportFile(withNotice(rec.doc, effective), format);
   const bytes = typeof file.bytes === 'string' ? new TextEncoder().encode(file.bytes) : file.bytes;
   const saved: DocRecord = { id: newDocId(), title: rec.title, origin: 'saved', name: file.name, mime: file.mime, kind: kindOf(file.name, file.mime), doc: rec.doc, scan: { scanned: true, notes: [`Copy of ${rec.id} saved as ${format}`, ...flagged] }, dept: rec.dept, by, at };
   return saveRecord(store, saved, bytes);
