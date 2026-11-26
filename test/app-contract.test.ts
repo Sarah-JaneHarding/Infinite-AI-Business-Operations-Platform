@@ -42,9 +42,13 @@ describe('App shell keeps what authenticated mode needs', () => {
     const board = readFileSync('src/ui/Board.tsx', 'utf8');
     expect(board).toContain('Solo signing is on. You approve, then countersign after');
     expect(board).toContain('with your token. Every such ratification is flagged.');
-    expect(board).toContain('aria-label="Re-enter your token to countersign"');
-    expect(board).toMatch(/autoComplete="off"/);
-    expect(board).toMatch(/withReauth\(/);
+    // The token field and the withReauth wrapper live in one shared file, used by the Board and the Studio.
+    const reauth = readFileSync('src/ui/ReauthInput.tsx', 'utf8');
+    expect(board).toContain('<ReauthInput');
+    expect(board).toContain('countersignWith(');
+    expect(reauth).toContain('aria-label="Re-enter your token to countersign"');
+    expect(reauth).toMatch(/autoComplete="off"/);
+    expect(reauth).toMatch(/withReauth\(/);
     expect(board).toContain('single-signer');
   });
   it('Board lists single-signer ratifications from the report route', () => {

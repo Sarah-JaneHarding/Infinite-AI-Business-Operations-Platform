@@ -13,6 +13,8 @@ import { download } from './primitives';
 import { ExportBar } from './ExportBar';
 import { newDocId, saveExport, saveRecord } from '../core/documents';
 import { noticeFor, withNotice } from '../core/notice';
+import { countersignState } from './boardGate';
+import { ReauthInput, countersignWith } from './ReauthInput';
 import { proposalFromArtefact } from '../connector/proposals';
 
 export function BlockEditor({ b, set }: { b: Block; set: (n: Block) => void }) {
@@ -43,7 +45,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
   const [doc, setDoc] = useState<Doc>(a.doc);
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
-  useEffect(() => { setDoc(a.doc); setMsg(null); setMode2('preview'); }, [a.id, a.version, a.status]);
+  useEffect(() => { setDoc(a.doc); setMsg(null); setMode2('preview'); setToken(''); }, [a.id, a.version, a.status]);
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     try { await fn(); setMsg({ tone: 'ok', text: ok }); } catch (e) { setMsg({ tone: 'bad', text: e instanceof RunRefused ? e.message : (e as Error).message }); }
     bump();
@@ -54,6 +56,9 @@ function ArtefactPanel({ a }: { a: Artefact }) {
   const notice = noticeFor(a.flags);
   const shownDoc = useMemo(() => withNotice(a.doc, notice), [a.doc, notice]);
   const preview = useMemo(() => toHtml(shownDoc), [shownDoc]);
+  const [token, setToken] = useState('');
+  const cs = countersignState(a, actor.id, signing, new Date(), agent);
+  const soloSelf = a.status === 'APPROVED' && a.approvedBy === actor.id && signing.mode === 'solo' && !(agent && (agent.twoPerson || agent.professionalReview));
 
   return (
     <div className="space-y-3">
@@ -100,8 +105,10 @@ function ArtefactPanel({ a }: { a: Artefact }) {
             <button className="btn" disabled={a.status !== 'DRAFT'} onClick={() => act(() => p!.submitForReview(a.id, actor), 'Submitted for review.')}><Send size={14} /> Submit for review</button>
             <button className="btn ok" disabled={a.status !== 'IN_REVIEW' || !approveGate.ok} title={a.status === 'IN_REVIEW' && !approveGate.ok ? approveGate.why : ''} onClick={() => act(() => p!.decide(a.id, actor, 'APPROVED', note, agent), 'Approved.')}><CheckCircle2 size={14} /> Approve</button>
             <button className="btn danger" disabled={a.status !== 'IN_REVIEW'} onClick={() => act(() => p!.decide(a.id, actor, 'REJECTED', note, agent), 'Rejected.')}><XCircle size={14} /> Reject</button>
-            <button className="btn primary" disabled={a.status !== 'APPROVED' || a.approvedBy === actor.id} title={a.status === 'APPROVED' && a.approvedBy === actor.id ? 'A different person from the approver must countersign' : ''} onClick={() => act(() => p!.countersign(a.id, actor, note, agent), 'Countersigned and ratified.')}><PenLine size={14} /> Countersign and ratify</button>
+            <button className="btn primary" disabled={!cs.enabled || (soloSelf && !token)} title={cs.reason ?? ''} onClick={() => { const t = token; setToken(''); void act(() => countersignWith(p!, a, actor, note, agent, t), 'Countersigned and ratified.'); }}><PenLine size={14} /> Countersign and ratify</button>
           </div>
+          {a.status === 'APPROVED' && cs.reason && <p className="text-sm">{cs.reason}</p>}
+          {soloSelf && <ReauthInput value={token} onChange={setToken} />}
           {msg && <div role="status" className="rounded-lg border p-2 text-sm" style={{ borderColor: msg.tone === 'ok' ? 'var(--emerald)' : 'var(--rose)' }}>{msg.text}</div>}
         </div>
       </Card>
