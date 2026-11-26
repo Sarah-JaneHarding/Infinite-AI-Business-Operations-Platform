@@ -1,6 +1,6 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { canonical } from '../src/core/crypto';
@@ -83,6 +83,22 @@ describe('FileStore', () => {
     expect(() => s.append('../x', { id: 'x' })).toThrow(/bad collection/);
     writeFileSync(join(dir, 'broken.jsonl'), '{"id":"a"}\n{nope\n');
     expect(() => new FileStore(dir)).toThrow(/broken\.jsonl line 2/);
+  });
+});
+
+describe('FileStore collection names (CodeQL alert 6)', () => {
+  const names = ['../x', '..', '../../etc/passwd', 'a/b', 'a\\b', 'A', 'a.b', 'a b', '', 'x'.repeat(65), 'a\0b', '/abs', 'runs/../../x'];
+  it('refuse anything that is not a lower-case word, before any file is touched', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ops-'));
+    const s = new FileStore(dir);
+    for (const n of names) expect(() => s.append(n, { id: 'x' }), JSON.stringify(n)).toThrow(/bad collection/);
+    expect(readdirSync(dir)).toEqual([]);
+    expect(readdirSync(dirname(dir)).filter((f) => f === 'x.jsonl')).toEqual([]);
+  });
+  it('write a valid collection inside the folder and nowhere else', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ops-'));
+    new FileStore(dir).append('run_log_2', { id: 'r' });
+    expect(readdirSync(dir)).toEqual(['run_log_2.jsonl']);
   });
 });
 
