@@ -739,6 +739,51 @@
     "title": "How will learner data be re-encrypted if DB_ENCRYPTION_KEY ever has to change?"
   },
   {
+    "blocks": "Stage 18 gate (pnpm check:flags)",
+    "history": [
+      {
+        "at": "2026-11-26T00:00:00.000Z",
+        "kind": "raised",
+        "text": "Loaded from docs/OPEN_QUESTIONS.md into the register."
+      },
+      {
+        "at": "2026-11-26T00:00:00.000Z",
+        "kind": "resolved",
+        "text": "Synced from docs/OPEN_QUESTIONS.md: resolved 2026-11-24, the owner chose option 1. The commons_pattern_sharing flag was removed from FLAGS, along with its tests and the FLAG_COMMONS_PATTERN_SHARING line in docs/OPERATOR_MANUAL.md. Re-add a flag, with a fresh expiry, when LE-08 pattern sharing is built."
+      }
+    ],
+    "id": "OQ-054",
+    "options": [
+      "Remove the flag (feature is off)",
+      "Wire the consumer, then remove the flag",
+      "Extend expiresAt after a review"
+    ],
+    "order": 27,
+    "question": "pnpm check:flags failed because the flag's expiresAt passed on 2026-11-15. Its own rule is to ship behind the flag and remove it, or remove it if the feature is off, and not to extend expiresAt without a review. Nothing in apps/* or packages/* reads isEnabled('commons_pattern_sharing'), so the flag gated no code. It describes tenant opt-in sharing of anonymised learning patterns to the Commons pool (LE-08, k-anonymity threshold).",
+    "raised": "2026-11-24",
+    "reason": "The feature touches POPIA purpose limitation, so removing or extending the flag was the owner's call and not a clean-up. The Stage 18 gate stayed red until it was decided.",
+    "recommendation": "Option 1, remove the flag, since no code uses it.",
+    "recommendedIndex": 0,
+    "repo": "ecosystem",
+    "review": {
+      "actions": [
+        "Marked resolved to match the markdown register, which is authoritative."
+      ],
+      "at": "2026-11-26T00:00:00.000Z",
+      "summary": "Synced from docs/OPEN_QUESTIONS.md: resolved 2026-11-24, the owner chose option 1. The commons_pattern_sharing flag was removed from FLAGS, along with its tests and the FLAG_COMMONS_PATTERN_SHARING line in docs/OPERATOR_MANUAL.md. Re-add a flag, with a fresh expiry, when LE-08 pattern sharing is built. This was resolved in the repository, not through this page.",
+      "verdict": "accepted"
+    },
+    "source": "docs/OPEN_QUESTIONS.md · OQ-054",
+    "stage": "18",
+    "status": "resolved",
+    "suggestions": [
+      "Feature is off or not being built yet: delete the flag from FLAGS and update the flags.spec.ts cases that name it. Re-add it with a fresh expiry when LE-08 sharing is built.",
+      "Feature is shipping: wire its consumer behind the flag first, then remove the flag once it ships to all tenants.",
+      "Needs more time: extend expiresAt to a stated date with a recorded reason, only after a review."
+    ],
+    "title": "The commons_pattern_sharing flag expired on 2026-11-15: ship it, remove it, or extend it?"
+  },
+  {
     "blocks": "Live connector, webhook and narrative",
     "history": [
       {

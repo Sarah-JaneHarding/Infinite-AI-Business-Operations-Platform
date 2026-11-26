@@ -2,7 +2,7 @@
 
 A live register of every open question across `infinite-ai-ecosystem` and
 `Infinite-AI-Business-Operations-Platform`, each with why it is open, options, and a recommendation.
-This folder is a **versioned snapshot** of the page and its data as of 2026-11-24. The live copy is a
+This folder is a **versioned snapshot** of the page and its data as of 2026-11-26. The live copy is a
 Claude artifact whose answers live in the artifact's own database, not in this repository.
 
 The same snapshot is kept in `infinite-ai-ecosystem` under `docs/open-questions-register/`. If the two
@@ -11,7 +11,7 @@ folders differ, the one with the later date in this README wins; refresh both to
 | File                  | What it is                                                                                                               |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `register.html`       | The page source (single file, no build). Runs only inside a Claude artifact.                                             |
-| `questions.seed.json` | The 60 questions in the register as of 2026-11-24 (26 ecosystem, 34 platform), one JSON object per question.             |
+| `questions.seed.json` | The 61 questions in the register as of 2026-11-26 (27 ecosystem, 34 platform), one JSON object per question.             |
 
 ## How answers are checked
 
@@ -30,6 +30,6 @@ folders differ, the one with the later date in this README wins; refresh both to
 - Recommendations marked "from the repository's recommendations file" come from this repo's
   `docs/OPQ_RECOMMENDATIONS.md`. The rest were written by Claude from the question text and need a
   human's judgement.
-- The seed holds unresolved questions, plus OPQ-035 and OPQ-036, which were marked resolved on 2026-11-24
-  to match the markdown. Other resolved items stay in the markdown files.
+- The seed holds unresolved questions, plus OPQ-035, OPQ-036 and OQ-054, which were marked resolved to match
+  the markdown. Other resolved items stay in the markdown files.
 - Nothing here holds learner data, credentials or tenant identifiers.
