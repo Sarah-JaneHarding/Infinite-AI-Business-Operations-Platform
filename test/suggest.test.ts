@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyInput, blanksOf, deterministicSuggestions, excludeSeen, failPanelState, generatedWithLabel, initialPanelState, nextPanelState, parseDoc, startLoading, textsOf, type DocSuggestions } from '../src/core/suggest';
+import { applyInput, blanksOf, excludeFor, requestRound, SUGGEST_LIMITS, deterministicSuggestions, excludeSeen, failPanelState, generatedWithLabel, initialPanelState, nextPanelState, parseDoc, startLoading, textsOf, type DocSuggestions } from '../src/core/suggest';
 import type { Doc } from '../src/core/types';
 
 const F = (s: string) => `[Fill in: ${s}]`;
@@ -168,5 +168,50 @@ describe('panel state', () => {
     expect(generatedWithLabel('anthropic:claude-x', [])).toBe('Model: anthropic:claude-x');
     expect(generatedWithLabel('deterministic-fallback', ['deterministic'])).toBe('Built-in suggestions (no model configured)');
     expect(generatedWithLabel('deterministic-fallback', ['refresh_fallback', 'rate_limited'])).toMatch(/limit/);
+    expect(generatedWithLabel('deterministic-fallback', ['refresh_fallback', 'provider_failed'])).toMatch(/unavailable/);
+    expect(generatedWithLabel('anthropic:claude-x', ['refresh_fallback', 'mixed_source'])).toBe('Model: anthropic:claude-x (some suggestions are built-in)');
+  });
+});
+
+describe('Refresh cannot dead-end', () => {
+  const longLabel = 'x'.repeat(700);
+  const docs: [string, Doc][] = [
+    ['three blanks', { ...fixture(), blocks: [...fixture().blocks, { type: 'p', text: F('start date') }] } as Doc],
+    ['none', bare()],
+    ['a very long blank label', { title: 'Long', blocks: [{ type: 'p', text: F(longLabel) }, { type: 'p', text: F('other  thing') }], meta: {} }],
+  ];
+  for (const [name, doc] of docs) {
+    it(`130 successive clicks all send a valid request and never repeat (${name})`, () => {
+      let state = initialPanelState();
+      let prev = '';
+      let wrapped = false;
+      for (let click = 0; click < 130; click++) {
+        const round = requestRound(state);
+        const exclude = excludeFor(state.seen);
+        expect(Number.isInteger(round) && round >= 0 && round <= SUGGEST_LIMITS.maxRound).toBe(true);
+        expect(exclude.length).toBeLessThanOrEqual(SUGGEST_LIMITS.maxExclude);
+        expect(exclude.every((t) => t.length <= SUGGEST_LIMITS.maxExcludeChars)).toBe(true);
+        if (click > 0 && round === 0) wrapped = true;
+        const d = deterministicSuggestions(doc, round, exclude);
+        const result: DocSuggestions = { inputs: d.inputs, prompts: d.prompts, round, generatedWith: 'deterministic-fallback', draft: true, flags: [] };
+        const texts = textsOf(result);
+        expect(texts.length).toBeGreaterThan(0);
+        expect(texts.every((t) => t.length <= SUGGEST_LIMITS.maxExcludeChars)).toBe(true);
+        expect(excludeSeen(texts, exclude)).toEqual(texts);
+        expect(sig(result)).not.toBe(prev);
+        prev = sig(result);
+        state = nextPanelState(startLoading(state), result);
+      }
+      expect(wrapped).toBe(true);
+    });
+  }
+
+  it('keeps only the most recent 200 excluded texts, normalised and cut to 500 characters', () => {
+    const seen = [...Array.from({ length: 250 }, (_, i) => `t${i}`), `a   b${'y'.repeat(600)}`];
+    const out = excludeFor(seen);
+    expect(out).toHaveLength(200);
+    expect(out[0]).toBe('t51');
+    expect(out.at(-1)!.length).toBe(500);
+    expect(out.at(-1)!.startsWith('a b')).toBe(true);
   });
 });

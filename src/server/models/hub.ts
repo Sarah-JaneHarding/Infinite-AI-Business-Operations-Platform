@@ -353,10 +353,11 @@ export class ModelHub {
     const recIn = typeof parsed.recommendedInputs === 'object' && parsed.recommendedInputs !== null ? (parsed.recommendedInputs as Record<string, unknown>) : {};
     const recommendedInputs = Object.fromEntries(agent.inputs.map((i) => [i.key, typeof recIn[i.key] === 'string' ? String(recIn[i.key]) : det.recommendedInputs[i.key] ?? '']));
     const flags = [...r.flags];
-    let strategicRecommendations = excludeSeen(strings(parsed.strategicRecommendations, []), exclude);
+    // Like the other model items, a text over 300 characters is dropped, so nothing shown can exceed the exclude limit.
+    let strategicRecommendations = excludeSeen(strings(parsed.strategicRecommendations, []).filter((t) => t.length <= 300), exclude);
     if (!strategicRecommendations.length) {
       strategicRecommendations = det.strategicRecommendations;
-      if (exclude.length) flags.push('refresh_fallback');
+      flags.push(...(exclude.length ? ['refresh_fallback'] : []), 'mixed_source');
     }
     return { agentId: agent.id, strategicRecommendations, recommendedInputs, complianceGuidance: strings(parsed.complianceGuidance, det.complianceGuidance), suggestedNextSteps: strings(parsed.suggestedNextSteps, det.suggestedNextSteps), toolsUsed: [], generatedWith: `${r.provider}:${r.model}`, draft: true, flags };
   }
@@ -404,8 +405,8 @@ export class ModelHub {
     const det = deterministicSuggestions(doc, round, [...exclude, ...textsOf(parsed)]);
     const flags = [...r.flags];
     let { inputs, prompts } = parsed;
-    if (!inputs.length && blanks.length) { inputs = det.inputs; flags.push('refresh_fallback'); }
-    if (!prompts.length) { prompts = det.prompts; if (!flags.includes('refresh_fallback')) flags.push('refresh_fallback'); }
+    if (!inputs.length && blanks.length) { inputs = det.inputs; flags.push('refresh_fallback', 'mixed_source'); }
+    if (!prompts.length) { prompts = det.prompts; flags.push(...['refresh_fallback', 'mixed_source'].filter((f) => !flags.includes(f))); }
     return { inputs, prompts, round, generatedWith: `${r.provider}:${r.model}`, draft: true, flags };
   }
 

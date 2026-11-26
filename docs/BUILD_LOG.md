@@ -247,3 +247,8 @@ Not verified / known limits:
 - Built-in pools are 224 prompts and 144 wordings per blank; with `exclude` honoured, 40 refreshes in a row never repeat a text (tested for a document with blanks and one without).
 - Tests: `test/suggest.test.ts` (23), 12 added to `test/models-hub.test.ts`. `test/models-door.test.ts` now also lists `suggestForDocument` among the hub entry points only the routes may call.
 
+## 2026-11-26: mixed-source suggestions are labelled; Refresh cannot dead-end
+- Results the model only partly supplied carry `mixed_source` (with `refresh_fallback`); `generatedWithLabel` shows "Model: … (some suggestions are built-in)". Used by the panel and the agent runner's badge.
+- `requestRound` restarts at 0 after round 50 (exclusion kept); `excludeFor` sends the latest 200 texts, normalised and cut to 500 characters. Model strategic recommendations over 300 characters are dropped; built-in values quote at most 100 characters of a blank label. The route's caps are unchanged.
+- Tests: a 130-click simulation over the real state functions (three blanks, none, a 700-character label), label cases, and mixed-source hub cases.
+

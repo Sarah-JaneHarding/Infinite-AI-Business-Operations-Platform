@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Check, Copy, RefreshCw, Sparkles } from 'lucide-react';
 import { apiFetch } from '../core/api';
 import { Badge, Card } from './primitives';
-import { blanksOf, failPanelState, generatedWithLabel, initialPanelState, nextPanelState, requestRound, startLoading, type DocSuggestions } from '../core/suggest';
+import { blanksOf, excludeFor, failPanelState, generatedWithLabel, initialPanelState, nextPanelState, requestRound, startLoading, type DocSuggestions } from '../core/suggest';
 import type { Doc } from '../core/types';
 
 /**
@@ -22,7 +22,7 @@ export function SuggestPanel({ doc, onApply }: { doc: Doc; onApply: (blank: stri
     setS(startLoading(cur));
     setNote('');
     try {
-      const res = await apiFetch('/api/ai/document-suggestions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doc, round: requestRound(cur), exclude: cur.seen }) });
+      const res = await apiFetch('/api/ai/document-suggestions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doc, round: requestRound(cur), exclude: excludeFor(cur.seen) }) });
       const body = (await res.json().catch(() => ({}))) as Partial<DocSuggestions> & { error?: string };
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
       setS((prev) => nextPanelState(prev, body as DocSuggestions));

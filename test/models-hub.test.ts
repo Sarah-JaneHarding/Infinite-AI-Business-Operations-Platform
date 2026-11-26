@@ -604,3 +604,51 @@ describe('document suggestions routes', () => {
     expect(b.strategicRecommendations).not.toEqual(a.strategicRecommendations);
   });
 });
+
+describe('mixed-source results are marked', () => {
+  const F = (x: string) => `[Fill in: ${x}]`;
+  const d: Doc = { title: 'Supplier agreement', blocks: [{ type: 'p', text: `Between ${F('supplier name')} and the school.` }], meta: {} };
+  const mixed = (r: DocSuggestions) => r.flags.includes('mixed_source') && r.flags.includes('refresh_fallback');
+
+  it('inputs from the model but no new prompts: built-in prompts, model label, mixed flag', async () => {
+    const { hub, up } = setup();
+    await attestAll(hub);
+    up.queue.anthropic.push(aText(JSON.stringify({ inputs: [{ blank: 'supplier name', value: 'Name the supplier', why: 'w' }], prompts: [{ text: 'Seen prompt', why: 'w' }] })));
+    const r = await hub.suggestForDocument(d, 1, ['Seen prompt'], 'sarah');
+    expect([r.generatedWith, mixed(r), r.inputs[0]!.value]).toEqual(['anthropic:claude-sonnet-5-5', true, 'Name the supplier']);
+    expect(r.prompts.length).toBeGreaterThan(0);
+    expect(r.prompts.map((p) => p.text)).not.toContain('Seen prompt');
+  });
+
+  it('prompts from the model but no usable inputs: built-in inputs, mixed flag', async () => {
+    const { hub, up } = setup();
+    await attestAll(hub);
+    up.queue.anthropic.push(aText(JSON.stringify({ inputs: [], prompts: [{ text: 'A new prompt', why: 'w' }] })));
+    const r = await hub.suggestForDocument(d, 0, [], 'sarah');
+    expect([r.generatedWith, mixed(r), r.prompts[0]!.text]).toEqual(['anthropic:claude-sonnet-5-5', true, 'A new prompt']);
+    expect(r.inputs[0]!.value).toContain('[Fill in:');
+  });
+
+  it('a fully model result is not marked mixed, and a fully built-in one is not either', async () => {
+    const { hub, up } = setup();
+    await attestAll(hub);
+    up.queue.anthropic.push(aText(JSON.stringify({ inputs: [{ blank: 'supplier name', value: 'V', why: 'w' }], prompts: [{ text: 'P', why: 'w' }] })));
+    expect((await hub.suggestForDocument(d, 0, [], 'sarah')).flags).not.toContain('mixed_source');
+    up.queue.anthropic.push(aText('{"inputs":[],"prompts":[]}'));
+    const none = await hub.suggestForDocument(d, 1, [], 'sarah');
+    expect([none.generatedWith, none.flags.includes('mixed_source')]).toEqual(['deterministic-fallback', false]);
+  });
+
+  it('agent recommendations: a replaced strategic list is marked mixed, and a model text over 300 characters is dropped', async () => {
+    const { hub, up } = setup();
+    await attestAll(hub);
+    const agent = agentById('OPS-FIN-01')!;
+    up.queue.anthropic.push(aText(JSON.stringify({ strategicRecommendations: ['x'.repeat(301)], recommendedInputs: {}, complianceGuidance: ['c'], suggestedNextSteps: ['n'] })));
+    const r = await hub.recommend(agent, {}, 'sarah', 0, []);
+    expect(r.flags).toContain('mixed_source');
+    expect(r.strategicRecommendations.every((t) => t.length <= 300)).toBe(true);
+    up.queue.anthropic.push(aText(JSON.stringify({ strategicRecommendations: ['Fine one'], recommendedInputs: {}, complianceGuidance: ['c'], suggestedNextSteps: ['n'] })));
+    expect((await hub.recommend(agent, {}, 'sarah', 0, [])).flags).not.toContain('mixed_source');
+  });
+});
+

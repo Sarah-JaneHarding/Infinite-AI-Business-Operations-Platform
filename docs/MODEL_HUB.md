@@ -93,7 +93,9 @@ wordings in all).
 **Labels and flags.** `generatedWith` is `provider:model` or `deterministic-fallback`. The panel shows "Model: …" or
 "Built-in suggestions (…)" with the reason: no model configured, model limit reached (`rate_limited`: the rate limit or the
 daily budget, answered with the built-in suggestions rather than an error), model unavailable (`provider_failed`), or the model
-had nothing new (`refresh_fallback`). Other flags: `model_reply_not_json`, `pool_cycled`.
+had nothing new (`refresh_fallback`). When a model answered only in part and the built-in engine filled the rest (for example inputs from the model but no new prompts, or a replaced strategic list) the flag `mixed_source` is added and the label reads "Model: … (some suggestions are built-in)". Other flags: `model_reply_not_json`, `pool_cycled`.
+
+**Refresh cannot dead-end.** A client sends the most recent 200 texts only, each whitespace-normalised and cut to 500 characters, so a request is always valid; after round 50 the panel and the agent runner restart at round 0 and keep the exclusion list. Model items over 300 characters (including strategic recommendations) are dropped and built-in values quote at most 100 characters of a blank's label, so nothing shown can exceed the exclude limit.
 
 ## Troubleshooting
 

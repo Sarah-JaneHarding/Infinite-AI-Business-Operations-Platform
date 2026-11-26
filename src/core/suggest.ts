@@ -203,7 +203,7 @@ export function deterministicSuggestions(doc: Doc, round: number, exclude: reado
       const start = (r + b * 17) % VALUE_POOL;
       for (let i = 0; i < VALUE_POOL; i++) {
         const idx = ((start + i) * 53) % VALUE_POOL;
-        const value = `[Fill in: ${blank} — ${src[idx % 12]}; ${chk[Math.floor(idx / 12)]}]`;
+        const value = `[Fill in: ${blank.slice(0, 100)} — ${src[idx % 12]}; ${chk[Math.floor(idx / 12)]}]`;
         if (!skip.has(norm(value))) return [{ blank, value, why: flavour(blank) }];
       }
       short = true;
@@ -271,8 +271,11 @@ export interface PanelState {
 }
 const MAX_SHOWN = 12;
 
-/** The round to ask for next: 0 until something has been shown, then the one after the last success. */
-export const requestRound = (s: PanelState): number => (s.seen.length ? s.round + 1 : 0);
+/** The round to ask for next: 0 until something has been shown, then the one after the last success; past the route's maximum the rotation restarts at 0 (the exclusion list is kept). */
+export const requestRound = (s: PanelState): number => (s.seen.length ? (s.round + 1 > SUGGEST_LIMITS.maxRound ? 0 : s.round + 1) : 0);
+
+/** The `exclude` list to send: the most recent 200 texts, whitespace normalised and cut to 500 characters, so the request is always valid. */
+export const excludeFor = (seen: readonly string[]): string[] => seen.slice(-SUGGEST_LIMITS.maxExclude).map((t) => t.replace(/\s+/g, ' ').trim().slice(0, SUGGEST_LIMITS.maxExcludeChars));
 export const initialPanelState = (): PanelState => ({ round: 0, seen: [], inputs: [], prompts: [], generatedWith: '', flags: [], error: null, loading: false });
 export const startLoading = (s: PanelState): PanelState => ({ ...s, loading: true, error: null });
 const stale = <T>(xs: Shown<T>[]) => xs.map((x) => ({ ...x, isNew: false }));
@@ -294,7 +297,7 @@ export const failPanelState = (prev: PanelState, message: string): PanelState =>
 
 /** Where the suggestions came from, in words. */
 export function generatedWithLabel(generatedWith: string, flags: readonly string[]): string {
-  if (generatedWith !== 'deterministic-fallback') return `Model: ${generatedWith}`;
+  if (generatedWith !== 'deterministic-fallback') return flags.includes('mixed_source') ? `Model: ${generatedWith} (some suggestions are built-in)` : `Model: ${generatedWith}`;
   if (flags.includes('rate_limited')) return 'Built-in suggestions (model limit reached)';
   if (flags.includes('provider_failed')) return 'Built-in suggestions (model unavailable)';
   if (flags.includes('refresh_fallback')) return 'Built-in suggestions (the model had nothing new)';
