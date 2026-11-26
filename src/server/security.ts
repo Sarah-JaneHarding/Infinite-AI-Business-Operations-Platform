@@ -41,10 +41,13 @@ const tooMany = (res: Response) => res.status(429).set('Retry-After', '60').json
 /** One limit for every caller (by address) on the API, and a much tighter one for bad tokens, so a token cannot be guessed. */
 export function requestLimits(o: { perMinute: number; badTokensPerMinute: number; now?: () => number }) {
   const all = new RateLimiter(o.perMinute, 60_000, o.now);
+  const pages = new RateLimiter(o.perMinute, 60_000, o.now);
   const bad = new RateLimiter(o.badTokensPerMinute, 60_000, o.now);
   return {
     /** Counts every API request. */
     general: ((req, res, next) => (all.allow(req.ip ?? 'unknown') ? next() : tooMany(res))) as RequestHandler,
+    /** Counts page requests (the app shell, which reads a file) on their own, so page loads and API calls from one address do not use each other's allowance. */
+    pages: ((req, res, next) => (pages.allow(req.ip ?? 'unknown') ? next() : tooMany(res))) as RequestHandler,
     /** Call with the result of authentication: counts only failures, and refuses once a caller has failed too often. */
     failure: (req: Request, res: Response): boolean => (bad.allow(req.ip ?? 'unknown') ? false : (tooMany(res), true)),
   };

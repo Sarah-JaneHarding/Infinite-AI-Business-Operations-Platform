@@ -384,7 +384,7 @@ async function start() {
         next(err);
       }
     });
-    app.get('*', async (req, res, next) => {
+    app.get('*', limits.pages, async (req, res, next) => {
       if (req.path.startsWith('/api')) return next();
       try {
         await viteReady;
@@ -398,7 +398,7 @@ async function start() {
   } else {
     const dist = path.join(process.cwd(), 'dist');
     app.use(express.static(dist));
-    app.get('*', (_q, res) => res.sendFile(path.join(dist, 'index.html')));
+    app.get('*', limits.pages, (_q, res) => res.sendFile(path.join(dist, 'index.html')));
   }
   if (autonomy.enabled) {
     // Scheduled orders are checked every minute. A failed check is logged and tried again next minute.

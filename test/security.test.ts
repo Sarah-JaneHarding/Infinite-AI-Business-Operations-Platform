@@ -62,6 +62,20 @@ describe('headers and limits', () => {
     expect(dev.headers['X-Content-Type-Options']).toBe('nosniff');
     expect(dev.headers['Cache-Control']).toBeUndefined();
   });
+  it('limits page requests on their own, so page loads and API calls do not use each other\'s allowance (CodeQL 9 and 18)', () => {
+    let t = 0;
+    const l = requestLimits({ perMinute: 3, badTokensPerMinute: 2, now: () => t });
+    const req = { ip: '1.2.3.4' } as never;
+    const pass = (h: typeof l.pages) => { let ok = false; h(req, fakeRes() as never, () => { ok = true; }); return ok; };
+    expect([pass(l.pages), pass(l.pages), pass(l.pages), pass(l.pages)]).toEqual([true, true, true, false]);
+    expect(pass(l.general)).toBe(true); // exhausting the page allowance did not touch the API allowance
+    expect(pass(l.pages)).toBe(false);
+    const other = { ip: '5.6.7.8' } as never;
+    let ok = false; l.pages(other, fakeRes() as never, () => { ok = true; });
+    expect(ok).toBe(true); // another address is unaffected
+    t = 61_000;
+    expect(pass(l.pages)).toBe(true);
+  });
   it('limits an address overall and limits bad tokens separately, and recovers after the window', () => {
     let t = 0;
     const l = requestLimits({ perMinute: 3, badTokensPerMinute: 2, now: () => t });
@@ -110,6 +124,15 @@ describe('server: headers, limits and roles end to end', () => {
     const a = await api(base, '/api/whoami', { token: T_SARAH });
     expect(a.headers.get('cache-control')).toBe('no-store');
     expect(a.headers.get('content-security-policy')).toBe(CSP);
+  }, 60_000);
+
+  it('limits page requests on their own, without taking the API allowance (CodeQL 9 and 18)', async () => {
+    const base = await boot(3457, { OPS_USERS: users, OPS_RATE_PER_MINUTE: '5' });
+    const codes: number[] = [];
+    for (let i = 0; i < 8; i++) codes.push((await fetch(`${base}/some/app/route`)).status); // a route the SPA fallback answers, not a static file
+    expect(codes.slice(0, 5)).toEqual(Array(5).fill(200));
+    expect(codes.slice(5)).toEqual([429, 429, 429]);
+    expect((await api(base, '/api/whoami', { token: T_SARAH })).status).toBe(200); // the API has its own allowance
   }, 60_000);
 
   it('slows token guessing without locking out a good token, and caps overall requests', async () => {
