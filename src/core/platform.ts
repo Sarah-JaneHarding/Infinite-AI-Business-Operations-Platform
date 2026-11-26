@@ -9,6 +9,7 @@ import type { Actor, Doc, LedgerEntry, Status } from './types';
 import { deidentify, detectPii, LearnerDataRefused } from './guardrails/pii';
 import { DEFAULT_SIGNING, SINGLE_SIGNER, holdsProfession, requiresTwoPerson, soloWaitRemainingMs, type Profession, type SigningPolicy } from './signing';
 import { contractFor } from '../departments/custom';
+import { LIBRARY_DOC_AGENT, listDocuments, needsReview } from './documents';
 import { ERASURE_CATEGORIES, normalizeSubject, type ErasureCategory, type ErasureRequest } from './erasure';
 
 export interface Artefact {
@@ -313,6 +314,42 @@ export class Platform {
     return this.warehouse.list<Artefact>('artefact_versions', (r) => r['id'] === id);
   }
 
+  /** Learner identifiers can never be saved onto the board, by an edit or by putting a library document on it. */
+  private assertNoLearnerData(doc: Doc, source: string) {
+    try {
+      deidentify(JSON.stringify(doc), [source]);
+    } catch (e) {
+      if (e instanceof LearnerDataRefused) throw new RunRefused('learner_data', 'Learner-level identifiers cannot be saved.');
+      throw e;
+    }
+  }
+
+  /** Newest artefact made from this library document, if any (`doc.meta.sourceDocId`). */
+  artefactForDocument(docId: string): Artefact | undefined {
+    return this.artefacts().find((a) => a.doc.meta?.['sourceDocId'] === docId);
+  }
+
+  /**
+   * Puts an editable library document on the review board as a DRAFT, so a person can approve, countersign and ratify it.
+   * It goes through the same board as any agent output. Repeating it returns the artefact already made for that document.
+   * The library record itself is never changed.
+   */
+  async promoteDocument(docId: string, by: Actor): Promise<Artefact> {
+    if (by.kind !== 'human' || isAutonomous(by.id)) throw new RunRefused('hitl', 'Only a named human can put a document on the review board.');
+    const rec = listDocuments(this.warehouse).find((d) => d.id === docId);
+    if (!rec) throw new RunRefused('library', 'Unknown document.');
+    if (!rec.doc) throw new RunRefused('library', 'This file is stored as uploaded and cannot be edited, so it cannot go on the review board.');
+    const existing = this.artefactForDocument(docId);
+    if (existing && existing.status !== 'REJECTED') return existing;
+    const doc = JSON.parse(JSON.stringify(rec.doc)) as Doc;
+    this.assertNoLearnerData(doc, 'edit');
+    doc.meta = { ...doc.meta, sourceDocId: rec.id };
+    const art: Artefact = { id: newId('art'), orgId: this.orgId, agentId: LIBRARY_DOC_AGENT, dept: rec.dept ?? 'library', title: doc.title, status: 'DRAFT', version: 1, requestedBy: by.id, formats: ['docx', 'pdf', 'md', 'csv', 'json', 'html', 'xlsx'], doc, flags: needsReview(rec) ? ['needs-review'] : [], engine: 'library', at: new Date().toISOString() };
+    await this.saveVersion(art, by.id);
+    await this.ledger.append({ orgId: this.orgId, actor: by.id, action: 'document.promote', subject: art.id, detail: { docId: rec.id } });
+    return this.artefact(art.id)!;
+  }
+
   /** Human edit → new version (status returns to DRAFT) + learning proposal. */
   async edit(artefactId: string, doc: Doc, editor: Actor): Promise<Artefact> {
     const cur = this.artefact(artefactId);
@@ -321,13 +358,7 @@ export class Platform {
     if (cur.status === 'RATIFIED' || cur.status === 'INGESTED') throw new RunRefused('hitl', 'A ratified artefact is final. Start a revision instead.');
     const clean = JSON.parse(JSON.stringify(doc)) as Doc;
     const next: Artefact = { ...withoutSigning(cur), id: artefactId, doc: clean, title: clean.title, version: cur.version + 1, status: 'DRAFT', approvedBy: undefined, at: new Date().toISOString() };
-    // learner identifiers can never be saved via an edit either
-    try {
-      deidentify(JSON.stringify(clean), ['edit']);
-    } catch (e) {
-      if (e instanceof LearnerDataRefused) throw new RunRefused('learner_data', 'Learner-level identifiers cannot be saved.');
-      throw e;
-    }
+    this.assertNoLearnerData(clean, 'edit');
     await this.saveVersion(next, editor.id);
     await this.ledger.append({ orgId: this.orgId, actor: editor.id, action: 'artefact.edit', subject: artefactId, detail: { version: next.version } });
     await this.captureLearning(cur.doc, clean, cur.agentId, editor.id, artefactId);

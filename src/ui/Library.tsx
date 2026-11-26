@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, FilePlus2, Trash2, Upload } from 'lucide-react';
+import { Download, FilePlus2, Send, Trash2, Upload } from 'lucide-react';
 import { useOps } from './store';
-import { Badge, Card, download } from './primitives';
+import { Badge, Card, download, statusTone } from './primitives';
 import { BlockEditor } from './Studio';
 import { ExportBar } from './ExportBar';
 import { toHtml } from '../core/artefacts/render';
 import { refusedFiles } from '../library/seedEcosystem';
 import { sourceOf, type DocSource } from '../library/sourceOf';
-import { listDocuments, loadOriginal, MAX_UPLOAD_BYTES, newDocId, saveRecord, uploadFile, UploadRefused, type DocRecord } from '../core/documents';
+import { listDocuments, loadOriginal, needsReview, MAX_UPLOAD_BYTES, newDocId, saveRecord, uploadFile, UploadRefused, type DocRecord } from '../core/documents';
 import { TEMPLATES, templateById, type Template } from '../departments/templates';
 import { customArtefacts } from '../departments/custom';
 import { pending } from './nav';
+import { RunRefused } from '../core/platform';
 import type { Doc } from '../core/types';
 
 const blankDoc = (): Doc => ({ title: 'Untitled document', blocks: [{ type: 'h', level: 2, text: 'Heading' }, { type: 'p', text: '' }], meta: {} });
@@ -20,7 +21,7 @@ const ADD: Record<string, () => Doc['blocks'][number]> = {
 };
 
 export function Library() {
-  const { p, actor, tick, bump } = useOps();
+  const { p, actor, tick, bump, go } = useOps();
   const store = p!.warehouse;
   const docs = useMemo(() => listDocuments(store), [store, tick]);
   const [sel, setSel] = useState<string | null>(null);
@@ -49,6 +50,11 @@ export function Library() {
     if (file.current) file.current.value = '';
   };
   const saveEdit = async () => { if (!rec || !draft) return; await saveRecord(store, { ...rec, title: draft.title, doc: draft, at: new Date().toISOString(), by: actor.name }); bump(); say('ok', 'Saved.'); };
+  const art = rec ? p!.artefactForDocument(rec.id) : undefined;
+  const toReview = async () => {
+    if (!rec) return;
+    try { const a = await p!.promoteDocument(rec.id, actor); bump(); go({ name: 'studio', id: a.id }); } catch (e) { say('bad', e instanceof RunRefused ? e.message : (e as Error).message); }
+  };
   const remove = async () => { if (!rec) return; await saveRecord(store, { ...rec, deleted: true, at: new Date().toISOString() }); setSel(null); setDraft(null); bump(); };
   useEffect(() => { const id = pending.template; if (id) { pending.template = undefined; const t = templateById(id); if (t) void create(structuredClone(t.doc), 'template', t.dept); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const mine = useMemo(() => customArtefacts(store), [store, tick]);
@@ -91,6 +97,11 @@ export function Library() {
         {rec ? (
           <Card title={rec.title} right={<button className="btn danger" onClick={remove}><Trash2 size={13} /> Remove</button>}>
             <div className="space-y-3">
+              {draft && <div className="flex flex-wrap items-center gap-2">
+                {art && <Badge tone={statusTone(art.status)}>{art.status === 'INGESTED' ? 'Ingested' : art.status[0] + art.status.slice(1).toLowerCase().replace('_', ' ')}</Badge>}
+                {needsReview(rec) && <Badge tone="draft">needs review</Badge>}
+                <button className="btn primary" onClick={toReview}><Send size={14} /> {art ? 'Open on the review board' : 'Send to review'}</button>
+              </div>}
               {rec.scan.notes.length > 0 && <ul className="list-disc pl-5 text-xs">{rec.scan.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
               {rec.chunks && <button className="btn" onClick={() => { const b = loadOriginal(store, rec.id); if (b) download(rec.name ?? rec.title, b, rec.mime ?? 'application/octet-stream'); }}><Download size={14} /> Download original{rec.name ? ` (${rec.name})` : ''}</button>}
               {draft ? (

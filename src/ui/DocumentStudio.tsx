@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BookOpen, FileCode, ShieldCheck, Sparkles, Database, FileText, Layers, Wrench, GitFork } from 'lucide-react';
 import { DocsAndRatify } from '../../legacy/components/DocsAndRatify';
 import { Studio } from './Studio';
@@ -17,6 +17,8 @@ type StudioTab = 'policy' | 'artefacts' | 'library' | 'builders' | 'integrations
 export function DocumentStudio({ initialArtefactId, initialDocId }: DocumentStudioProps) {
   const { p, actor, bump, go } = useOps();
   const [activeTab, setActiveTab] = useState<StudioTab>(initialArtefactId ? 'artefacts' : 'policy');
+  // Opening an artefact from another tab (the Library's "Send to review") switches to the artefacts tab.
+  useEffect(() => { if (initialArtefactId) setActiveTab('artefacts'); }, [initialArtefactId]);
   const [ratifiedCount, setRatifiedCount] = useState<number>(58);
 
   const handleRatifyPolicy = async (docId?: string) => {

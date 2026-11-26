@@ -38,6 +38,12 @@ export interface DocRecord {
   deleted?: boolean;
 }
 
+/** The agent id of an artefact made from a library document. It is not a built-in agent contract: nothing here runs it. */
+export const LIBRARY_DOC_AGENT = 'LIBRARY-DOC';
+
+/** A library record is flagged for professional review when any scan note starts with "Needs review by" (see `seedLibrary`). */
+export const needsReview = (rec: Pick<DocRecord, 'scan'>): boolean => rec.scan.notes.some((n) => n.startsWith('Needs review by'));
+
 export const extOf = (name: string) => (name.split('.').pop() ?? '').toLowerCase();
 
 export function kindOf(name: string, mime = ''): FileKind {

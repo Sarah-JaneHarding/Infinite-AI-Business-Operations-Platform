@@ -23,5 +23,9 @@ export function ratifiedProblem(store: ReadStore, art: Rec | undefined): string 
   if (required && !store.list('countersignatures').some((r) => r.artefactId === art.id && r.signer === art.countersignedBy && r.docHash === art.docHash && r.profession === required)) {
     return `No recorded countersignature by a registered ${required.replace('_', ' ')} for this artefact.`;
   }
+  // A library document flagged for professional review leaves only with a professional's countersignature on the same content.
+  if (Array.isArray(art.flags) && art.flags.includes('needs-review') && !store.list('countersignatures').some((r) => r.artefactId === art.id && r.docHash === art.docHash && typeof r.profession === 'string' && r.profession !== '')) {
+    return 'This document is marked for professional review and none is recorded; it cannot leave the platform.';
+  }
   return null;
 }

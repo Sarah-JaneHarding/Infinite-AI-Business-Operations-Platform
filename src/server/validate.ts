@@ -8,6 +8,7 @@ import { DEFAULT_SIGNING, SINGLE_SIGNER, holdsProfession, requiresTwoPerson, sol
 import { maySignFor, type Signer } from './signing';
 import { checkTaskText, MAX_NOTES, MAX_TITLE } from '../core/ceo/guard';
 import { isDate } from '../core/ceo/time';
+import { LIBRARY_DOC_AGENT } from '../core/documents';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
@@ -122,7 +123,7 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
   const status = rec.status;
   if (status !== 'DRAFT' && status !== 'IN_REVIEW' && status !== 'APPROVED' && status !== 'RATIFIED' && status !== 'INGESTED' && status !== 'REJECTED') bad('bad artefact status');
   const customIds = new Set(ctx.store.list('custom_defs').filter((d) => d.kind === 'agent' && !d.deleted).map((d) => d.id));
-  if (typeof rec.agentId !== 'string' || !(agentById(rec.agentId) || customIds.has(rec.agentId))) bad('unknown agent');
+  if (typeof rec.agentId !== 'string' || !(agentById(rec.agentId) || customIds.has(rec.agentId) || rec.agentId === LIBRARY_DOC_AGENT)) bad('unknown agent');
   if (status !== 'APPROVED' && status !== 'REJECTED' && status !== 'RATIFIED' && status !== 'INGESTED' && rec.approvedBy !== undefined) bad('only a decision carries approvedBy');
   if (status !== 'RATIFIED' && status !== 'INGESTED' && rec.countersignedBy !== undefined) bad('only a ratified artefact carries countersignedBy');
   if (rec.signing !== undefined && rec.signing !== SINGLE_SIGNER) bad('the only signing marker is single-signer');
