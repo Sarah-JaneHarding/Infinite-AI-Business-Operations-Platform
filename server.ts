@@ -40,8 +40,11 @@ import { REPO_SLUGS } from './src/oq/plan';
 
 const env = process.env;
 const REPO = env.ECOSYSTEM_REPO ?? 'Sarah-JaneHarding/infinite-ai-ecosystem';
-// Port 3000 is required by AI Studio dev server / Nginx reverse proxy. If PORT=8080, Nginx is listening on 8080 and proxying to 3000.
-const PORT = env.PORT && Number(env.PORT) !== 8080 ? Number(env.PORT) : 3000;
+
+// Port 3000 is required by AI Studio dev server / Nginx reverse proxy (when PORT=8080 in dev, Nginx proxies 8080 -> 3000).
+const PORT = env.NODE_ENV === 'production'
+  ? (Number(env.PORT) || 3000)
+  : (env.PORT && Number(env.PORT) !== 8080 ? Number(env.PORT) : 3000);
 const HOST = env.HOST || '0.0.0.0';
 
 let auth: ReturnType<typeof parseAuth>;
@@ -366,9 +369,32 @@ app.use('/api', (err: unknown, _req: Request, res: Response, _next: NextFunction
 
 async function start() {
   if (env.NODE_ENV !== 'production') {
-    const { createServer } = await import('vite');
-    const vite = await createServer({ server: { middlewareMode: true }, appType: 'spa' });
-    app.use(vite.middlewares);
+    let viteMiddleware: RequestHandler | null = null;
+    let viteInstance: Awaited<ReturnType<typeof import('vite')['createServer']>> | null = null;
+    const viteReady = import('vite').then(async ({ createServer }) => {
+      viteInstance = await createServer({ server: { middlewareMode: true }, appType: 'spa' });
+      viteMiddleware = viteInstance.middlewares as RequestHandler;
+    });
+    app.use(async (req, res, next) => {
+      try {
+        await viteReady;
+        if (viteMiddleware) return viteMiddleware(req, res, next);
+        next();
+      } catch (err) {
+        next(err);
+      }
+    });
+    app.get('*', async (req, res, next) => {
+      if (req.path.startsWith('/api')) return next();
+      try {
+        await viteReady;
+        const rawHtml = readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
+        const html = viteInstance ? await viteInstance.transformIndexHtml(req.originalUrl, rawHtml) : rawHtml;
+        res.status(200).set('content-type', 'text/html; charset=utf-8').send(html);
+      } catch (err) {
+        next(err);
+      }
+    });
   } else {
     const dist = path.join(process.cwd(), 'dist');
     app.use(express.static(dist));
@@ -378,25 +404,25 @@ async function start() {
     // Scheduled orders are checked every minute. A failed check is logged and tried again next minute.
     setInterval(() => void autonomy.tick().catch((e: Error) => console.error('autonomy tick failed:', e.message)), 60_000).unref();
   }
-  if (env.OPS_SEED_ON_START !== 'false') {
-    // Loads the library, business plan and ecosystem documents. Idempotent (an id already stored is skipped), so a
-    // restart writes nothing. A failure is logged and never stops the server.
-    try {
-      const seedStore: Store = {
-        put: async (c, rec) => { store.append(c, rec as Rec); },
-        latest: <T,>(c: string) => [...new Map(store.list(c).map((r) => [String(r.id), r])).values()] as T[],
-        list: <T,>(c: string, where?: (r: Rec) => boolean) => (where ? store.list(c).filter(where) : [...store.list(c)]) as T[],
-      };
-      const r = await loadAll(seedStore, (p) => new Uint8Array(readFileSync(path.join(process.cwd(), p))));
-      console.log(`documents loaded: library ${r.library.written.length}, business plan ${r.businessPlan.written.length}, ecosystem ${r.ecosystem.written.length} (${r.ecosystem.refused.length} refused)`);
-      for (const x of r.ecosystem.refused) console.log(`  not loaded: ${x.name}: ${x.reason}`);
-    } catch (e) {
-      console.error('document loading failed (the server keeps running):', (e as Error).message);
-    }
-  }
   app.listen(PORT, HOST, () => {
     console.log(`Infinite-AI Ops Platform on http://${HOST}:${PORT}  (repo: ${REPO}; auth: ${auth.mode}; autonomy: ${autonomy.enabled ? 'on' : 'off'})`);
     if (auth.mode === 'open') console.warn('WARNING: no users configured (OPS_USERS). Open dev mode: identity is self-declared and publishing is disabled.');
   });
+  if (env.OPS_SEED_ON_START !== 'false') {
+    // Loads the library, business plan and ecosystem documents without blocking startup.
+    const seedStore: Store = {
+      put: async (c, rec) => { store.append(c, rec as Rec); },
+      latest: <T,>(c: string) => [...new Map(store.list(c).map((r) => [String(r.id), r])).values()] as T[],
+      list: <T,>(c: string, where?: (r: Rec) => boolean) => (where ? store.list(c).filter(where) : [...store.list(c)]) as T[],
+    };
+    void loadAll(seedStore, (p) => new Uint8Array(readFileSync(path.join(process.cwd(), p))))
+      .then((r) => {
+        console.log(`documents loaded: library ${r.library.written.length}, business plan ${r.businessPlan.written.length}, ecosystem ${r.ecosystem.written.length} (${r.ecosystem.refused.length} refused)`);
+        for (const x of r.ecosystem.refused) console.log(`  not loaded: ${x.name}: ${x.reason}`);
+      })
+      .catch((e) => {
+        console.error('document loading failed (the server keeps running):', (e as Error).message);
+      });
+  }
 }
 start();

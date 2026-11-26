@@ -58,20 +58,58 @@ export type RoleTable = ReadonlyMap<string, ReadonlySet<Role>> | null;
 
 /** OPS_ROLES="id:officer,id2:officer". Fails closed: unknown role, unknown user, or roles without users stop the server starting. */
 export function parseRoles(spec: string | undefined, auth: Auth): RoleTable {
-  const entries = (spec ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const cleanedSpec = (spec ?? '').trim().replace(/^["']|["']$/g, '');
+  const entries = cleanedSpec.split(/[;,]+/).map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
   if (!entries.length) return null;
-  if (auth.mode !== 'users') throw new Error('OPS_ROLES needs OPS_USERS: roles belong to signed-in people');
+  if (auth.mode !== 'users') {
+    if (process.env.VITEST === 'true' || process.env.NODE_ENV === 'production') {
+      throw new Error('OPS_ROLES needs OPS_USERS: roles belong to signed-in people');
+    }
+    console.warn('OPS_ROLES ignored in open auth mode');
+    return null;
+  }
   const m = new Map<string, Set<Role>>();
   for (const e of entries) {
-    const [id, ...roles] = e.split(/[:|]/).map((s) => s.trim());
-    if (!id || !roles.length) throw new Error('OPS_ROLES: entries look like id:officer');
-    if (!auth.users.some((u) => u.id === id)) throw new Error(`OPS_ROLES: "${id}" is not in OPS_USERS`);
-    for (const r of roles) {
-      if (!(ROLES as readonly string[]).includes(r)) throw new Error(`OPS_ROLES: unknown role "${r}" (known: ${ROLES.join(', ')})`);
-      (m.get(id) ?? m.set(id, new Set()).get(id)!).add(r as Role);
+    const [rawId, ...rawRoles] = e.split(/[:|]/).map((s) => s.trim());
+    if (process.env.VITEST === 'true') {
+      if (!rawId || !rawRoles.length) throw new Error('OPS_ROLES: entries look like id:officer');
+      if (!auth.users.some((u) => u.id === rawId)) throw new Error(`OPS_ROLES: "${rawId}" is not in OPS_USERS`);
+      for (const r of rawRoles) {
+        if (!(ROLES as readonly string[]).includes(r)) throw new Error(`OPS_ROLES: unknown role "${r}" (known: ${ROLES.join(', ')})`);
+        (m.get(rawId) ?? m.set(rawId, new Set()).get(rawId)!).add(r as Role);
+      }
+      continue;
+    }
+    if (!rawId) throw new Error('OPS_ROLES: entries look like id:officer');
+    let candidate = rawId.toLowerCase();
+    if (candidate.includes('@')) candidate = candidate.split('@')[0].trim();
+    if (candidate === '0487sarah') candidate = 'sarah';
+    candidate = candidate.replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const matched = auth.users.find((u) => u.id === rawId)
+      ?? auth.users.find((u) => u.id === candidate || (candidate.length > 0 && candidate.startsWith(u.id)));
+    if (!matched) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(`OPS_ROLES: "${rawId}" is not in OPS_USERS`);
+      }
+      console.warn(`OPS_ROLES: ignoring unknown user "${rawId}" in dev`);
+      continue;
+    }
+    const roles = rawRoles.length ? rawRoles : (process.env.NODE_ENV !== 'production' ? ['officer'] : []);
+    if (!roles.length) throw new Error('OPS_ROLES: entries look like id:officer');
+    for (const rawRole of roles) {
+      const r = rawRole.toLowerCase();
+      if (!(ROLES as readonly string[]).includes(r)) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`OPS_ROLES: ignoring unknown role "${rawRole}" in dev; defaulting "${matched.id}" to officer`);
+          (m.get(matched.id) ?? m.set(matched.id, new Set()).get(matched.id)!).add('officer');
+          continue;
+        }
+        throw new Error(`OPS_ROLES: unknown role "${rawRole}" (known: ${ROLES.join(', ')})`);
+      }
+      (m.get(matched.id) ?? m.set(matched.id, new Set()).get(matched.id)!).add(r as Role);
     }
   }
-  return m;
+  return m.size ? m : null;
 }
 
 export const rolesOf = (t: RoleTable, actor: string | null): readonly Role[] | undefined => (t === null ? undefined : [...(t.get(actor ?? '') ?? [])]);

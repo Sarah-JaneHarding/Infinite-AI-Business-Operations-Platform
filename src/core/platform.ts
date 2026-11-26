@@ -37,6 +37,10 @@ export interface Artefact {
   ingestedAt?: string;
   /** Set on a revision: the ratified artefact it was copied from. */
   revisionOf?: string;
+  deleted?: boolean;
+  deleteReason?: string;
+  signedBy?: string;
+  signedAt?: string;
 }
 
 /** A copy of the artefact with no `signing` key at all (not even undefined): the marker is part of the signature state. */
@@ -362,6 +366,38 @@ export class Platform {
     await this.saveVersion(next, editor.id);
     await this.ledger.append({ orgId: this.orgId, actor: editor.id, action: 'artefact.edit', subject: artefactId, detail: { version: next.version } });
     await this.captureLearning(cur.doc, clean, cur.agentId, editor.id, artefactId);
+    return next;
+  }
+
+  /** Signed deletion of non-ratified draft/review/approved/rejected artefacts. */
+  async deleteArtefact(artefactId: string, by: Actor, reason: string, signature: string): Promise<Artefact> {
+    const cur = this.artefact(artefactId);
+    if (!cur) throw new Error('Unknown artefact.');
+    if (by.kind !== 'human' || isAutonomous(by.id)) throw new RunRefused('hitl', 'Only a named human can delete an artefact.');
+    if (cur.status === 'RATIFIED' || cur.status === 'INGESTED') throw new RunRefused('hitl', 'Ratified or ingested artefacts are final under Law 02 and cannot be deleted.');
+    const cleanReason = reason.trim();
+    const cleanSignature = signature.trim();
+    if (!cleanReason) throw new RunRefused('input', 'A deletion reason is required.');
+    if (!cleanSignature) throw new RunRefused('hitl', 'A statutory signature is required to delete an artefact.');
+    const at = new Date().toISOString();
+    const next: Artefact = {
+      ...withoutSigning(cur),
+      id: artefactId,
+      version: cur.version + 1,
+      deleted: true,
+      deleteReason: cleanReason,
+      signedBy: cleanSignature,
+      signedAt: at,
+      at,
+    };
+    await this.saveVersion(next, by.id);
+    await this.ledger.append({
+      orgId: this.orgId,
+      actor: by.id,
+      action: 'artefact.deleted',
+      subject: artefactId,
+      detail: { title: cur.title, status: cur.status, reason: cleanReason, signature: cleanSignature, signedAt: at },
+    });
     return next;
   }
 
