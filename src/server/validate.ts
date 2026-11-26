@@ -17,6 +17,8 @@ const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'coun
 const LIBRARY = ['documents', 'document_chunks', 'document_refusals', 'custom_defs', 'chat_log', 'integration_settings'];
 /** CEO command centre: tasks added by hand, a person's override of one task, and calendar events. */
 const CEO = ['ceo_tasks', 'ceo_task_state', 'ceo_events'];
+/** Open questions register decisions and generated department/agent task manifests. */
+const GOVERNANCE = ['open_question_decisions', 'task_manifests'];
 /** Collections behind widgets made in the widget builder. */
 export const CUSTOM_WIDGET_COLLECTION = /^cw_[a-z0-9_]{1,40}$/;
 
@@ -25,6 +27,7 @@ export const CLIENT_COLLECTIONS: ReadonlySet<string> = new Set([
   ...CORE,
   ...LIBRARY,
   ...CEO,
+  ...GOVERNANCE,
   ...DEPARTMENTS.flatMap((d) => d.widgets).flatMap((w) => ('collection' in w ? [w.collection] : [])),
 ]);
 
@@ -87,14 +90,53 @@ export async function validateAppend(collection: string, body: unknown, ctx: App
     case 'approvals': approval(rec, ctx); break;
     case 'countersignatures': countersignature(rec, ctx); break;
     case 'documents': await document(rec, ctx); break;
+    case 'custom_defs': signedDeletionIfDeleted(rec); break;
     case 'brain': brain(rec, ctx); break;
     case 'erasure_requests': erasure(rec, ctx); break;
     case 'tombstones': tombstone(rec, ctx); break;
     case 'ceo_tasks': ceoTask(rec); break;
     case 'ceo_events': ceoEvent(rec); break;
     case 'ceo_task_state': ceoState(rec); break;
+    case 'open_question_decisions': openQuestionDecision(rec); break;
+    case 'task_manifests': taskManifest(rec); break;
   }
   return rec;
+}
+
+function signedDeletionIfDeleted(rec: Rec) {
+  if (rec.deleted !== true) return;
+  if (typeof rec.deleteReason !== 'string' || !rec.deleteReason.trim() || rec.deleteReason.length > 400) {
+    bad('signed deletion requires a reason (1-400 characters)');
+  }
+  if (typeof rec.signedBy !== 'string' || !rec.signedBy.trim() || rec.signedBy.length > 200) {
+    bad('signed deletion requires a signature (signedBy)');
+  }
+}
+
+function openQuestionDecision(rec: Rec) {
+  if (typeof rec.questionId !== 'string' || !rec.questionId.trim()) bad('questionId is required');
+  if (typeof rec.decision !== 'string' || !rec.decision.trim()) bad('decision text is required');
+  if (typeof rec.decidedBy !== 'string' || !rec.decidedBy.trim()) bad('decidedBy signature is required');
+  if (typeof rec.targetDept !== 'string' || !DEPARTMENTS.some((d) => d.id === rec.targetDept)) bad('targetDept is not a department id');
+  const refusedDecision = checkTaskText(rec.decision as string, typeof rec.rationale === 'string' ? rec.rationale : undefined);
+  if (refusedDecision) bad(refusedDecision);
+  const refusedSigner = checkTaskText(rec.decidedBy as string);
+  if (refusedSigner) bad(refusedSigner);
+}
+
+function taskManifest(rec: Rec) {
+  if (typeof rec.questionId !== 'string' || !rec.questionId.trim()) bad('questionId is required');
+  if (typeof rec.targetDept !== 'string' || !DEPARTMENTS.some((d) => d.id === rec.targetDept)) bad('targetDept is not a department id');
+  if (!Array.isArray(rec.tasks)) bad('manifest tasks must be an array');
+  if (typeof rec.summary === 'string' && rec.summary.trim()) {
+    const refusedSummary = checkTaskText(rec.summary);
+    if (refusedSummary) bad(refusedSummary);
+  }
+  for (const t of rec.tasks as Array<Record<string, unknown>>) {
+    if (typeof t?.title !== 'string' || !t.title.trim()) bad('manifest task title is required');
+    const refused = checkTaskText(t.title as string, typeof t.notes === 'string' ? t.notes : undefined);
+    if (refused) bad(refused);
+  }
 }
 
 function ceoTask(rec: Rec) {
@@ -104,6 +146,7 @@ function ceoTask(rec: Rec) {
   if (typeof rec.dept !== 'string' || !DEPARTMENTS.some((d) => d.id === rec.dept)) bad('dept is not a department id');
   const refused = checkTaskText(rec.title as string, (rec.notes ?? undefined) as string | undefined);
   if (refused) bad(refused);
+  signedDeletionIfDeleted(rec);
 }
 function ceoEvent(rec: Rec) {
   if (typeof rec.title !== 'string' || !rec.title.trim() || rec.title.length > MAX_TITLE) bad('title is required');
@@ -158,6 +201,7 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
     }
     return;
   }
+  if (cur.deleted === true) bad('this artefact has already been deleted', 409);
   if (rec.requestedBy !== cur.requestedBy || rec.agentId !== cur.agentId || rec.orgId !== cur.orgId) bad('requestedBy, agent and org cannot change');
   if (hasNeedsReview(rec) !== hasNeedsReview(cur)) bad('the needs-review flag cannot be added or removed');
   // The contract always comes from the stored artefact, never from anything the client sends.
@@ -165,6 +209,13 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
   const custom = !contract && customIds.has(String(cur.agentId));
   const policy = ctx.signing ?? DEFAULT_SIGNING;
   const sameDoc = rec.docHash === cur.docHash && rec.version === cur.version;
+
+  if (rec.deleted === true) {
+    if (cur.status === 'RATIFIED' || cur.status === 'INGESTED') bad('ratified or ingested artefacts cannot be deleted', 409);
+    if (rec.docHash !== cur.docHash || rec.version !== Number(cur.version) + 1) bad('deleting an artefact must keep its document and increment version');
+    signedDeletionIfDeleted(rec);
+    return;
+  }
 
   if (status === 'DRAFT') {
     if (cur.status === 'RATIFIED' || cur.status === 'INGESTED') bad('a ratified artefact is final: start a revision instead', 409);
@@ -257,6 +308,7 @@ export const countersignMarker = (art: Rec): typeof SINGLE_SIGNER | undefined =>
 /** A ratified library document is the exact approved-and-countersigned content, and once written it never changes. */
 async function document(rec: Rec, ctx: AppendCtx) {
   if (latestById(ctx.store.list('documents'), rec.id)?.origin === 'ratified') bad('a ratified document is immutable', 409);
+  signedDeletionIfDeleted(rec);
   if (rec.origin !== 'ratified') return;
   const from = rec.ratifiedFrom as { artefactId?: string; docHash?: string } | undefined;
   const art = latestById(ctx.store.list('artefact_versions'), from?.artefactId);

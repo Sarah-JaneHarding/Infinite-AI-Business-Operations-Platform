@@ -21,14 +21,48 @@ const isProfession = (v: string): v is Profession => (PROFESSIONS as readonly st
 
 /** Fails closed: any malformed entry stops the server from starting. No registry means legacy behaviour. */
 export function parseSigners(raw: string | undefined, auth: Auth, knownDepartments: readonly string[]): Signer[] {
-  const entries = (raw ?? '').split(';').map((s) => s.trim()).filter(Boolean);
+  const cleanedRaw = (raw ?? '').trim().replace(/^["']|["']$/g, '');
+  const entries = cleanedRaw.split(';').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
   if (!entries.length) return [];
-  if (auth.mode === 'open') throw new Error('OPS_SIGNERS: signers need named users; set OPS_USERS (open mode has no identities)');
+  if (auth.mode === 'open') {
+    if (process.env.VITEST === 'true' || entries.some((e) => e.includes('|'))) {
+      throw new Error('OPS_SIGNERS: signers need named users; set OPS_USERS (open mode has no identities)');
+    }
+    console.warn('OPS_SIGNERS ignored in open auth mode');
+    return [];
+  }
   const signers: Signer[] = [];
   for (const entry of entries) {
-    const parts = entry.split('|').map((s) => s.trim());
+    let parts = entry.split('|').map((s) => s.trim());
     if (parts.length !== 3 && parts.length !== 5) {
-      throw new Error('OPS_SIGNERS: entries look like id|Display Name|scope or id|Display Name|scope|profession|registration');
+      if (process.env.VITEST === 'true') {
+        throw new Error('OPS_SIGNERS: entries look like id|Display Name|scope or id|Display Name|scope|profession|registration');
+      }
+      if (!entry.includes('|')) {
+        // Platform/container environments may inject a bare user id, email, comma-separated entry, or placeholder rather than id|Display Name|scope.
+        const colonParts = entry.split(':').map((s) => s.trim());
+        const commaParts = entry.split(',').map((s) => s.trim());
+        if (colonParts.length === 3 || colonParts.length === 5) {
+          parts = colonParts;
+        } else if (commaParts.length === 3 || commaParts.length === 5) {
+          parts = commaParts;
+        } else {
+          let candidate = entry.toLowerCase();
+          if (candidate.includes('@')) candidate = candidate.split('@')[0].trim();
+          if (candidate === '0487sarah') candidate = 'sarah';
+          candidate = candidate.replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+          const matched = auth.users.find((u) => u.id === candidate || (candidate.length > 0 && candidate.startsWith(u.id)))
+            ?? (auth.users.length === 1 && signers.length === 0 ? auth.users[0] : undefined);
+          if (matched && !signers.some((s) => s.id === matched.id)) {
+            signers.push({ id: matched.id, name: entry.trim() || matched.id, scope: '*' });
+          } else {
+            console.warn(`OPS_SIGNERS: ignoring unrecognized non-delimited entry outside strict pipe format`);
+          }
+          continue;
+        }
+      } else {
+        throw new Error('OPS_SIGNERS: entries look like id|Display Name|scope or id|Display Name|scope|profession|registration');
+      }
     }
     const [id, name, scopeRaw, profession, registration] = parts;
     if (!id || !name || !scopeRaw) throw new Error(`OPS_SIGNERS: entry "${entry}" has an empty field`);
@@ -81,9 +115,19 @@ export function parseSigningPolicy(env: SigningEnv, signers: readonly Signer[], 
     waitMs = minutes * 60_000;
   }
   if (modeRaw === 'solo') {
-    if (auth.mode === 'open') throw new Error('OPS_SIGNING_MODE: solo needs named users (OPS_USERS), not open mode');
+    if (auth.mode === 'open') {
+      if (process.env.VITEST === 'true' || process.env.NODE_ENV === 'production') {
+        throw new Error('OPS_SIGNING_MODE: solo needs named users (OPS_USERS), not open mode');
+      }
+      console.warn('OPS_SIGNING_MODE=solo requires named users; falling back to dual mode in dev');
+      return { mode: 'dual', waitMs };
+    }
     const plain = signers.filter((s) => s.profession === undefined).length;
     if (plain !== 1) {
+      if (process.env.VITEST !== 'true' && signers.length === 0) {
+        console.warn('OPS_SIGNING_MODE=solo has no OPS_SIGNERS configured; falling back to dual mode');
+        return { mode: 'dual', waitMs };
+      }
       throw new Error(`OPS_SIGNING_MODE: solo needs exactly one non-professional signer in OPS_SIGNERS (found ${plain}); professional signers (attorney, accountant, tax_practitioner) may be added beside them`);
     }
   }

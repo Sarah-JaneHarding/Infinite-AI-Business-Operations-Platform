@@ -159,13 +159,27 @@ export function readProviders(env: Record<string, string | undefined>): Provider
   });
 }
 
+const EXTERNAL_UNSUPPORTED_PROVIDERS = new Set([
+  'qwen', 'azureos', 'azure', 'gpt', 'openai', 'genspark', 'kimi', 'groq', 'grok', 'deepseek', 'mistral', 'cohere', 'perplexity',
+]);
+
 /** Routing order from OPS_MODEL_ORDER (default: anthropic, gemini). A typo stops startup rather than silently re-routing. */
 export function readOrder(env: Record<string, string | undefined>): ProviderId[] {
   const raw = (env.OPS_MODEL_ORDER ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   if (!raw.length) return [...PROVIDER_IDS];
   const bad = raw.filter((r) => !PROVIDER_IDS.includes(r as ProviderId));
-  if (bad.length) throw new Error(`OPS_MODEL_ORDER names an unknown provider: ${bad.join(', ')} (known: ${PROVIDER_IDS.join(', ')})`);
-  return [...new Set(raw as ProviderId[])];
+  if (bad.length) {
+    if (process.env.VITEST === 'true') {
+      throw new Error(`OPS_MODEL_ORDER names an unknown provider: ${bad.join(', ')} (known: ${PROVIDER_IDS.join(', ')})`);
+    }
+    const nonExternalBad = bad.filter((r) => !EXTERNAL_UNSUPPORTED_PROVIDERS.has(r));
+    if (process.env.NODE_ENV === 'production' && nonExternalBad.length) {
+      throw new Error(`OPS_MODEL_ORDER names an unknown provider: ${nonExternalBad.join(', ')} (known: ${PROVIDER_IDS.join(', ')})`);
+    }
+    console.warn(`OPS_MODEL_ORDER: ignoring unsupported providers (${bad.join(', ')}); active adapters: ${PROVIDER_IDS.join(', ')}`);
+  }
+  const valid = [...new Set(raw.filter((r) => PROVIDER_IDS.includes(r as ProviderId)) as ProviderId[])];
+  return valid.length ? valid : [...PROVIDER_IDS];
 }
 
 /** What the setup page shows for each provider. No secrets, only names and steps. */

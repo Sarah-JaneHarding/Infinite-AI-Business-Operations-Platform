@@ -16,7 +16,7 @@ import { agentById, DEPARTMENTS } from '../departments';
 export const MONITOR_SECONDS = 30;
 
 export interface Health { ok: boolean; repo: string; auth: 'users' | 'open'; githubToken: boolean; llm: boolean; ecosystemWrites: boolean; prWrites?: boolean; webhook: boolean; outbound?: boolean; inbound?: boolean; calendarFeed?: boolean }
-export type View = { name: 'overview' } | { name: 'dept'; id: string } | { name: 'studio'; id?: string; docId?: string } | { name: 'brain' } | { name: 'ledger' } | { name: 'warehouse' } | { name: 'connector' } | { name: 'guardrails' } | { name: 'copilot' } | { name: 'cost' } | { name: 'showcase' } | { name: 'erasure' } | { name: 'models' } | { name: 'board' } | { name: 'autonomy' } | { name: 'contracts' } | { name: 'brand' } | { name: 'ceo' } | { name: 'oq' };
+export type View = { name: 'overview' } | { name: 'dept'; id: string } | { name: 'studio'; id?: string; docId?: string } | { name: 'brain' } | { name: 'ledger' } | { name: 'warehouse' } | { name: 'connector' } | { name: 'guardrails' } | { name: 'copilot' } | { name: 'cost' } | { name: 'showcase' } | { name: 'erasure' } | { name: 'models' } | { name: 'board' } | { name: 'autonomy' } | { name: 'contracts' } | { name: 'brand' } | { name: 'ceo' } | { name: 'oq' } | { name: 'questions'; id?: string };
 
 interface Ctx {
   p: Platform | null;

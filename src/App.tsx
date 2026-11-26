@@ -184,7 +184,7 @@ function Shell() {
             : view.name === 'models' ? <ModelHub />
             : view.name === 'board' ? <Board />
             : view.name === 'autonomy' ? <Autonomy />
-            : view.name === 'oq' ? <OpenQuestions />
+            : view.name === 'oq' || view.name === 'questions' ? <OpenQuestions />
             : view.name === 'contracts' ? <Contracts />
             : <GuardrailLab />}
         </main>
