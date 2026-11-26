@@ -27,6 +27,8 @@ RUN --mount=type=secret,id=extra_ca,required=false \
     npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server.js ./server.js
+# The Open Questions Register loads its starting questions from this file at boot.
+COPY --from=build /app/docs/open-questions-register/questions.seed.json ./docs/open-questions-register/questions.seed.json
 RUN mkdir -p data && chown -R node:node data
 USER node
 EXPOSE 3000
