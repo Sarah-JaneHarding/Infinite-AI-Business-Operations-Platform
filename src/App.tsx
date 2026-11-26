@@ -20,7 +20,8 @@ import {
   Sparkles, 
   Users,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  HelpCircle,
 } from 'lucide-react';
 import { OpsProvider, useOps, type View } from './ui/store';
 import { Icon } from './ui/primitives';
@@ -39,6 +40,7 @@ import { DEPARTMENTS } from './departments';
 import { BRAND } from './brand';
 import { BrandView } from './ui/BrandView';
 import { CeoCentre } from './ui/CeoCentre';
+import { OpenQuestions } from './ui/OpenQuestions';
 
 function Shell() {
   const { view, go, p, mode, actor, setActor, llm, setLlm, health, authNeeded, authError, signIn, syncError } = useOps();
@@ -119,6 +121,7 @@ function Shell() {
             {item({ name: 'guardrails' }, 'Guardrail Lab', <ShieldAlert size={16} className="text-purple-400" />, view.name === 'guardrails')}
             {item({ name: 'connector' }, 'GitHub Connector', <GitBranch size={16} className="text-sky-400" />, view.name === 'connector')}
             {item({ name: 'autonomy' }, 'Autonomous Agents', <Bot size={16} className="text-cyan-300" />, view.name === 'autonomy')}
+            {item({ name: 'oq' }, 'Open Questions', <HelpCircle size={16} className="text-amber-300" />, view.name === 'oq')}
             {item({ name: 'board' }, 'Review Board', <ClipboardCheck size={16} className="text-amber-300" />, view.name === 'board')}
             {item({ name: 'contracts' }, 'Agent Contracts', <FileCheck2 size={16} className="text-teal-300" />, view.name === 'contracts')}
             {item({ name: 'models' }, 'Model Hub', <Cpu size={16} className="text-violet-300" />, view.name === 'models')}
@@ -181,6 +184,7 @@ function Shell() {
             : view.name === 'models' ? <ModelHub />
             : view.name === 'board' ? <Board />
             : view.name === 'autonomy' ? <Autonomy />
+            : view.name === 'oq' ? <OpenQuestions />
             : view.name === 'contracts' ? <Contracts />
             : <GuardrailLab />}
         </main>
