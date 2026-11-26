@@ -19,7 +19,7 @@ export const HEALTH_RULES = {
 const DAY = 86_400_000;
 
 export function deptHealth(departments: Department[], tasks: CeoTask[], collections: Record<string, readonly Rec[]>, now: number): DeptHealth[] {
-  const arts = latestById<Artefact>(collections['artefact_versions']);
+  const arts = latestById<Artefact>(collections['artefact_versions']).filter((a) => !a.deleted);
   return departments.map((d) => {
     const mine = tasks.filter((t) => t.dept === d.id);
     const colls = d.widgets.filter((w) => w.type === 'tracker' || w.type === 'checklist').map((w) => ('collection' in w ? w.collection : ''));

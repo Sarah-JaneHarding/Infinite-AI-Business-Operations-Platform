@@ -127,7 +127,7 @@ function checklistTasks(inp: TaskInput, today: string): CeoTask[] {
 function artefactTasks(inp: TaskInput, today: string): CeoTask[] {
   const out: CeoTask[] = [];
   const deptName = new Map(inp.departments.map((d) => [d.id, d]));
-  for (const a of latestById<Artefact>(inp.collections['artefact_versions'])) {
+  for (const a of latestById<Artefact>(inp.collections['artefact_versions']).filter((x) => !x.deleted)) {
     const d = deptName.get(a.dept);
     const owner = d ? DEPT_OWNER(d) : undefined;
     const base = { dept: a.dept, source: 'artefact' as const, sourceRef: a.id, owner, due: undefined, requiresHuman: true };
@@ -149,14 +149,17 @@ function manualTasks(inp: TaskInput, today: string): CeoTask[] {
   return latestById<ManualTask>(inp.collections['ceo_tasks']).filter((t) => !t.deleted && t.title).map((t) => finish({
     id: `man:${t.id}`, dept: t.dept || 'executive', title: t.title, source: t.source === 'inbound' ? 'inbound' : 'manual', sourceRef: t.id, status: 'open',
     kind: t.kind ?? 'action', requiresHuman: t.requiresHuman ?? t.kind !== 'ai_draft', priority: 2, due: isDate(t.due) ? t.due : undefined, owner: t.owner || 'CEO',
-    reason: t.source === 'inbound' ? 'Arrived through the inbound webhook.' : 'Added by hand.',
+    agentId: t.agentId, questionId: t.questionId, manifestId: t.manifestId,
+    reason: t.questionId
+      ? `Generated from open question ${t.questionId}${t.agentId ? ` · assigned to ${t.agentId}` : ''}.${t.notes ? ` ${t.notes}` : ''}`
+      : t.source === 'inbound' ? 'Arrived through the inbound webhook.' : (t.notes || 'Added by hand.'),
   }, today));
 }
 
 /** The monitor's own task: the weekly review is an AI draft, so it does not need a person to prepare it. */
 function monitorTasks(inp: TaskInput, today: string): CeoTask[] {
   const week = inp.now - 7 * 86_400_000;
-  const ran = latestById<Artefact>(inp.collections['artefact_versions']).some((a) => a.agentId === OPS_REVIEW_AGENT && Date.parse(a.at) >= week);
+  const ran = latestById<Artefact>(inp.collections['artefact_versions']).some((a) => !a.deleted && a.agentId === OPS_REVIEW_AGENT && Date.parse(a.at) >= week);
   return ran ? [] : [finish({
     id: 'mon:weekly-review', dept: 'executive', title: 'Run the weekly operations review (an agent drafts it; you approve it)', source: 'monitor', sourceRef: OPS_REVIEW_AGENT, status: 'open', kind: 'ai_draft', requiresHuman: false, priority: 2,
     reason: 'No operations review has been drafted in the last seven days.',

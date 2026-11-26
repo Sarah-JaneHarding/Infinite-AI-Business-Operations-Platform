@@ -9,6 +9,7 @@ import type { InputField } from '../core/agent';
 import type { Col } from '../departments/types';
 import type { Doc, Purpose } from '../core/types';
 import { pending } from './nav';
+import { DeleteModal } from './DeleteModal';
 
 type Kind = 'agent' | 'widget' | 'artefact';
 const lines = (s: string) => s.split('\n').map((x) => x.trim()).filter(Boolean);
@@ -89,14 +90,28 @@ function ArtefactForm({ dept, done }: { dept: string; done: (d: CustomArtefactDe
 }
 
 export function Builders() {
-  const { p, tick, bump } = useOps();
+  const { p, actor, tick, bump } = useOps();
   const [kind, setKind] = useState<Kind>('agent');
   const [dept, setDept] = useState('executive');
   const [msg, setMsg] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<CustomDef | null>(null);
   useEffect(() => { if (pending.builder) { setKind(pending.builder); if (pending.dept) setDept(pending.dept); pending.builder = undefined; } }, []);
   const defs = useMemo(() => listDefs(p!.warehouse), [p, tick]);
   const save = async (d: CustomDef) => { try { await saveDef(p!.warehouse, d); bump(); setMsg(`Saved. It now appears in ${deptName(d.dept)}${d.kind === 'artefact' ? ' and the template library' : ''}.`); } catch (e) { setMsg((e as Error).message); } };
-  const remove = async (d: CustomDef) => { await p!.warehouse.put('custom_defs', { ...d, deleted: true, at: now() } as never); bump(); };
+  const handleRemove = async (reason: string, signature: string) => {
+    if (!deleteTarget) return;
+    const ts = now();
+    await p!.warehouse.put('custom_defs', { ...deleteTarget, deleted: true, deleteReason: reason, signedBy: signature, signedAt: ts, at: ts } as never);
+    await p!.ledger.append({
+      orgId: p!.orgId,
+      actor: actor.id,
+      action: 'custom_def.deleted',
+      subject: deleteTarget.id,
+      detail: { kind: deleteTarget.kind, name: title(deleteTarget), dept: deleteTarget.dept, reason, signature, signedAt: ts },
+    });
+    bump();
+    setDeleteTarget(null);
+  };
   const title = (d: CustomDef) => (d.kind === 'agent' ? d.name : d.title);
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
@@ -108,8 +123,15 @@ export function Builders() {
         {msg && <div role="status" className="mt-3 rounded-lg border p-2 text-sm" style={{ borderColor: 'var(--line)' }}>{msg}</div>}
       </Card>
       <Card title={`Your definitions (${defs.length})`}>
-        <ul className="space-y-1">{defs.map((d) => <li key={d.id} className="flex items-center justify-between gap-2 rounded-lg border p-2 text-sm" style={{ borderColor: 'var(--line)' }}><span><b>{title(d)}</b><br /><Badge>{d.kind}</Badge> <span className="text-xs">{deptName(d.dept)}</span></span><button className="btn danger text-xs" onClick={() => remove(d)}>Remove</button></li>)}{!defs.length && <li className="text-sm" style={{ color: 'var(--muted)' }}>Nothing yet.</li>}</ul>
+        <ul className="space-y-1">{defs.map((d) => <li key={d.id} className="flex items-center justify-between gap-2 rounded-lg border p-2 text-sm" style={{ borderColor: 'var(--line)' }}><span><b>{title(d)}</b><br /><Badge>{d.kind}</Badge> <span className="text-xs">{deptName(d.dept)}</span></span><button className="btn danger text-xs" onClick={() => setDeleteTarget(d)}>Delete</button></li>)}{!defs.length && <li className="text-sm" style={{ color: 'var(--muted)' }}>Nothing yet.</li>}</ul>
       </Card>
+      <DeleteModal
+        isOpen={Boolean(deleteTarget)}
+        itemTitle={deleteTarget ? title(deleteTarget) : ''}
+        itemType={`Custom ${deleteTarget?.kind ?? 'Definition'}`}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleRemove}
+      />
     </div>
   );
 }

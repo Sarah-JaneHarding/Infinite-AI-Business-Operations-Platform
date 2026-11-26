@@ -19,4 +19,4 @@ export function calendarFeed(all: Record<string, readonly Rec[]>, now = Date.now
 }
 
 /** Collections the dashboard needs, so a refresh fetches these and not the document library. */
-export const CEO_COLLECTIONS: string[] = [...new Set([...DEPARTMENTS.flatMap((d) => d.widgets).flatMap((w) => ('collection' in w ? [w.collection] : [])), 'artefact_versions', 'ceo_tasks', 'ceo_task_state', 'ceo_events'])];
+export const CEO_COLLECTIONS: string[] = [...new Set([...DEPARTMENTS.flatMap((d) => d.widgets).flatMap((w) => ('collection' in w ? [w.collection] : [])), 'artefact_versions', 'ceo_tasks', 'ceo_task_state', 'ceo_events', 'open_question_decisions', 'task_manifests'])];

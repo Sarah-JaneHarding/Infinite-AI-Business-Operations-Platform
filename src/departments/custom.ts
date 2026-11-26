@@ -23,7 +23,7 @@ export type CSec =
   | { h: string; kind: 'checks'; items: string[] }
   | { h: string; kind: 'table'; headers: string[]; blankRows: number };
 
-interface Base { id: string; dept: string; by: string; at: string; deleted?: boolean }
+interface Base { id: string; dept: string; by: string; at: string; deleted?: boolean; deleteReason?: string; signedBy?: string; signedAt?: string }
 export interface CustomAgentDef extends Base { kind: 'agent'; name: string; summary: string; purpose: Purpose; inputs: InputField[]; sections: CSec[] }
 export interface CalcOutDef { label: string; expr: string; unit: string }
 export interface CustomWidgetDef extends Base { kind: 'widget'; title: string; wtype: 'checklist' | 'tracker' | 'calc'; note?: string; items?: string[]; columns?: Col[]; inputs?: { key: string; label: string; unit?: string }[]; outputs?: CalcOutDef[] }

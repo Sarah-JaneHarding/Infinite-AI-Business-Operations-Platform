@@ -48,6 +48,9 @@ export function Overview() {
           {stat('Docs', f['eco.docs'], 'docs/')}
         </div>
         <p className="mt-3 text-xs" style={{ color: 'var(--muted)' }}>Counted from files, not estimated. Test pass rates are not claimed here; they come from CI via the live connector{mode === 'server' && live ? ` (fetched ${new Date(live.status.fetchedAt).toLocaleTimeString('en-ZA')})` : ''}. The snapshot is from a shallow checkout, so commit counts are not shown.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" className="btn primary text-xs" onClick={() => go({ name: 'questions' })}>Answer Open Questions &amp; Generate Task Manifests</button>
+        </div>
         {Number(f['eco.agents.contracts']) !== Number(f['eco.agents.documented']) && (
           <div className="mt-3 flex items-start gap-2 rounded-lg border p-2 text-sm" style={{ borderColor: 'var(--amber)' }}><AlertTriangle size={16} /> The agent roster disagrees: {f['eco.agents.contracts']} contract files counted, docs/AGENTS.md says {f['eco.agents.documented']}. Reconcile before quoting a number externally.<button className="btn ml-auto" onClick={() => go({ name: 'dept', id: 'ai' })}>Open AI department</button></div>
         )}

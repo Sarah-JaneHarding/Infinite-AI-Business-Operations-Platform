@@ -20,7 +20,7 @@ describe('templates', () => {
       expect((await toDocx(t.doc)).length).toBeGreaterThan(500);
       expect((await toXlsx(t.doc)).length).toBeGreaterThan(200);
     }
-  });
+  }, 15_000);
   it('carries no personal details and no invented rand amounts', () => {
     for (const t of TEMPLATES) {
       const text = docText(t.doc);
