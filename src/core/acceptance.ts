@@ -5,6 +5,15 @@ import { detectInjection } from './guardrails/injection';
 import { toCsv, toHtml, toJson, toMarkdown } from './artefacts/render';
 
 /**
+ * True when exported HTML holds a script element, an event-handler attribute inside a tag, or a javascript: link. It reads the whole
+ * export. It used to cut out the first style block first, which hides whatever sits inside a block that is cut out (CodeQL alert 3).
+ * Plain text such as "onclick=" is not flagged: text is escaped on export, so it never forms a tag.
+ */
+export function unsafeMarkup(html: string): boolean {
+  return /<script/i.test(html) || /<[a-z][^>]*\son[a-z]+\s*=/i.test(html) || /\b(?:href|src)\s*=\s*["']?\s*javascript:/i.test(html);
+}
+
+/**
  * The acceptance suite. Every autonomous draft must pass it before it can be sent for review, and a standing order must pass
  * it in a dry run before it can be activated. It is deterministic and pure, so the runner, the server (which re-checks it
  * before accepting a submission) and the board all reach the same answer. A detail never contains the text that failed.
@@ -90,8 +99,7 @@ export function runAcceptance(c: Candidate, agent: AgentContract | undefined): A
       const json = toJson(doc);
       if (![md, html, csv, json].every((s) => s.trim().length > 0)) return 'a format rendered empty';
       JSON.parse(json);
-      const markup = html.replace(/<style[\s\S]*?<\/style>/i, '');
-      if (/<script/i.test(markup) || /<[a-z][^>]*\son[a-z]+\s*=/i.test(markup) || /\b(?:href|src)\s*=\s*["']?\s*javascript:/i.test(markup)) return 'the HTML export contains script or an event handler';
+      if (unsafeMarkup(html)) return 'the HTML export contains script or an event handler';
       return null;
     }),
     check('A9', 'It is marked as a draft with its provenance', () => {

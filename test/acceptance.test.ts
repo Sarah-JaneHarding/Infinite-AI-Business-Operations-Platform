@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Platform } from '../src/core/platform';
 import { AGENTS } from '../src/departments';
-import { failedChecks, runAcceptance, textOf, type Candidate } from '../src/core/acceptance';
+import { failedChecks, runAcceptance, textOf, unsafeMarkup, type Candidate } from '../src/core/acceptance';
 import { detectPii } from '../src/core/guardrails/pii';
 import type { Doc } from '../src/core/types';
+import { toHtml } from '../src/core/artefacts/render';
 
 const agent = AGENTS.find((a) => a.id === 'OPS-FIN-01')!;
 const good = (): Doc => ({
@@ -112,4 +113,22 @@ describe('acceptance suite', () => {
     }
     expect(bad).toEqual([]);
   }, 120_000);
+});
+
+describe('unsafeMarkup (CodeQL alert 3: nothing may hide behind a stripped style block)', () => {
+  it('flags script, an event handler and a javascript: link', () => {
+    expect(unsafeMarkup('<p>hi</p><script>alert(1)</script>')).toBe(true);
+    expect(unsafeMarkup('<img src=x onerror=alert(1)>')).toBe(true);
+    expect(unsafeMarkup('<a href="javascript:alert(1)">x</a>')).toBe(true);
+  });
+  it('flags script that sits inside, or is wrapped by, a style block, which the old check cut out unseen', () => {
+    expect(unsafeMarkup('<style>a{}</style><style><script>alert(1)</script></style>')).toBe(true);
+    expect(unsafeMarkup('<style><script>alert(1)</script></style>')).toBe(true);
+    expect(unsafeMarkup('<sty<style></style>le><script>alert(1)</script>')).toBe(true);
+  });
+  it('does not flag text that merely mentions them, or a normal export with its own style block', () => {
+    expect(unsafeMarkup('<p>write onclick= and &lt;script&gt; and javascript: in prose</p>')).toBe(false);
+    const doc: Doc = { title: 'Report', blocks: [{ type: 'h', level: 2, text: 'onclick= <script>alert(1)</script>' }, { type: 'p', text: 'javascript:void(0) href="javascript:x"' }], meta: {} };
+    expect(unsafeMarkup(toHtml(doc))).toBe(false);
+  });
 });

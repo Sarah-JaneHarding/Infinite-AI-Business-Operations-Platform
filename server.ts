@@ -12,6 +12,7 @@ import { Rejected, validateAppend, type AppendCtx } from './src/server/validate'
 import { parseSigners, parseSigningPolicy, singleSignerReport, type Signer } from './src/server/signing';
 import type { SigningPolicy } from './src/core/signing';
 import { RateLimiter } from './src/server/rate';
+import { pageLimiter } from './src/server/pageLimit';
 import { appendLedger } from './src/server/ledgerService';
 import { ratifiedProblem } from './src/server/finality';
 import { AutonomyService } from './src/server/autonomy/service';
@@ -111,7 +112,9 @@ try {
   console.error(`FATAL: ${(err as Error).message}`);
   process.exit(1);
 }
-const limits = requestLimits({ perMinute: Number(env.OPS_RATE_PER_MINUTE) > 0 ? Number(env.OPS_RATE_PER_MINUTE) : 300, badTokensPerMinute: 10 });
+const perMinute = Number(env.OPS_RATE_PER_MINUTE) > 0 ? Number(env.OPS_RATE_PER_MINUTE) : 300;
+const limits = requestLimits({ perMinute, badTokensPerMinute: 10 });
+const pageLimit = pageLimiter(perMinute);
 
 const app = express();
 app.disable('x-powered-by');
@@ -384,7 +387,7 @@ async function start() {
         next(err);
       }
     });
-    app.get('*', async (req, res, next) => {
+    app.get('*', pageLimit, async (req, res, next) => {
       if (req.path.startsWith('/api')) return next();
       try {
         await viteReady;
@@ -398,7 +401,7 @@ async function start() {
   } else {
     const dist = path.join(process.cwd(), 'dist');
     app.use(express.static(dist));
-    app.get('*', (_q, res) => res.sendFile(path.join(dist, 'index.html')));
+    app.get('*', pageLimit, (_q, res) => res.sendFile(path.join(dist, 'index.html')));
   }
   if (autonomy.enabled) {
     // Scheduled orders are checked every minute. A failed check is logged and tried again next minute.

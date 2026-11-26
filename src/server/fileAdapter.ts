@@ -1,5 +1,5 @@
 import { appendFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import type { Rec } from '../core/warehouse';
 
 /**
@@ -20,9 +20,12 @@ export class FileStore {
       });
     }
   }
+  /** The file for a collection. The name is checked twice: against a strict allow-list, and by confirming the resolved path stays inside the data folder. */
   private path(c: string) {
     if (!/^[a-z0-9_]{1,64}$/.test(c)) throw new Error('bad collection name');
-    return join(this.dir, `${c}.jsonl`);
+    const file = resolve(this.dir, `${c}.jsonl`);
+    if (!file.startsWith(resolve(this.dir) + sep)) throw new Error('bad collection name');
+    return file;
   }
   append(collection: string, rec: Rec) {
     appendFileSync(this.path(collection), JSON.stringify(rec) + '\n');
