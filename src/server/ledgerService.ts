@@ -38,7 +38,7 @@ export function appendLedger(store: LedgerStore, input: unknown, knownSeq: unkno
 const tails = new WeakMap<object, Promise<unknown>>();
 
 /** Actions only the server writes. Budgets and test results are counted from them, so a client must not be able to add them. */
-export const SERVER_ONLY_ACTIONS = /^(model|autonomy)\./;
+export const SERVER_ONLY_ACTIONS = /^(model|autonomy|oq)\./;
 
 async function write(store: LedgerStore, input: unknown, knownSeq: unknown, actor: string | null, now: () => string = () => new Date().toISOString(), opts: { client?: boolean } = {}): Promise<LedgerResult> {
   const bad = (m: string, status = 400): never => {
