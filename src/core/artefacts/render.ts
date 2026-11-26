@@ -8,6 +8,8 @@ const cell = (c: string | number) => String(c);
  * A heading level from a document, which can come from an upload or the API: a whole number from 0 to 6, or `dflt` when it is not a
  * number. It used to go straight into `'#'.repeat(level)`, which throws on a negative count (CodeQL alert 7), and into the tag name `<h${level}>`.
  */
+/** The markdown marker for each heading level, by lookup: no string is ever built from a number that came from a document. */
+const HASHES = ['', '#', '##', '###', '####', '#####', '######'];
 const headingLevel = (v: unknown, dflt: number): number => {
   const n = Math.trunc(Number(v ?? dflt));
   return Number.isNaN(n) ? dflt : Math.min(6, Math.max(0, n));
@@ -18,7 +20,7 @@ export function toMarkdown(d: Doc): string {
   if (d.subtitle) out.push(`_${d.subtitle}_`);
   for (const b of d.blocks) {
     switch (b.type) {
-      case 'h': out.push(`${'#'.repeat(headingLevel(b.level, 2))} ${b.text}`); break;
+      case 'h': out.push(`${HASHES[headingLevel(b.level, 2)]} ${b.text}`); break;
       case 'p': out.push(b.text ?? ''); break;
       case 'ul': out.push((b.items ?? []).map((i) => `- ${i}`).join('\n')); break;
       case 'ol': out.push((b.items ?? []).map((i, n) => `${n + 1}. ${i}`).join('\n')); break;
