@@ -22,6 +22,10 @@ export interface CeoTask {
   owner?: string;
   /** Why it is on the list and why it needs a person. */
   reason: string;
+  /** Optional assigned agent id or originating open question / manifest id. */
+  agentId?: string;
+  questionId?: string;
+  manifestId?: string;
 }
 
 /** A manual or inbound task record (collection ceo_tasks). */
@@ -35,7 +39,13 @@ export interface ManualTask {
   requiresHuman?: boolean;
   source?: 'manual' | 'inbound';
   notes?: string;
+  agentId?: string;
+  questionId?: string;
+  manifestId?: string;
   deleted?: boolean;
+  deleteReason?: string;
+  signedBy?: string;
+  signedAt?: string;
   at?: string;
 }
 

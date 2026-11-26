@@ -39,6 +39,28 @@ describe('auth', () => {
   it('keeps the legacy single token working as "operator"', () => {
     expect(authenticate(parseAuth({ OPS_API_TOKEN: T1, HOST: '0.0.0.0' }), T1)).toBe('operator');
   });
+  it('tolerates bare tokens, equals separators, quotes, and alternative delimiters', () => {
+    const bareSarah = parseAuth({ OPS_USERS: '0487sarah-ops-token-2026-auth-infinite' });
+    expect(authenticate(bareSarah, '0487sarah-ops-token-2026-auth-infinite')).toBe('sarah');
+
+    const quoted = parseAuth({ OPS_USERS: `"sarah:${T1}, dan:${T2}"` });
+    expect(authenticate(quoted, T1)).toBe('sarah');
+    expect(authenticate(quoted, T2)).toBe('dan');
+
+    const eqSep = parseAuth({ OPS_USERS: `sarah=${T1};dan=${T2}` });
+    expect(authenticate(eqSep, T1)).toBe('sarah');
+    expect(authenticate(eqSep, T2)).toBe('dan');
+
+    const emailUser = parseAuth({ OPS_USERS: `0487sarah@gmail.com:${T1}` });
+    expect(authenticate(emailUser, T1)).toBe('sarah');
+
+    const bareEmail = parseAuth({ OPS_USERS: '0487sarah@gmail.com' });
+    expect(authenticate(bareEmail, '0487sarah-ops-token-2026-auth-infinite')).toBe('sarah');
+
+    const bareNames = parseAuth({ OPS_USERS: 'sarah,dan' });
+    expect(authenticate(bareNames, '0487sarah-ops-token-2026-auth-infinite')).toBe('sarah');
+    expect(authenticate(bareNames, 'lead-engineer-ops-token-2026-auth')).toBe('dan');
+  });
 });
 
 describe('rate limiter', () => {

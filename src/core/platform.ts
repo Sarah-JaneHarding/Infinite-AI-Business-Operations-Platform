@@ -303,7 +303,7 @@ export class Platform {
 
   /** Newest record per artefact (every state change and edit is a new immutable record). */
   artefacts(): Artefact[] {
-    return this.warehouse.latest<Artefact>('artefact_versions', 'id').sort((x, y) => y.at.localeCompare(x.at));
+    return this.warehouse.latest<Artefact>('artefact_versions', 'id').filter((a) => !a.deleted).sort((x, y) => y.at.localeCompare(x.at));
   }
 
   artefact(id: string): Artefact | undefined {

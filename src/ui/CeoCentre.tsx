@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Bot, CalendarClock, Download, RefreshCw, User } from 'lucide-react';
+import { Bot, CalendarClock, Download, RefreshCw, Trash2, User } from 'lucide-react';
 import { useOps, MONITOR_SECONDS } from './store';
 import { Badge, Card, download } from './primitives';
 import { agentById, DEPARTMENTS } from '../departments';
-import { CALENDAR_RULES, HEALTH_RULES, OPS_REVIEW_AGENT, PLAN, toIcs, type Block, type CeoTask, type DeptHealth, type TaskState } from '../core/ceo';
+import { CALENDAR_RULES, HEALTH_RULES, OPS_REVIEW_AGENT, PLAN, toIcs, type Block, type CeoTask, type DeptHealth, type ManualTask, type TaskState } from '../core/ceo';
 import { checkTaskText, MAX_TITLE } from '../core/ceo/guard';
 import { digestText } from '../core/ceo/digest';
 import { sastDate } from '../core/ceo/time';
 import { RunRefused } from '../core/platform';
+import { DeleteModal } from './DeleteModal';
 
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 const LIGHT_TONE: Record<DeptHealth['light'], string> = { green: 'ok', amber: 'review', red: 'bad', none: 'draft' };
@@ -104,6 +105,7 @@ function Tasks({ tasks }: { tasks: CeoTask[] }) {
   const [source, setSource] = useState('');
   const [q, setQ] = useState('');
   const [limit, setLimit] = useState(40);
+  const [deleteTarget, setDeleteTarget] = useState<CeoTask | null>(null);
   const rows = useMemo(() => tasks.filter((t) =>
     (!dept || t.dept === dept) && (!source || t.source === source) &&
     (status === 'all' || (status === 'active' ? t.status !== 'done' : t.status === status)) &&
@@ -112,6 +114,36 @@ function Tasks({ tasks }: { tasks: CeoTask[] }) {
   const setState = async (t: CeoTask, st: NonNullable<TaskState['status']>) => {
     const cur = p!.warehouse.latest<TaskState>('ceo_task_state').find((s) => s.id === t.id);
     await p!.warehouse.put('ceo_task_state', { ...cur, id: t.id, status: st, by: actor.id, at: new Date().toISOString() } as never);
+    bump();
+  };
+  const handleDeleteTask = async (reason: string, signature: string) => {
+    if (!deleteTarget || !p) return;
+    const taskId = deleteTarget.sourceRef ?? deleteTarget.id;
+    const cur = p.warehouse.latest<ManualTask>('ceo_tasks').find((x) => x.id === taskId);
+    const ts = new Date().toISOString();
+    await p.warehouse.put('ceo_tasks', {
+      ...cur,
+      id: taskId,
+      title: cur?.title ?? deleteTarget.title,
+      dept: cur?.dept ?? deleteTarget.dept,
+      source: cur?.source ?? deleteTarget.source,
+      kind: cur?.kind ?? 'action',
+      requiresHuman: cur?.requiresHuman ?? deleteTarget.requiresHuman,
+      deleted: true,
+      deleteReason: reason,
+      signedBy: signature,
+      signedAt: ts,
+      by: actor.id,
+      at: ts,
+    } as never);
+    await p.ledger.append({
+      orgId: p.orgId,
+      actor: actor.id,
+      action: 'task.deleted',
+      subject: taskId,
+      detail: { title: deleteTarget.title, dept: deleteTarget.dept, reason, signature, signedAt: ts },
+    });
+    setDeleteTarget(null);
     bump();
   };
   const open = (t: CeoTask) => (t.source === 'artefact' ? go({ name: 'studio', id: t.sourceRef }) : t.source === 'tracker' || t.source === 'checklist' || t.source === 'plan' || t.source === 'monitor' ? go({ name: 'dept', id: t.dept }) : undefined);
@@ -132,15 +164,38 @@ function Tasks({ tasks }: { tasks: CeoTask[] }) {
               <tr key={t.id}>
                 <td><Badge tone={STATUS_TONE[t.status]}>{STATUS_TEXT[t.status]}</Badge></td>
                 <td title={t.requiresHuman ? 'Needs a person' : 'An agent can prepare this; a person still approves'}>{t.requiresHuman ? <User size={14} aria-label="Needs a person" /> : <Bot size={14} aria-label="An agent can draft" />}</td>
-                <td><div className="text-sm">{t.title}</div><div className="text-[11px]" style={{ color: 'var(--muted)' }}>{t.reason}</div></td>
+                <td>
+                  <div className="text-sm">{t.title}</div>
+                  <div className="text-[11px] flex flex-wrap items-center gap-2" style={{ color: 'var(--muted)' }}>
+                    <span>{t.reason}</span>
+                    {t.agentId && <span className="mono text-cyan-400">· {t.agentId}</span>}
+                    {t.questionId && (
+                      <button type="button" className="underline text-cyan-300" onClick={() => go({ name: 'questions', id: t.questionId })}>
+                        View {t.questionId}
+                      </button>
+                    )}
+                  </div>
+                </td>
                 <td className="text-xs">{deptName(t.dept)}</td>
                 <td className="mono text-xs">{t.due ?? ''}</td>
                 <td className="text-xs">{t.owner ?? ''}</td>
                 <td className="text-xs">{SOURCE_TEXT[t.source]}</td>
                 <td className="whitespace-nowrap">
-                  {(t.source === 'plan' || t.source === 'manual' || t.source === 'inbound') ? (
-                    <select className="select !w-auto" aria-label={`Set status of ${t.title}`} value={t.status === 'overdue' ? 'open' : t.status} onChange={(e) => void setState(t, e.target.value as NonNullable<TaskState['status']>)}><option value="open">Open</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select>
-                  ) : <button className="btn" onClick={() => open(t)}>Open</button>}
+                  <div className="flex items-center gap-1.5">
+                    {(t.source === 'plan' || t.source === 'manual' || t.source === 'inbound') ? (
+                      <select className="select !w-auto" aria-label={`Set status of ${t.title}`} value={t.status === 'overdue' ? 'open' : t.status} onChange={(e) => void setState(t, e.target.value as NonNullable<TaskState['status']>)}><option value="open">Open</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select>
+                    ) : <button className="btn" onClick={() => open(t)}>Open</button>}
+                    {(t.source === 'manual' || t.source === 'inbound') && (
+                      <button
+                        type="button"
+                        className="btn danger text-xs flex items-center gap-1"
+                        title="Sign & delete this created task"
+                        onClick={() => setDeleteTarget(t)}
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -151,6 +206,13 @@ function Tasks({ tasks }: { tasks: CeoTask[] }) {
       {rows.length > limit && <button className="btn mt-2" onClick={() => setLimit(limit + 60)}>Show more ({rows.length - limit} left)</button>}
       <p className="mt-2 text-[11px]" style={{ color: 'var(--muted)' }}>Tracker, checklist and artefact tasks are finished where they are recorded (use Open). Plan, hand-added and inbound tasks are finished here. Nothing is invented: every task comes from a record, a checklist item, an artefact or the plan.</p>
       <AddTask />
+      <DeleteModal
+        isOpen={Boolean(deleteTarget)}
+        itemTitle={deleteTarget?.title ?? ''}
+        itemType="Created Task"
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteTask}
+      />
     </Card>
   );
 }
