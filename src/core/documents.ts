@@ -9,7 +9,9 @@
  * - Files are stored in the warehouse: one `documents` record per file plus `document_chunks` records holding
  *   the original bytes as base64 pieces that fit the server's per-record limit.
  */
-import type { Block, Doc } from './types';
+import type { ArtefactFormat, Block, Doc } from './types';
+import { fileName, MIME, render } from './artefacts/render';
+import { NEEDS_REVIEW_NOTICE, withNotice } from './notice';
 import { checkInput } from './guardrails/engine';
 import { detectPii } from './guardrails/pii';
 
@@ -351,3 +353,30 @@ export function loadOriginal(store: Store, id: string): Uint8Array | null {
 }
 
 export const listDocuments = (store: Store): DocRecord[] => store.latest<DocRecord>('documents').filter((d) => !d.deleted).sort((a, b) => b.at.localeCompare(a.at));
+
+/** RATIFIED or INGESTED artefacts: the only ones that count as ratified. */
+export const countRatified = (artefacts: readonly { status: string }[]): number => artefacts.filter((a) => a.status === 'RATIFIED' || a.status === 'INGESTED').length;
+
+// ---------- export ----------
+
+export interface ExportedFile { name: string; mime: string; bytes: string | Uint8Array }
+
+/** The one place a document becomes a file. Download and save both call it, so they are byte-identical for the same format. */
+export async function exportFile(doc: Doc, f: ArtefactFormat): Promise<ExportedFile> {
+  return { name: fileName(doc, f), mime: MIME[f], bytes: await render(doc, f) };
+}
+
+/**
+ * Renders `rec.doc` in `format` and stores it as a new library record (`origin: 'saved'`) beside the original, which is not
+ * touched. A record marked "Needs review by" is rendered with the review notice and the copy keeps that mark. PDF is made by
+ * printing, so it is refused rather than replaced by another type.
+ */
+export async function saveExport(store: Store, rec: DocRecord, format: ArtefactFormat, by: string, at: string = new Date().toISOString(), notice?: string | null): Promise<DocRecord> {
+  if (format === 'pdf') throw new Error('PDF is produced by printing; use Print');
+  if (!rec.doc) throw new Error('This file is stored as uploaded and cannot be re-saved in another type.');
+  const flagged = rec.scan.notes.filter((n) => n.startsWith('Needs review by'));
+  const file = await exportFile(withNotice(rec.doc, notice !== undefined ? notice : needsReview(rec) ? NEEDS_REVIEW_NOTICE : null), format);
+  const bytes = typeof file.bytes === 'string' ? new TextEncoder().encode(file.bytes) : file.bytes;
+  const saved: DocRecord = { id: newDocId(), title: rec.title, origin: 'saved', name: file.name, mime: file.mime, kind: kindOf(file.name, file.mime), doc: rec.doc, scan: { scanned: true, notes: [`Copy of ${rec.id} saved as ${format}`, ...flagged] }, dept: rec.dept, by, at };
+  return saveRecord(store, saved, bytes);
+}

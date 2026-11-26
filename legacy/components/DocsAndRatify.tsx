@@ -41,7 +41,10 @@ import {
 
 interface DocsAndRatifyProps {
   ratifiedCount?: number;
-  onRatifyPolicy?: () => void;
+  /** Called when the person asks to ratify a document. May return a message to show. It must not mark anything ratified here. */
+  onRatifyPolicy?: (docId: string) => Promise<string | void> | string | void;
+  /** The signed-in person's name, shown as the signer. No person is hard-coded. */
+  signerName?: string;
   onNavigateToWarehouse?: () => void;
   initialDocId?: string | null;
 }
@@ -98,8 +101,9 @@ function downloadFile(content: string, filename: string, mime: string) {
 }
 
 export const DocsAndRatify: React.FC<DocsAndRatifyProps> = ({ 
-  ratifiedCount = 42, 
+  ratifiedCount = 0, 
   onRatifyPolicy,
+  signerName,
   onNavigateToWarehouse,
   initialDocId
 }) => {
@@ -144,9 +148,11 @@ export const DocsAndRatify: React.FC<DocsAndRatifyProps> = ({
   });
 
   const [signingModal, setSigningModal] = useState<boolean>(false);
-  const [signerRole, setSignerRole] = useState<string>('Sarah-Jane Harding (Chief Executive Officer)');
-  const [signerTitle, setSignerTitle] = useState<string>('CEO & Founding Partner');
-  const [typedSignature, setTypedSignature] = useState<string>('Sarah-Jane Harding');
+  const who = signerName?.trim() || 'Signed-in signer';
+  const [signerRole, setSignerRole] = useState<string>(who);
+  const [signerTitle, setSignerTitle] = useState<string>('Signing authority');
+  const [typedSignature, setTypedSignature] = useState<string>(signerName?.trim() ?? '');
+  useEffect(() => { setSignerRole(who); setTypedSignature(signerName?.trim() ?? ''); }, [who, signerName]);
   const [legalAgreementChecked, setLegalAgreementChecked] = useState<boolean>(true);
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -218,9 +224,9 @@ This initial baseline draft specifies the operating procedures and governance in
     } catch {}
   };
 
-  const totalPolicies = 136;
+  const totalPolicies = documents.length;
   const currentRatified = ratifiedCount;
-  const percentRatified = Math.round((currentRatified / totalPolicies) * 100);
+  const percentRatified = totalPolicies > 0 ? Math.round((currentRatified / totalPolicies) * 100) : 0;
 
   const handleContentChange = (val: string) => {
     setEditedContent(val);
@@ -248,7 +254,7 @@ This initial baseline draft specifies the operating procedures and governance in
       {
         version: newVersion,
         date: timestamp,
-        author: signerTitle.includes('CEO') ? 'Sarah-Jane Harding (CEO)' : 'Executive Editor',
+        author: who,
         summary: bumpVersion ? `Version bump to ${newVersion} with operational edits` : 'Routine revision and content update',
         contentSnapshot: editedContent
       }
@@ -276,50 +282,13 @@ This initial baseline draft specifies the operating procedures and governance in
     setTimeout(() => setSaveSuccessMsg(''), 4000);
   };
 
-  const handleExecuteCountersignature = () => {
+  const handleExecuteCountersignature = async () => {
     if (!selectedDoc) return;
-
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' SAST';
-    const sigHash = 'sig:sha256:' + Array.from({ length: 4 }, () => Math.random().toString(16).substring(2, 10)).join('');
-
-    const updated: DocumentItem[] = documents.map(d => {
-      if (d.id === selectedDoc.id) {
-        return {
-          ...d,
-          status: 'RATIFIED' as const,
-          reviewStatus: 'RATIFIED' as const,
-          countersignedBy: `${signerRole} (${signerTitle})`,
-          countersignedAt: timestamp,
-          countersignHash: sigHash,
-          lastUpdated: timestamp.substring(0, 10)
-        };
-      }
-      return d;
-    });
-
-    persistDocuments(updated);
     setSigningModal(false);
-    if (onRatifyPolicy) onRatifyPolicy();
-
-    try {
-      const existingAudit = localStorage.getItem('ia_warehouse_audit_log');
-      const parsedAudit = existingAudit ? JSON.parse(existingAudit) : [];
-      const newAuditItem = {
-        id: `AUD-${Date.now().toString().slice(-4)}`,
-        timestamp,
-        entityType: 'DOCUMENT',
-        entityId: selectedDoc.id,
-        action: 'RATIFY',
-        actor: signerRole,
-        actorRole: signerTitle,
-        details: `Countersigned and committed ${selectedDoc.title} to Brain L0 Immutable Ring.`,
-        merkleHash: sigHash
-      };
-      localStorage.setItem('ia_warehouse_audit_log', JSON.stringify([newAuditItem, ...parsedAudit]));
-    } catch {}
-
-    setSaveSuccessMsg(`Ratified & Countersigned! Recorded to Brain L0 with SHA-256 seal.`);
-    setTimeout(() => setSaveSuccessMsg(''), 4500);
+    // Nothing is marked ratified here and no audit entry is written: the platform's review board does that, with a real approval.
+    const msg = onRatifyPolicy ? await onRatifyPolicy(selectedDoc.id) : undefined;
+    setSaveSuccessMsg(msg || 'Open this document from the Library to send it to review.');
+    setTimeout(() => setSaveSuccessMsg(''), 6000);
   };
 
   const handleCreateDocument = () => {
@@ -395,7 +364,7 @@ Notification of any suspected data breach must occur within 24 hours to the Info
 **Document ID:** ${nextId}  
 **Classification:** L0 Constitution & Statutory Bylaws  
 **Effective Date:** ${timestamp}  
-**Signatory Authority:** Sarah-Jane Harding (Chief Executive Officer & Founder)  
+**Signatory Authority:** ${who}  
 
 ---
 
@@ -407,7 +376,7 @@ Under Infinite-AI System Law 02:
 - **L1 Task Agents:** Generate draft lesson plans, summaries, and curriculum alignments.
 - **L2 Lead Agents:** Perform cross-departmental validation and check against CAPS ATP milestones.
 - **L3 Executive Super Agents:** Collate departmental deliverables and stage draft Pull Requests.
-- **L4 Chief Executive Signatory (Sarah-Jane Harding):** Final authority. Affixes cryptographic SHA-256 seal into Brain L0.
+- **L4 Chief Executive Signatory (${who}):** Final authority. Affixes cryptographic SHA-256 seal into Brain L0.
 
 ## 3. PR Ingestion Gate
 All automated code changes, curriculum models, and ecosystem additions must be staged in draft Pull Requests and require formal human approval before merge.`;
@@ -471,7 +440,7 @@ Document description and operational scope...`;
       type: newDocType,
       category: newDocCategory,
       version: '1.0',
-      owner: 'Sarah-Jane Harding (CEO)',
+      owner: who,
       status: 'DRAFT',
       reviewStatus: 'DRAFT',
       reviewNotes: 'Initial draft created in Document Studio. Ready for technical review.',
@@ -480,7 +449,7 @@ Document description and operational scope...`;
       hash: docHash,
       tags: [newDocCategory || 'OPERATIONS', newDocType],
       changeLog: [
-        { version: '1.0', date: timestamp, author: 'Sarah-Jane Harding', summary: 'Initial document draft created' }
+        { version: '1.0', date: timestamp, author: who, summary: 'Initial document draft created' }
       ]
     };
 
@@ -536,7 +505,7 @@ Document description and operational scope...`;
 
           <div className="card p-3 min-w-[260px] space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#CBD5E1] font-mono">136 Policies Ratified:</span>
+              <span className="text-[#CBD5E1] font-mono">Policies Ratified:</span>
               <strong className="text-cyan-400 font-mono">{currentRatified} / {totalPolicies} ({percentRatified}%)</strong>
             </div>
             <div className="w-full bg-[#0E1830] h-2 rounded-full overflow-hidden border border-[rgba(148,163,255,0.1)]">
@@ -791,7 +760,7 @@ Document description and operational scope...`;
                             RATIFIED &amp; COUNTERSIGNED (BRAIN L0 IMMUTABLE)
                           </strong>
                           <span className="text-[#CBD5E1] text-[11px]">
-                            Signed by {selectedDoc.countersignedBy || 'Sarah-Jane Harding (CEO)'} on {selectedDoc.countersignedAt || selectedDoc.lastUpdated}
+                            Signed by {selectedDoc.countersignedBy || who} on {selectedDoc.countersignedAt || selectedDoc.lastUpdated}
                           </span>
                         </div>
                       </div>
@@ -1168,24 +1137,10 @@ Document description and operational scope...`;
                 </label>
                 <select
                   value={signerRole}
-                  onChange={(e) => {
-                    setSignerRole(e.target.value);
-                    if (e.target.value.includes('CEO')) {
-                      setSignerTitle('CEO & Founding Partner');
-                      setTypedSignature('Sarah-Jane Harding');
-                    } else if (e.target.value.includes('Legal')) {
-                      setSignerTitle('Legal Counsel & Corporate Secretary');
-                      setTypedSignature('Adv. Peter Thorne');
-                    } else {
-                      setSignerTitle('School Governing Body Representative');
-                      setTypedSignature('Dr. David Van Zyl');
-                    }
-                  }}
+                  onChange={(e) => setSignerRole(e.target.value)}
                   className="select text-xs py-1.5 w-full bg-[#0E1830]"
                 >
-                  <option value="Sarah-Jane Harding (Chief Executive Officer)">Sarah-Jane Harding (Chief Executive Officer)</option>
-                  <option value="Adv. Peter Thorne (Legal Counsel)">Adv. Peter Thorne (Legal Counsel &amp; Governance)</option>
-                  <option value="Dr. David Van Zyl (SGB Representative)">Dr. David Van Zyl (SGB Chair / School Principal)</option>
+                  <option value={who}>{who}</option>
                 </select>
               </div>
 
@@ -1413,7 +1368,7 @@ Document description and operational scope...`;
     <tr><th>Document ID</th><td>${selectedDoc.id}</td><th>Version</th><td>v${selectedDoc.version}</td></tr>
     <tr><th>Classification</th><td>${selectedDoc.type} / ${selectedDoc.category || 'OPERATIONS'}</td><th>Data Residency</th><td>AWS af-south-1 (Cape Town)</td></tr>
     <tr><th>Content SHA-256</th><td colspan="3" style="font-family: monospace;">${selectedDoc.hash || 'sha256:verified'}</td></tr>
-    <tr><th>Countersigned By</th><td>${selectedDoc.countersignedBy || 'Sarah-Jane Harding (CEO & Founding Partner)'}</td><th>Countersigned At</th><td>${selectedDoc.countersignedAt || selectedDoc.lastUpdated}</td></tr>
+    <tr><th>Countersigned By</th><td>${selectedDoc.countersignedBy || 'Not countersigned'}</td><th>Countersigned At</th><td>${selectedDoc.countersignedAt || selectedDoc.lastUpdated}</td></tr>
     <tr><th>Merkle Sig Hash</th><td colspan="3" style="font-family: monospace;">${selectedDoc.countersignHash || 'sig:sha256:4a9c39e28f11d98a2e105e4c6b8d9102'}</td></tr>
   </table>
   <h3>Document Body</h3>
@@ -1421,7 +1376,7 @@ Document description and operational scope...`;
   <div class="signature-block">
     <h4>STATUTORY COUNTERSIGNATURE RECORD (SYSTEM LAW 02 HITL)</h4>
     <p>This certifies that <strong>${selectedDoc.title}</strong> has completed executive ratification under the non-bypassable Human-in-the-Loop decision governance invariant. All data processing conforms strictly with POPIA Section 72 with sovereign hosting in Cape Town, South Africa.</p>
-    <p><strong>Signatory Authority:</strong> Sarah-Jane Harding (Chief Executive Officer & Founding Partner)</p>
+    <p><strong>Signatory Authority:</strong> ${who}</p>
   </div>
 </body>
 </html>`;
@@ -1555,7 +1510,7 @@ Document description and operational scope...`;
 
             <div className="flex items-center justify-between border-t border-[rgba(148,163,255,0.15)] pt-4 shrink-0 text-xs">
               <span className="text-[#CBD5E1] font-mono text-[11px]">
-                Target: Brain L0 Immutable Ring · Signer: Sarah-Jane Harding (CEO)
+                Target: Brain L0 Immutable Ring · Signer: {who}
               </span>
               <button
                 type="button"
