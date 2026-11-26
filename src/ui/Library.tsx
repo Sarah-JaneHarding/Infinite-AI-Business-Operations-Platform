@@ -5,6 +5,8 @@ import { Badge, Card, download } from './primitives';
 import { BlockEditor } from './Studio';
 import { ExportBar } from './ExportBar';
 import { toHtml } from '../core/artefacts/render';
+import { refusedFiles } from '../library/seedEcosystem';
+import { sourceOf, type DocSource } from '../library/sourceOf';
 import { listDocuments, loadOriginal, MAX_UPLOAD_BYTES, newDocId, saveRecord, uploadFile, UploadRefused, type DocRecord } from '../core/documents';
 import { TEMPLATES, templateById, type Template } from '../departments/templates';
 import { customArtefacts } from '../departments/custom';
@@ -24,6 +26,7 @@ export function Library() {
   const [sel, setSel] = useState<string | null>(null);
   const [draft, setDraft] = useState<Doc | null>(null);
   const [msg, setMsg] = useState<{ tone: 'ok' | 'bad'; text: string }[]>([]);
+  const [source, setSource] = useState<'all' | DocSource>('all');
   const [group, setGroup] = useState<'all' | 'business' | 'customer'>('all');
   const file = useRef<HTMLInputElement>(null);
   const rec = docs.find((d) => d.id === sel);
@@ -49,12 +52,22 @@ export function Library() {
   const remove = async () => { if (!rec) return; await saveRecord(store, { ...rec, deleted: true, at: new Date().toISOString() }); setSel(null); setDraft(null); bump(); };
   useEffect(() => { const id = pending.template; if (id) { pending.template = undefined; const t = templateById(id); if (t) void create(structuredClone(t.doc), 'template', t.dept); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const mine = useMemo(() => customArtefacts(store), [store, tick]);
+  const refused = useMemo(() => refusedFiles(store), [store, tick]);
+  const counts = useMemo(() => { const c = { library: 0, 'business-plan': 0, ecosystem: 0 }; for (const d of docs) { const k = sourceOf(d); if (k !== 'other') c[k]++; } return c; }, [docs]);
+  const shown = source === 'all' ? docs : docs.filter((d) => sourceOf(d) === source);
+  const chips: { id: 'all' | DocSource; label: string; n: number }[] = [{ id: 'all', label: 'All', n: docs.length }, { id: 'library', label: 'Library', n: counts.library }, { id: 'business-plan', label: 'Business plan', n: counts['business-plan'] }, { id: 'ecosystem', label: 'Ecosystem', n: counts.ecosystem }];
   const tpls = TEMPLATES.filter((t) => group === 'all' || t.group === group);
   const useTpl = (t: Template) => create(structuredClone(t.doc), 'template', t.dept);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
       <div className="space-y-4">
+        {refused.length > 0 && (
+          <Card title={`Not loaded (${refused.length})`}>
+            <p className="mb-2 text-xs" style={{ color: 'var(--muted)' }}>The input gate refused these ecosystem documents, so they are not in the Library. Loading them anyway is the owner's decision.</p>
+            <ul className="space-y-1">{refused.map((r) => <li key={r.name} className="rounded-lg border p-2 text-xs" style={{ borderColor: 'var(--line)' }}><div className="text-sm font-semibold">{r.name}</div><div style={{ color: 'var(--muted)' }}>{r.reason}</div></li>)}</ul>
+          </Card>
+        )}
         <Card title="Add documents">
           <div className="space-y-2">
             <input ref={file} type="file" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} aria-label="Upload documents" />
@@ -65,9 +78,12 @@ export function Library() {
           </div>
         </Card>
         <Card title={`Library (${docs.length})`}>
+          <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label="Filter by source">
+            {chips.map((c) => <button key={c.id} className={`btn !py-0 text-xs${source === c.id ? ' primary' : ''}`} aria-pressed={source === c.id} onClick={() => setSource(c.id)}>{c.label} ({c.n})</button>)}
+          </div>
           <ul className="max-h-[40vh] space-y-1 overflow-auto">
-            {docs.map((d) => <li key={d.id}><button className="w-full rounded-lg border p-2 text-left" style={{ borderColor: d.id === sel ? 'var(--violet)' : 'var(--line)' }} onClick={() => open(d)}><div className="text-sm font-semibold">{d.title}</div><div className="mt-1 flex gap-1.5"><Badge>{d.origin}</Badge>{d.kind && <Badge tone="info">{d.kind}</Badge>}</div></button></li>)}
-            {!docs.length && <li className="text-sm" style={{ color: 'var(--muted)' }}>Nothing yet. Upload a file or start from a template.</li>}
+            {shown.map((d) => <li key={d.id}><button className="w-full rounded-lg border p-2 text-left" style={{ borderColor: d.id === sel ? 'var(--violet)' : 'var(--line)' }} onClick={() => open(d)}><div className="text-sm font-semibold">{d.title}</div><div className="mt-1 flex gap-1.5"><Badge>{d.origin}</Badge>{d.kind && <Badge tone="info">{d.kind}</Badge>}</div></button></li>)}
+            {!shown.length && <li className="text-sm" style={{ color: 'var(--muted)' }}>Nothing yet. Upload a file or start from a template.</li>}
           </ul>
         </Card>
       </div>

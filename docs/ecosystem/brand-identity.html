@@ -1,0 +1,1664 @@
+<title>Infinite-AI Brand Identity</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --ink: #05070f;
+    --panel: #0c1224;
+    --panel2: #111a36;
+    --line: rgba(148, 163, 255, 0.13);
+    --violet: #7c5cff;
+    --cyan: #2dd4bf;
+    --gold: #f5b841;
+    --rose: #fb7185;
+    --text: #e9edf8;
+    --muted: #8fa0c2;
+    --grad: linear-gradient(90deg, var(--violet), var(--cyan));
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ── type ── */
+  h1,
+  h2,
+  h3,
+  h4,
+  .disp {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  h1 {
+    font-size: clamp(2.6rem, 7vw, 6rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: clamp(1.9rem, 4vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+  h3 {
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    font-weight: 600;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+  p {
+    max-width: 62ch;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .grad-text {
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ── layout ── */
+  .contain {
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: clamp(1.5rem, 5vw, 4rem);
+  }
+
+  .sec {
+    padding-block: clamp(5rem, 10vw, 8rem);
+  }
+
+  .rule {
+    height: 1px;
+    background: var(--grad);
+    border: none;
+    opacity: 0.35;
+  }
+
+  /* ── panels ── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+  }
+
+  .card2 {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 0.7rem;
+  }
+
+  /* ── hero ── */
+  #hero {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* full-bleed original logo image */
+  #hero-image-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  #hero-bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 40%;
+    display: block;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+  #hero-bg-img.loaded {
+    opacity: 1;
+  }
+
+  /* dark overlay so text stays legible over the image */
+  #hero-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(
+        to bottom,
+        rgba(5, 7, 15, 0.35) 0%,
+        rgba(5, 7, 15, 0.15) 40%,
+        rgba(5, 7, 15, 0.85) 80%,
+        var(--ink) 100%
+      ),
+      radial-gradient(
+        ellipse 60% 50% at 50% 35%,
+        rgba(124, 92, 255, 0.12) 0%,
+        transparent 70%
+      );
+  }
+
+  /* canvas sits centred over the image */
+  #logo-wrap {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%);
+    width: min(680px, 90vw);
+    aspect-ratio: 2.2/1;
+    z-index: 1;
+  }
+  /* when image doesn't load, canvas is the sole hero — bring it back to centre */
+  #hero.no-image #logo-wrap {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin-top: 4rem;
+  }
+
+  #logo-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* text content at the bottom of the hero */
+  #hero-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding: 0 clamp(1.5rem, 5vw, 3rem) 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .wordmark {
+    text-align: center;
+  }
+  .wordmark .name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.8rem, 5vw, 3.2rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .wordmark .tagline {
+    font-size: clamp(0.8rem, 1.5vw, 1rem);
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    margin-top: 0.6rem;
+  }
+
+  .scroll-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.6;
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: bob 2.5s ease-in-out infinite;
+  }
+  .scroll-hint svg {
+    opacity: 0.5;
+  }
+  @keyframes bob {
+    0%,
+    100% {
+      transform: translateX(-50%) translateY(0);
+    }
+    50% {
+      transform: translateX(-50%) translateY(6px);
+    }
+  }
+
+  /* ── narrative ── */
+  #narrative .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  @media (max-width: 780px) {
+    #narrative .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  blockquote {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.3rem, 3vw, 2rem);
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text);
+    border-left: 3px solid;
+    border-image: var(--grad) 1;
+    padding-left: 1.5rem;
+  }
+
+  blockquote cite {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 400;
+    font-style: normal;
+    color: var(--muted);
+    margin-top: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── the mark ── */
+  #mark .anatomy {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+  @media (max-width: 700px) {
+    #mark .anatomy {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .anatomy-card {
+    padding: 1.5rem;
+    border-radius: 0.9rem;
+    border: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .anatomy-card .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-bottom: 0.7rem;
+  }
+  .anatomy-card h4 {
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+  .anatomy-card p {
+    font-size: 0.78rem;
+    color: var(--muted);
+    max-width: none;
+  }
+
+  .mark-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 3rem 2rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .mark-preview canvas {
+    display: block;
+  }
+
+  .size-demos {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  /* ── colour ── */
+  #colour .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 2.5rem;
+  }
+
+  .swatch-card {
+    border-radius: 0.8rem;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .swatch-card:hover {
+    transform: translateY(-3px);
+  }
+  .swatch-card .swatch-color {
+    height: 80px;
+  }
+  .swatch-card .swatch-info {
+    padding: 0.75rem;
+    background: var(--panel);
+    font-size: 0.72rem;
+  }
+  .swatch-card .swatch-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .swatch-card .swatch-hex {
+    color: var(--muted);
+    margin-top: 0.15rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .swatch-card .swatch-use {
+    color: var(--muted);
+    margin-top: 0.2rem;
+    font-size: 0.68rem;
+  }
+
+  .grad-strip {
+    height: 48px;
+    border-radius: 0.6rem;
+    background: linear-gradient(90deg, var(--violet), var(--cyan), var(--violet));
+    margin-top: 1.5rem;
+  }
+
+  /* ── type ── */
+  #type .scale {
+    margin-top: 2.5rem;
+  }
+  .type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2rem;
+    padding: 1.2rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .type-row:first-child {
+    border-top: 1px solid var(--line);
+  }
+  .type-meta {
+    width: 120px;
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .type-sample {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .specimen-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2.5rem;
+  }
+  @media (max-width: 640px) {
+    .specimen-pair {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── voice ── */
+  #voice .axes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 640px) {
+    #voice .axes {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .axis-card {
+    padding: 1.25rem 1.5rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
+  }
+  .axis-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--panel2);
+    margin: 0.75rem 0;
+    position: relative;
+  }
+  .axis-track::after {
+    content: '';
+    position: absolute;
+    left: var(--pos);
+    top: -3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--grad-stop, var(--cyan));
+    transform: translateX(-50%);
+  }
+  .axis-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.66rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  .principles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 640px) {
+    .principles {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .principle {
+    padding: 1.2rem 1.4rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
+    border-left: 3px solid var(--cyan);
+  }
+  .principle.gold {
+    border-left-color: var(--gold);
+  }
+  .principle.violet {
+    border-left-color: var(--violet);
+  }
+  .principle.rose {
+    border-left-color: var(--rose);
+  }
+  .principle.leaf {
+    border-left-color: #86efac;
+  }
+
+  .principle h4 {
+    font-size: 0.82rem;
+    margin-bottom: 0.3rem;
+  }
+  .principle p {
+    font-size: 0.76rem;
+    color: var(--muted);
+    max-width: none;
+  }
+
+  .do-dont {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 640px) {
+    .do-dont {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .do-col,
+  .dont-col {
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.8rem;
+  }
+  .do-col {
+    background: rgba(134, 239, 172, 0.06);
+    border: 1px solid rgba(134, 239, 172, 0.2);
+  }
+  .dont-col {
+    background: rgba(251, 113, 133, 0.06);
+    border: 1px solid rgba(251, 113, 133, 0.2);
+  }
+  .do-col h4 {
+    color: #86efac;
+    font-size: 0.78rem;
+    margin-bottom: 0.75rem;
+  }
+  .dont-col h4 {
+    color: var(--rose);
+    font-size: 0.78rem;
+    margin-bottom: 0.75rem;
+  }
+  .do-col p,
+  .dont-col p {
+    font-size: 0.78rem;
+    color: var(--muted);
+    max-width: none;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── manifesto / closing ── */
+  #manifesto {
+    text-align: center;
+    padding-block: clamp(6rem, 12vw, 10rem);
+    position: relative;
+    overflow: hidden;
+  }
+  #manifesto::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 70% 60% at 50% 50%,
+      rgba(124, 92, 255, 0.08) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+  #manifesto .big {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.5rem, 4vw, 3rem);
+    font-weight: 700;
+    line-height: 1.25;
+    max-width: 16em;
+    margin-inline: auto;
+    text-wrap: balance;
+  }
+  #manifesto .em-line {
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    color: var(--muted);
+    margin-top: 1.5rem;
+  }
+  #manifesto .stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 2.5rem;
+    padding: 0.5rem 1.2rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* ── footer ── */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 2rem clamp(1.5rem, 5vw, 4rem);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  footer p {
+    font-size: 0.72rem;
+    color: var(--muted);
+    max-width: none;
+  }
+
+  /* ── reveal ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.7s ease,
+      transform 0.7s ease;
+  }
+  .reveal.on {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ── toast ── */
+  .toast-msg {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel2);
+    border: 1px solid var(--cyan);
+    border-radius: 0.6rem;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.78rem;
+    color: var(--cyan);
+    z-index: 99;
+    pointer-events: none;
+    animation: toastIn 0.25s ease;
+  }
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+    @keyframes bob {
+      0%,
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+  }
+</style>
+
+<!-- ══════════ HERO ══════════ -->
+<header id="hero" class="no-image">
+  <!-- original logo image — loads in a real browser; hidden gracefully if blocked -->
+  <div id="hero-image-wrap">
+    <img
+      id="hero-bg-img"
+      src="https://image.qwenlm.ai/public_source/b222c791-c587-4205-aba5-274352c6e01a/1f630670d-6420-41c9-8189-a7e77ce7fe57.png"
+      alt="INFINITE-AI infinity mark in violet and cyan light"
+      onload="
+        this.classList.add('loaded');
+        document.getElementById('hero').classList.remove('no-image');
+      "
+      onerror="this.style.display = 'none'"
+    />
+    <div id="hero-overlay"></div>
+  </div>
+
+  <!-- animated canvas mark — always rendered, sits over the image -->
+  <div id="logo-wrap">
+    <canvas id="logo-canvas"></canvas>
+  </div>
+
+  <!-- wordmark + tagline pinned to the bottom of the hero -->
+  <div id="hero-content">
+    <div class="wordmark">
+      <div class="name">INFINITE&#8202;<span class="grad-text">AI</span></div>
+      <div class="tagline">AI drafts. The teacher decides. Always.</div>
+    </div>
+    <div class="scroll-hint">
+      <span>Brand Identity System</span>
+      <svg width="14" height="20" viewBox="0 0 14 20" fill="none">
+        <path
+          d="M7 1v14M1 9l6 8 6-8"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════ NARRATIVE ══════════ -->
+<section id="narrative" class="sec">
+  <div class="contain">
+    <hr class="rule reveal" style="margin-bottom: 3rem" />
+    <div class="grid">
+      <div class="reveal">
+        <span class="eyebrow">Origin</span>
+        <h2 style="margin-top: 0.75rem">Built for memory<br />that doesn't end</h2>
+        <p style="margin-top: 1.5rem; color: var(--muted)">
+          South Africa's classrooms carry knowledge that disappears. A teacher retires and
+          twenty years of hard-won insight on teaching isiZulu phonics walks out the door.
+          A learner is screened for support, assessed, referred — and three years later
+          the cycle begins again because no one can find the file. PIRLS 2021 told us 81%
+          of Grade 4 learners cannot read for meaning in any language. That is not a
+          technology problem. It is a memory problem.
+        </p>
+        <p style="margin-top: 1rem; color: var(--muted)">
+          The Infinite Brain was conceived as the answer: not an AI that replaces the
+          people in these rooms, but one that ensures nothing they know is ever lost
+          again. A living institutional memory that grows with the school, defers to the
+          teacher at every decision point, and holds the evidence of every choice made for
+          every child.
+        </p>
+        <p style="margin-top: 1rem; color: var(--muted)">
+          The name is the promise. As long as the ecosystem breathes, the knowledge
+          doesn't end.
+        </p>
+      </div>
+      <div
+        class="reveal"
+        style="display: flex; flex-direction: column; gap: 1.5rem; padding-top: 3.5rem"
+      >
+        <blockquote>
+          "Fix the soil, not the buckets."
+          <cite>— Founding product principle</cite>
+        </blockquote>
+        <div class="card2" style="padding: 1.5rem">
+          <span class="eyebrow" style="color: var(--cyan)">Three acts</span>
+          <div
+            style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.9rem"
+          >
+            <div style="display: flex; gap: 0.9rem; align-items: start">
+              <span
+                style="
+                  color: var(--violet);
+                  font-family: 'Space Grotesk', sans-serif;
+                  font-weight: 700;
+                  font-size: 0.72rem;
+                  min-width: 40px;
+                "
+                >I</span
+              >
+              <p style="font-size: 0.8rem; color: var(--muted); max-width: none">
+                Structural amnesia in South African education — the problem that scale
+                makes worse.
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.9rem; align-items: start">
+              <span
+                style="
+                  color: var(--cyan);
+                  font-family: 'Space Grotesk', sans-serif;
+                  font-weight: 700;
+                  font-size: 0.72rem;
+                  min-width: 40px;
+                "
+                >II</span
+              >
+              <p style="font-size: 0.8rem; color: var(--muted); max-width: none">
+                The Infinite Brain — institutional memory as infrastructure, not feature.
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.9rem; align-items: start">
+              <span
+                style="
+                  color: var(--gold);
+                  font-family: 'Space Grotesk', sans-serif;
+                  font-weight: 700;
+                  font-size: 0.72rem;
+                  min-width: 40px;
+                "
+                >III</span
+              >
+              <p style="font-size: 0.8rem; color: var(--muted); max-width: none">
+                What becomes possible when no classroom decision is ever lost again.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ THE MARK ══════════ -->
+<section id="mark" class="sec" style="padding-top: 0">
+  <div class="contain">
+    <hr class="rule reveal" style="margin-bottom: 3rem" />
+    <span class="eyebrow reveal">The Mark</span>
+    <h2 style="margin-top: 0.75rem" class="reveal">The Lemniscate</h2>
+    <p style="margin-top: 1rem; color: var(--muted)" class="reveal">
+      A single unbroken curve — no start, no end. Every loop feeds the other. Every
+      journey through the mark crosses the same convergence point, where memory and action
+      meet.
+    </p>
+
+    <!-- Static mark display -->
+    <div class="mark-preview reveal" style="margin-top: 2.5rem">
+      <canvas
+        id="static-canvas"
+        width="540"
+        height="240"
+        style="max-width: 100%"
+      ></canvas>
+      <div class="size-demos" id="size-demos"></div>
+    </div>
+
+    <!-- Anatomy -->
+    <div class="anatomy reveal">
+      <div class="anatomy-card">
+        <span
+          class="dot"
+          style="background: linear-gradient(135deg, var(--violet), var(--cyan))"
+        ></span>
+        <h4>The Arc</h4>
+        <p>
+          A continuous cubic bezier path that never intersects itself at the outer edge —
+          only at the centre crossing. Violet originates in the left loop; cyan completes
+          the right. The gradient is motion, not decoration.
+        </p>
+      </div>
+      <div class="anatomy-card">
+        <span class="dot" style="background: white"></span>
+        <h4>The Convergence</h4>
+        <p>
+          At coordinates (32, 16) in the mark's coordinate space — the exact centre — both
+          loops cross. This point represents the meeting of AI suggestion and human
+          decision. It is the most structurally significant pixel in the system.
+        </p>
+      </div>
+      <div class="anatomy-card">
+        <span class="dot" style="background: var(--gold)"></span>
+        <h4>Clear Space</h4>
+        <p>
+          Reserve a minimum equal to the mark's height on all four sides. Never place
+          text, other marks, or images inside this boundary. Minimum display width: 80px.
+          Below that, use the wordmark alone.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ COLOUR ══════════ -->
+<section id="colour" class="sec" style="padding-top: 0">
+  <div class="contain">
+    <hr class="rule reveal" style="margin-bottom: 3rem" />
+    <span class="eyebrow reveal">Colour System</span>
+    <h2 style="margin-top: 0.75rem" class="reveal">Six colours. One story.</h2>
+    <p style="margin-top: 1rem; color: var(--muted)" class="reveal">
+      Ink grounds everything. The gradient arc carries the brand. Gold marks every moment
+      a human ratifies something. Rose signals risk and safeguarding — never used
+      casually.
+    </p>
+
+    <div class="swatches reveal">
+      <div class="swatch-card" data-hex="#05070F">
+        <div class="swatch-color" style="background: #05070f"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink</div>
+          <div class="swatch-hex">#05070F</div>
+          <div class="swatch-use">Primary ground. All surfaces rest on this.</div>
+        </div>
+      </div>
+      <div class="swatch-card" data-hex="#7C5CFF">
+        <div class="swatch-color" style="background: #7c5cff"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Violet</div>
+          <div class="swatch-hex">#7C5CFF</div>
+          <div class="swatch-use">Brand primary. Gradient origin. Potential.</div>
+        </div>
+      </div>
+      <div class="swatch-card" data-hex="#2DD4BF">
+        <div class="swatch-color" style="background: #2dd4bf"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Cyan</div>
+          <div class="swatch-hex">#2DD4BF</div>
+          <div class="swatch-use">Brand secondary. Gradient close. Realisation.</div>
+        </div>
+      </div>
+      <div class="swatch-card" data-hex="#F5B841">
+        <div class="swatch-color" style="background: #f5b841"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Gold</div>
+          <div class="swatch-hex">#F5B841</div>
+          <div class="swatch-use">Human moment. Ratification. Decision made.</div>
+        </div>
+      </div>
+      <div class="swatch-card" data-hex="#FB7185">
+        <div class="swatch-color" style="background: #fb7185"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Rose</div>
+          <div class="swatch-hex">#FB7185</div>
+          <div class="swatch-use">Risk. Safeguarding. Never decorative.</div>
+        </div>
+      </div>
+      <div class="swatch-card" data-hex="#0C1224">
+        <div
+          class="swatch-color"
+          style="background: #0c1224; border-bottom: 1px solid rgba(148, 163, 255, 0.15)"
+        ></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Panel</div>
+          <div class="swatch-hex">#0C1224</div>
+          <div class="swatch-use">Card surface. One step above Ink.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grad-strip reveal" style="margin-top: 1.5rem"></div>
+    <p
+      class="reveal"
+      style="font-size: 0.74rem; color: var(--muted); margin-top: 0.75rem"
+    >
+      The Brand Arc — Violet → Cyan — is reserved for the mark, primary CTAs, and key data
+      moments. Do not apply it to decorative borders, backgrounds, or text where it would
+      lose its signal value.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ TYPE ══════════ -->
+<section id="type" class="sec" style="padding-top: 0">
+  <div class="contain">
+    <hr class="rule reveal" style="margin-bottom: 3rem" />
+    <span class="eyebrow reveal">Typography</span>
+    <h2 style="margin-top: 0.75rem" class="reveal">Two faces. No exceptions.</h2>
+
+    <div class="scale reveal">
+      <div class="type-row">
+        <div class="type-meta">Display · 700<br />Space Grotesk</div>
+        <div
+          class="type-sample disp"
+          style="
+            font-size: clamp(2rem, 6vw, 4rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1;
+          "
+        >
+          Evidence.
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">H1 · 700<br />Space Grotesk</div>
+        <div
+          class="type-sample disp"
+          style="
+            font-size: clamp(1.6rem, 4vw, 2.5rem);
+            font-weight: 700;
+            line-height: 1.05;
+          "
+        >
+          The teacher decides. Always.
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">H2 · 600<br />Space Grotesk</div>
+        <div
+          class="type-sample disp"
+          style="font-size: clamp(1.2rem, 2.5vw, 1.75rem); font-weight: 600"
+        >
+          Institutional memory as infrastructure
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">H3 · 600<br />Space Grotesk</div>
+        <div class="type-sample disp" style="font-size: 1.1rem; font-weight: 600">
+          MOD-01 Curriculum Engine · CAPS-grounded
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">Body · 400<br />Inter · 1.75lh</div>
+        <div class="type-sample" style="font-size: 0.95rem; color: var(--muted)">
+          Every lesson plan, screening record and intervention note lives in the Brain —
+          dated, provenanced, restorable. Nothing the school knows is lost when a teacher
+          leaves.
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">Label · 600<br />Inter · .2em ls</div>
+        <div class="type-sample eyebrow" style="color: var(--gold)">
+          Section label · Eyebrow text
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">Caption · 400<br />Inter · .05em ls</div>
+        <div
+          class="type-sample"
+          style="font-size: 0.73rem; color: var(--muted); letter-spacing: 0.04em"
+        >
+          PIRLS 2021 · Grade 4 Reading · Confidential internal use
+        </div>
+      </div>
+    </div>
+
+    <div class="specimen-pair reveal">
+      <div class="card" style="padding: 2rem">
+        <span class="eyebrow" style="color: var(--cyan)">Space Grotesk</span>
+        <p
+          class="disp"
+          style="
+            font-size: clamp(1.4rem, 3vw, 2.2rem);
+            font-weight: 700;
+            margin-top: 0.75rem;
+            line-height: 1.2;
+          "
+        >
+          Where knowledge lives, teaching thrives.
+        </p>
+        <p
+          class="disp"
+          style="
+            font-size: 0.85rem;
+            font-weight: 300;
+            color: var(--muted);
+            margin-top: 0.75rem;
+            letter-spacing: 0.02em;
+          "
+        >
+          Display · Headlines · Section markers<br />Weights 300–700 in use
+        </p>
+      </div>
+      <div class="card" style="padding: 2rem">
+        <span class="eyebrow" style="color: var(--violet)">Inter</span>
+        <p
+          style="
+            font-size: 0.92rem;
+            margin-top: 0.75rem;
+            color: var(--muted);
+            line-height: 1.8;
+          "
+        >
+          The Infinite Brain doesn't know what teachers know — it remembers it for them.
+          Every ratified decision becomes a datum. Every correction to an AI draft becomes
+          a lesson. The system learns from the school, not instead of it.
+        </p>
+        <p
+          style="
+            font-size: 0.73rem;
+            color: var(--muted);
+            margin-top: 0.75rem;
+            letter-spacing: 0.04em;
+          "
+        >
+          Body · UI · Captions · Data tables
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ VOICE ══════════ -->
+<section id="voice" class="sec" style="padding-top: 0">
+  <div class="contain">
+    <hr class="rule reveal" style="margin-bottom: 3rem" />
+    <span class="eyebrow reveal">Voice & Tone</span>
+    <h2 style="margin-top: 0.75rem" class="reveal">Plain, warm, honest.</h2>
+    <p style="margin-top: 1rem; color: var(--muted)" class="reveal">
+      Write for the teacher reading this at 6am on a Tuesday who has not yet had coffee
+      and has thirty things to do before the bell. Plain does not mean simple. Honest does
+      not mean cold.
+    </p>
+
+    <div class="axes reveal">
+      <div class="axis-card">
+        <h4 style="font-size: 0.82rem">Warm ↔ Clinical</h4>
+        <div class="axis-track" style="--pos: 25%"></div>
+        <div class="axis-labels"><span>Warm</span><span>Clinical</span></div>
+        <p style="font-size: 0.76rem; color: var(--muted); margin-top: 0.5rem">
+          Respect educators as professionals. Never patronise. Never over-explain.
+        </p>
+      </div>
+      <div class="axis-card">
+        <h4 style="font-size: 0.82rem">Plain ↔ Technical</h4>
+        <div class="axis-track" style="--pos: 30%"></div>
+        <div class="axis-labels"><span>Plain</span><span>Technical</span></div>
+        <p style="font-size: 0.76rem; color: var(--muted); margin-top: 0.5rem">
+          Use the educator's vocabulary, not the engineer's. Explain jargon the first
+          time, then trust the reader.
+        </p>
+      </div>
+      <div class="axis-card">
+        <h4 style="font-size: 0.82rem">Hopeful ↔ Cautious</h4>
+        <div class="axis-track" style="--pos: 40%"></div>
+        <div class="axis-labels"><span>Hopeful</span><span>Cautious</span></div>
+        <p style="font-size: 0.76rem; color: var(--muted); margin-top: 0.5rem">
+          Ground every claim. PIRLS 2021. CAPS clause. SIAS step number. Hope without
+          evidence is hype.
+        </p>
+      </div>
+      <div class="axis-card">
+        <h4 style="font-size: 0.82rem">Permanent ↔ Adaptive</h4>
+        <div class="axis-track" style="--pos: 45%"></div>
+        <div class="axis-labels"><span>Permanent</span><span>Adaptive</span></div>
+        <p style="font-size: 0.76rem; color: var(--muted); margin-top: 0.5rem">
+          The memory endures. The approach evolves. These are not in tension — they are
+          the same promise.
+        </p>
+      </div>
+    </div>
+
+    <div class="principles reveal">
+      <div class="principle violet">
+        <h4>Name things by what they do</h4>
+        <p>
+          The Brain remembers. The Engine plans. The Toolbox makes. Write the verb, not
+          the noun.
+        </p>
+      </div>
+      <div class="principle">
+        <h4>AI suggests. The teacher decides.</h4>
+        <p>
+          Every agent output is a draft. Every ratification is a human act. Never imply
+          otherwise — not in marketing, not in UI copy, not in reports.
+        </p>
+      </div>
+      <div class="principle gold">
+        <h4>Cite the evidence</h4>
+        <p>
+          PIRLS 2021. CAPS section. SIAS process step. If a claim can't be cited, it isn't
+          made.
+        </p>
+      </div>
+      <div class="principle leaf">
+        <h4>Use the ecosystem language</h4>
+        <p>
+          Soil. Roots. Seasons. Habitats. Harvest. The metaphor is structural — it maps to
+          the architecture. Prefer it to abstract tech-speak.
+        </p>
+      </div>
+      <div class="principle rose">
+        <h4>Never claim learner outcomes</h4>
+        <p>
+          We do not yet have a published randomised evaluation. Until we do, we claim
+          process quality, evidence-grounding, and time saved — not reading scores.
+        </p>
+      </div>
+    </div>
+
+    <div class="do-dont reveal">
+      <div class="do-col">
+        <h4>✓ Write like this</h4>
+        <p>
+          "Your lesson plan is ready for review — you'll want to check the assessment
+          weighting on Activity 3."
+        </p>
+        <p>"This learner has been at Tier 2 for 6 weeks. The SBST meeting is due."</p>
+        <p>
+          "81% of Grade 4 learners in SA cannot read for meaning. This is what we're here
+          to change — carefully."
+        </p>
+      </div>
+      <div class="dont-col">
+        <h4>✗ Not like this</h4>
+        <p>"AI-powered learning transformation for the 21st century educator!"</p>
+        <p>
+          "Our revolutionary platform uses cutting-edge machine learning to boost reading
+          scores."
+        </p>
+        <p>"Replace repetitive tasks with intelligent automation."</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MOTION ══════════ -->
+<section class="sec" style="padding-top: 0">
+  <div class="contain">
+    <hr class="rule reveal" style="margin-bottom: 3rem" />
+    <span class="eyebrow reveal">Motion Language</span>
+    <h2 style="margin-top: 0.75rem" class="reveal">Flow, not flash.</h2>
+    <div
+      style="
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+      "
+    >
+      <div class="card reveal" style="padding: 1.5rem">
+        <h4 style="font-size: 0.85rem; color: var(--cyan); margin-bottom: 0.5rem">
+          Continuous
+        </h4>
+        <p style="font-size: 0.78rem; color: var(--muted)">
+          The lemniscate never stops. Brand animations loop without a perceptible seam —
+          no bounce-in, no flash, no sudden stops. The loop is the proof of the promise.
+        </p>
+      </div>
+      <div class="card reveal" style="padding: 1.5rem">
+        <h4 style="font-size: 0.85rem; color: var(--violet); margin-bottom: 0.5rem">
+          Breathing
+        </h4>
+        <p style="font-size: 0.78rem; color: var(--muted)">
+          Glow intensity, opacity, scale — these pulse at 0.8–1.2 Hz, matching a calm
+          resting breath. Never faster. Fast animation signals urgency; this system
+          signals patience.
+        </p>
+      </div>
+      <div class="card reveal" style="padding: 1.5rem">
+        <h4 style="font-size: 0.85rem; color: var(--gold); margin-bottom: 0.5rem">
+          Gradient-directional
+        </h4>
+        <p style="font-size: 0.78rem; color: var(--muted)">
+          Particles travel violet → cyan, always. Counter-flow is never used decoratively.
+          When two streams meet at the convergence point, that is the brand's most charged
+          moment.
+        </p>
+      </div>
+      <div class="card reveal" style="padding: 1.5rem">
+        <h4 style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem">
+          Reduced motion
+        </h4>
+        <p style="font-size: 0.78rem; color: var(--muted)">
+          Respect
+          <code
+            style="
+              font-size: 0.72rem;
+              background: var(--panel2);
+              padding: 0.1em 0.3em;
+              border-radius: 0.2em;
+            "
+            >prefers-reduced-motion</code
+          >. The static mark is always sufficient. Motion enhances; it never carries
+          essential information.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MANIFESTO ══════════ -->
+<section id="manifesto">
+  <div class="contain" style="position: relative; z-index: 1">
+    <span class="eyebrow reveal" style="color: var(--muted)">The Promise</span>
+    <p class="big reveal" style="margin-top: 1rem">
+      Every teacher's insight.<br />
+      Every learner's journey.<br />
+      Every decision, evidenced.<br />
+      <span class="grad-text">None of it ever lost.</span>
+    </p>
+    <p class="em-line reveal">Evidence. System. Capacity — working together.</p>
+    <div
+      class="reveal"
+      style="
+        margin-top: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      "
+    >
+      <span class="stamp">IA-BID-2026 · Brand Identity System v1.0</span>
+      <span class="stamp">Confidential — internal & investor circulation</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+  <div style="display: flex; align-items: center; gap: 0.75rem">
+    <canvas id="foot-mark" width="48" height="24"></canvas>
+    <span
+      style="
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 0.8rem;
+        letter-spacing: 0.1em;
+      "
+      >INFINITE&#8202;<span class="grad-text">AI</span></span
+    >
+  </div>
+  <p>Brand Identity System · FY2026 · Founder's Office · mrsharding@benjaminpine.co.za</p>
+</footer>
+
+<!-- ══════════ SCRIPTS ══════════ -->
+<script>
+  /* ── Reveal on scroll ── */
+  const rv = new IntersectionObserver(
+    (es) =>
+      es.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('on');
+          rv.unobserve(e.target);
+        }
+      }),
+    { threshold: 0.1 },
+  );
+  document.querySelectorAll('.reveal').forEach((n) => rv.observe(n));
+
+  /* ── Path math ── */
+  const SEGS = [
+    [
+      [16, 8],
+      [5, 8],
+      [5, 24],
+      [16, 24],
+    ],
+    [
+      [16, 24],
+      [27, 24],
+      [37, 8],
+      [48, 8],
+    ],
+    [
+      [48, 8],
+      [59, 8],
+      [59, 24],
+      [48, 24],
+    ],
+    [
+      [48, 24],
+      [37, 24],
+      [27, 8],
+      [16, 8],
+    ],
+  ];
+
+  function pathPt(t) {
+    t = ((t % 1) + 1) % 1;
+    const s = t * 4,
+      si = Math.min(3, 0 | s),
+      lt = s - si;
+    const [a, b, c, d] = SEGS[si],
+      m = 1 - lt;
+    return [
+      m * m * m * a[0] +
+        3 * m * m * lt * b[0] +
+        3 * m * lt * lt * c[0] +
+        lt * lt * lt * d[0],
+      m * m * m * a[1] +
+        3 * m * m * lt * b[1] +
+        3 * m * lt * lt * c[1] +
+        lt * lt * lt * d[1],
+    ];
+  }
+
+  /* Color: violet at t=0, cyan at t=0.5, violet at t=1 */
+  function pathCol(t, a) {
+    t = ((t % 1) + 1) % 1;
+    const p = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
+    return `rgba(${0 | (124 + (45 - 124) * p)},${0 | (92 + (212 - 92) * p)},${0 | (255 + (191 - 255) * p)},${a})`;
+  }
+
+  /* Draw the infinity path with a linear gradient stroke */
+  function drawMark(ctx, W, H, lineW, alpha, shadowBlur, shadowCol) {
+    const sc = Math.min(W / 64, H / 32) * 0.82;
+    const ox = (W - 64 * sc) / 2;
+    const oy = (H - 32 * sc) / 2;
+
+    /* Gradient in canvas coords (left edge to right edge of path) */
+    const gl = ctx.createLinearGradient(ox + 5 * sc, 0, ox + 59 * sc, 0);
+    gl.addColorStop(0, `rgba(124,92,255,${alpha})`);
+    gl.addColorStop(0.5, `rgba(45,212,191,${alpha})`);
+    gl.addColorStop(1, `rgba(124,92,255,${alpha})`);
+
+    const T = ([x, y]) => [ox + x * sc, oy + y * sc];
+    const [m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11] = [
+      T([16, 8]),
+      T([5, 8]),
+      T([5, 24]),
+      T([16, 24]),
+      T([27, 24]),
+      T([37, 8]),
+      T([48, 8]),
+      T([59, 8]),
+      T([59, 24]),
+      T([48, 24]),
+      T([37, 24]),
+      T([27, 8]),
+    ];
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(...m0);
+    ctx.bezierCurveTo(...m1, ...m2, ...m3);
+    ctx.bezierCurveTo(...m4, ...m5, ...m6);
+    ctx.bezierCurveTo(...m7, ...m8, ...m9);
+    ctx.bezierCurveTo(...m10, ...m11, ...m0);
+    ctx.closePath();
+    ctx.strokeStyle = gl;
+    ctx.lineWidth = lineW;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (shadowBlur > 0) {
+      ctx.shadowBlur = shadowBlur;
+      ctx.shadowColor = shadowCol || 'rgba(124,92,255,0.9)';
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  /* ── Particle system for hero canvas ── */
+  const TRAIL = 22;
+  const particles = Array.from({ length: 36 }, (_, i) => ({
+    t: i / 36 + (Math.random() * 0.015 - 0.0075),
+    spd: 0.00042 + Math.random() * 0.00028,
+    sz: 1.4 + Math.random() * 2.2,
+    trail: [],
+    phase: Math.random() * Math.PI * 2,
+  }));
+
+  /* Hero canvas setup */
+  const heroCanvas = document.getElementById('logo-canvas');
+  let heroCtx, heroW, heroH, animId;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function heroResize() {
+    const wrap = document.getElementById('logo-wrap');
+    heroW = wrap.clientWidth;
+    heroH = wrap.clientHeight;
+    heroCanvas.width = heroW * dpr;
+    heroCanvas.height = heroH * dpr;
+    heroCanvas.style.width = heroW + 'px';
+    heroCanvas.style.height = heroH + 'px';
+    heroCtx = heroCanvas.getContext('2d');
+    heroCtx.scale(dpr, dpr);
+  }
+  heroResize();
+  window.addEventListener('resize', heroResize);
+
+  function drawHero(ts) {
+    const ctx = heroCtx,
+      W = heroW,
+      H = heroH;
+    ctx.clearRect(0, 0, W, H);
+
+    const breathe = 0.5 + 0.5 * Math.sin(ts * 0.0007);
+
+    /* Glow layers (additive) */
+    ctx.globalCompositeOperation = 'lighter';
+    drawMark(ctx, W, H, 44, 0.028 + breathe * 0.012, 0);
+    drawMark(ctx, W, H, 22, 0.06 + breathe * 0.02, 0);
+    drawMark(ctx, W, H, 8, 0.18 + breathe * 0.06, 0);
+    ctx.globalCompositeOperation = 'source-over';
+
+    /* Core path */
+    drawMark(ctx, W, H, 2.5, 0.75, 8, 'rgba(124,92,255,.7)');
+
+    /* Particles */
+    const sc = Math.min(W / 64, H / 32) * 0.82;
+    const ox = (W - 64 * sc) / 2;
+    const oy = (H - 32 * sc) / 2;
+
+    particles.forEach((p) => {
+      p.t = (p.t + p.spd) % 1;
+      const [px, py] = pathPt(p.t);
+      const cx = ox + px * sc,
+        cy = oy + py * sc;
+      const shimmer = 0.82 + 0.18 * Math.sin(ts * 0.0028 + p.phase);
+
+      p.trail.unshift({ x: cx, y: cy, t: p.t });
+      if (p.trail.length > TRAIL) p.trail.pop();
+
+      /* Trail */
+      for (let i = p.trail.length - 1; i >= 1; i--) {
+        const pt = p.trail[i];
+        const frac = 1 - i / TRAIL;
+        const r = p.sz * frac * 0.65;
+        if (r < 0.2) continue;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = pathCol(pt.t, frac * frac * 0.85);
+        ctx.fill();
+      }
+
+      /* Core glow */
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath();
+      ctx.arc(cx, cy, p.sz * shimmer * 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = pathCol(p.t, 0.12);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+
+      /* Core dot */
+      ctx.beginPath();
+      ctx.arc(cx, cy, p.sz * shimmer, 0, Math.PI * 2);
+      ctx.fillStyle = pathCol(p.t, 0.95);
+      ctx.fill();
+    });
+
+    /* Centre convergence point */
+    const cx0 = ox + 32 * sc,
+      cy0 = oy + 16 * sc;
+    const pulse = 0.4 + 0.6 * Math.abs(Math.sin(ts * 0.0013));
+    const rp = ((3 + 18 * (1 - pulse)) * sc) / 10;
+
+    ctx.beginPath();
+    ctx.arc(cx0, cy0, rp, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,255,255,${0.18 * pulse})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath();
+    ctx.arc(cx0, cy0, 3.5 * pulse, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${0.6 * pulse})`;
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+
+    animId = requestAnimationFrame(drawHero);
+  }
+  requestAnimationFrame(drawHero);
+
+  /* ── Static mark canvases ── */
+  function drawStatic(canvas, W, H, lw) {
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0C1224';
+    ctx.fillRect(0, 0, W, H);
+    /* Glow */
+    ctx.globalCompositeOperation = 'lighter';
+    drawMark(ctx, W, H, lw * 8, 0.04, 0);
+    drawMark(ctx, W, H, lw * 3, 0.1, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    drawMark(ctx, W, H, lw, 0.9, lw * 2, 'rgba(124,92,255,.7)');
+  }
+
+  /* Hero static canvas (mark anatomy preview) */
+  const sc = document.getElementById('static-canvas');
+  if (sc) drawStatic(sc, 540, 240, 3);
+
+  /* Size demos */
+  const sizeData = [
+    { w: 160, h: 72, lw: 2.5, label: '160px' },
+    { w: 80, h: 36, lw: 1.8, label: '80px' },
+    { w: 48, h: 22, lw: 1.2, label: 'min 48px' },
+  ];
+  const sdWrap = document.getElementById('size-demos');
+  if (sdWrap) {
+    sizeData.forEach(({ w, h, lw, label }) => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText =
+        'display:flex;flex-direction:column;align-items:center;gap:.5rem';
+      const c = document.createElement('canvas');
+      c.style.cssText = 'border-radius:.4rem';
+      drawStatic(c, w, h, lw);
+      const lb = document.createElement('span');
+      lb.style.cssText =
+        'font-size:.65rem;color:var(--muted);font-family:Inter,sans-serif';
+      lb.textContent = label;
+      wrap.append(c, lb);
+      sdWrap.append(wrap);
+    });
+  }
+
+  /* Footer mark */
+  const fm = document.getElementById('foot-mark');
+  if (fm) {
+    const fc = fm.getContext('2d');
+    const gl = fc.createLinearGradient(3, 0, 45, 0);
+    gl.addColorStop(0, 'rgba(124,92,255,.8)');
+    gl.addColorStop(1, 'rgba(45,212,191,.8)');
+    fc.save();
+    fc.beginPath();
+    fc.moveTo(16, 8);
+    fc.bezierCurveTo(5, 8, 5, 24, 16, 24);
+    fc.bezierCurveTo(27, 24, 37, 8, 48, 8);
+    fc.bezierCurveTo(59, 8, 59, 24, 48, 24);
+    fc.bezierCurveTo(37, 24, 27, 8, 16, 8);
+    fc.closePath();
+    /* scale to 48x24 */
+    fc.scale(48 / 64, 24 / 32);
+    fc.stroke();
+    fc.restore();
+    const fc2 = fm.getContext('2d');
+    fc2.clearRect(0, 0, 48, 24);
+    fc2.strokeStyle = gl;
+    fc2.lineWidth = 2;
+    fc2.lineCap = 'round';
+    fc2.lineJoin = 'round';
+    fc2.beginPath();
+    const s = Math.min(48 / 64, 24 / 32) * 0.82;
+    const fox = (48 - 64 * s) / 2,
+      foy = (24 - 32 * s) / 2;
+    const FT = ([x, y]) => [fox + x * s, foy + y * s];
+    const [fa, fb, fc3, fd, fe, ff, fg, fh, fi, fj, fk, fl] = [
+      FT([16, 8]),
+      FT([5, 8]),
+      FT([5, 24]),
+      FT([16, 24]),
+      FT([27, 24]),
+      FT([37, 8]),
+      FT([48, 8]),
+      FT([59, 8]),
+      FT([59, 24]),
+      FT([48, 24]),
+      FT([37, 24]),
+      FT([27, 8]),
+    ];
+    fc2.moveTo(...fa);
+    fc2.bezierCurveTo(...fb, ...fc3, ...fd);
+    fc2.bezierCurveTo(...fe, ...ff, ...fg);
+    fc2.bezierCurveTo(...fh, ...fi, ...fj);
+    fc2.bezierCurveTo(...fk, ...fl, ...fa);
+    fc2.stroke();
+  }
+
+  /* ── Colour copy ── */
+  function toast(msg) {
+    document.querySelectorAll('.toast-msg').forEach((t) => t.remove());
+    const t = document.createElement('div');
+    t.className = 'toast-msg';
+    t.textContent = msg;
+    document.body.append(t);
+    setTimeout(() => t.remove(), 2000);
+  }
+  document.querySelectorAll('.swatch-card').forEach((c) => {
+    c.addEventListener('click', () => {
+      const hex = c.dataset.hex;
+      navigator.clipboard?.writeText(hex).then(() => toast('Copied ' + hex));
+    });
+  });
+
+  /* ── Reduced motion ── */
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    cancelAnimationFrame(animId);
+    drawMark(heroCtx, heroW, heroH, 3, 0.85, 12, 'rgba(124,92,255,.8)');
+  }
+</script>
