@@ -1,7 +1,7 @@
 import { contractFor, type DefStore } from '../departments/custom';
 import type { Artefact } from '../core/platform';
 import type { LedgerEntry } from '../core/types';
-import { requiresTwoPerson, soloWaitRemainingMs, type SigningPolicy } from '../core/signing';
+import { requiresTwoPerson, soloWaitRemainingMs, type Profession, type SigningPolicy } from '../core/signing';
 
 export interface GateContext {
   signing: SigningPolicy;
@@ -58,4 +58,25 @@ export function reportRow(i: SingleSignerReportItem): { kindLabel: string; date:
     date: i.ratifiedAt.slice(0, 10),
     hash: i.docHash.slice(0, 12)
   };
+}
+
+export interface CountersignState { enabled: boolean; reason: string | null; minutesLeft: number }
+
+/**
+ * Whether this person may press Countersign on an APPROVED artefact now, for the Studio's button. Mirrors `Platform.countersign`:
+ * the approver may countersign their own approval only in solo mode, only after the wait, never for a twoPerson or
+ * professional-review agent. A different person is not held here (the server checks profession and the rest).
+ * `a.at` is the approval time, as `countersign` reads it. The server stays the authority.
+ */
+export function countersignState(a: Pick<Artefact, 'status' | 'approvedBy' | 'at'>, me: string, policy: SigningPolicy, now: Date, agent?: { twoPerson?: boolean; professionalReview?: Profession }): CountersignState {
+  if (a.status !== 'APPROVED') return { enabled: false, reason: 'Only an approved artefact can be countersigned.', minutesLeft: 0 };
+  if (a.approvedBy !== me) return { enabled: true, reason: null, minutesLeft: 0 };
+  if (agent && requiresTwoPerson(agent)) return { enabled: false, reason: 'A different person must countersign this.', minutesLeft: 0 };
+  if (policy.mode !== 'solo') return { enabled: false, reason: 'A different person must countersign', minutesLeft: 0 };
+  const left = soloWaitRemainingMs(a.at, now, policy);
+  if (left > 0) {
+    const mins = Math.ceil(left / 60_000);
+    return { enabled: false, reason: `Solo signing: ${mins} minute${mins === 1 ? '' : 's'} left before you can countersign your own approval.`, minutesLeft: mins };
+  }
+  return { enabled: true, reason: null, minutesLeft: 0 };
 }

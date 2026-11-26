@@ -137,7 +137,10 @@ configuration only: the approve and countersign rules are the ones above, and no
 3. **Sign.** Submit for review, then approve. To countersign your own approval you must wait: the default is **10 minutes**,
    set with `OPS_SOLO_WAIT_MINUTES` (1 to 1440), timed by the server from its own `hitl.approved` ledger entry. Then countersign
    again with your token re-entered; the browser sends it in the `x-ops-reauth` header. That ratifies the document, saves the
-   exact content to the library as `rat_<artefact id>_v<version>` and records an episode in the Brain (L2).
+   exact content to the library as `rat_<artefact id>_v<version>` and records an episode in the Brain (L2). You can do this
+   from the Review Board or from the artefact's panel in the Studio: in solo mode the Studio's **Countersign and ratify**
+   button shows the minutes left, then asks for your token (the same field, sent in `x-ops-reauth`). In dual mode it says a
+   different person must countersign, and it never opens for a `twoPerson` or professional-review agent.
 4. **What shows.** The artefact, its countersignature and the ledger entries carry the **single-signer** flag, and it appears on
    `GET /api/signing/report` so a second person can review it later. Any edit voids both signatures and returns it to DRAFT.
    Ratified output is final: start a revision to change it.

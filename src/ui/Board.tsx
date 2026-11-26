@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, FileText, GitFork, PackageCheck, PenLine, Send, ShieldCheck, XCircle } from 'lucide-react';
 import { useOps } from './store';
 import { approvedAtFromLedger, can, signingHint, reportRow, type SingleSignerReportItem } from './boardGate';
-import { apiFetch, withReauth } from '../core/api';
+import { apiFetch } from '../core/api';
+import { ReauthInput, countersignWith } from './ReauthInput';
 import { Badge, Card, statusTone } from './primitives';
 import { agentById } from '../departments';
 import { contractFor } from '../departments/custom';
@@ -126,8 +127,8 @@ function Item({ a, me, act, open, failed = [] }: { a: Artefact; me: string; act:
         <div className="mt-2 space-y-2">
           {!gate.ok && <p className="text-sm">{gate.why}</p>}
           <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Countersignature note (optional)" aria-label="Countersignature note" />
-          {isApprover && signing.mode === 'solo' && <input className="input" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Your token (needed to countersign your own approval)" aria-label="Re-enter your token to countersign" />}
-          <button className="btn primary" disabled={!gate.ok || (isApprover && !token)} onClick={() => { const t = token; setToken(''); void act(() => (isApprover ? withReauth(t, () => p!.countersign(a.id, actor, note, agent)) : p!.countersign(a.id, actor, note, agent)), agent?.ingestion === 'none' ? 'Countersigned and ratified.' : 'Countersigned, ratified and ingested into the library and the Brain.'); }}><PenLine size={14} /> Countersign and ratify</button>
+          {isApprover && signing.mode === 'solo' && <ReauthInput value={token} onChange={setToken} />}
+          <button className="btn primary" disabled={!gate.ok || (isApprover && !token)} onClick={() => { const t = token; setToken(''); void act(() => countersignWith(p!, a, actor, note, agent, t), agent?.ingestion === 'none' ? 'Countersigned and ratified.' : 'Countersigned, ratified and ingested into the library and the Brain.'); }}><PenLine size={14} /> Countersign and ratify</button>
         </div>
       )}
 

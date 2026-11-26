@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Download, Eye, FilePlus2, Pencil, PenLine, Save, Send, XCircle, UploadCloud } from 'lucide-react';
 import { useOps } from './store';
 import { apiFetch } from '../core/api';
-import { Badge, Card, statusTone } from './primitives';
+import { Badge, Card, FORMAT_LABEL, statusTone } from './primitives';
 import { toHtml, toMarkdown } from '../core/artefacts/render';
 import { AGENTS } from '../departments';
 import { contractFor } from '../departments/custom';
@@ -11,7 +11,10 @@ import { RunRefused, type Artefact } from '../core/platform';
 import type { Block, Doc } from '../core/types';
 import { download } from './primitives';
 import { ExportBar } from './ExportBar';
-import { newDocId, saveRecord } from '../core/documents';
+import { newDocId, saveExport, saveRecord } from '../core/documents';
+import { noticeFor, scanNotesFor, withNotice } from '../core/notice';
+import { countersignState } from './boardGate';
+import { ReauthInput, countersignWith } from './ReauthInput';
 import { proposalFromArtefact } from '../connector/proposals';
 
 export function BlockEditor({ b, set }: { b: Block; set: (n: Block) => void }) {
@@ -42,7 +45,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
   const [doc, setDoc] = useState<Doc>(a.doc);
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
-  useEffect(() => { setDoc(a.doc); setMsg(null); setMode2('preview'); }, [a.id, a.version, a.status]);
+  useEffect(() => { setDoc(a.doc); setMsg(null); setMode2('preview'); setToken(''); }, [a.id, a.version, a.status]);
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     try { await fn(); setMsg({ tone: 'ok', text: ok }); } catch (e) { setMsg({ tone: 'bad', text: e instanceof RunRefused ? e.message : (e as Error).message }); }
     bump();
@@ -50,7 +53,12 @@ function ArtefactPanel({ a }: { a: Artefact }) {
   const hist = p!.history(a.id);
   const ledger = p!.ledger.all.filter((e) => e.subject === a.id);
   const canPublish = a.agentId === 'OPS-PROD-01' && (a.status === 'RATIFIED' || a.status === 'INGESTED');
-  const preview = useMemo(() => toHtml(a.doc), [a.doc]);
+  const notice = noticeFor(a.flags);
+  const shownDoc = useMemo(() => withNotice(a.doc, notice), [a.doc, notice]);
+  const preview = useMemo(() => toHtml(shownDoc), [shownDoc]);
+  const [token, setToken] = useState('');
+  const cs = countersignState(a, actor.id, signing, new Date(), agent);
+  const soloSelf = a.status === 'APPROVED' && a.approvedBy === actor.id && signing.mode === 'solo' && !(agent && (agent.twoPerson || agent.professionalReview));
 
   return (
     <div className="space-y-3">
@@ -68,7 +76,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
       </div>
 
       {mode2 === 'preview' && <iframe title="Preview" sandbox="" srcDoc={preview} className="h-[520px] w-full rounded-xl border" style={{ borderColor: 'var(--line)', background: '#fff' }} />}
-      {mode2 === 'markdown' && <pre className="mono max-h-[520px] overflow-auto whitespace-pre-wrap rounded-xl border p-3 text-xs" style={{ borderColor: 'var(--line)' }}>{toMarkdown(a.doc)}</pre>}
+      {mode2 === 'markdown' && <pre className="mono max-h-[520px] overflow-auto whitespace-pre-wrap rounded-xl border p-3 text-xs" style={{ borderColor: 'var(--line)' }}>{toMarkdown(shownDoc)}</pre>}
       {mode2 === 'edit' && (
         <div className="space-y-3">
           <input className="input text-lg font-bold" value={doc.title} onChange={(e) => setDoc({ ...doc, title: e.target.value })} aria-label="Title" />
@@ -84,7 +92,9 @@ function ArtefactPanel({ a }: { a: Artefact }) {
       {mode2 === 'ledger' && <ul className="space-y-1 text-sm">{ledger.map((e) => <li key={e.seq}><span className="mono text-[11px]">#{e.seq}</span> {e.action} · {e.actor} · <span className="mono text-[11px]" style={{ color: 'var(--muted)' }}>{e.hash.slice(0, 10)}</span></li>)}</ul>}
 
       <Card title="Download, print or save">
-        <ExportBar doc={a.doc} onSave={async () => { await saveRecord(p!.warehouse, { id: newDocId(), title: a.title, origin: 'saved', doc: a.doc, scan: { scanned: true, notes: [`Copy of ${a.id} v${a.version}`] }, by: actor.name, at: new Date().toISOString() }); setMsg({ tone: 'ok', text: 'Copy saved to the library.' }); }} />
+        <ExportBar doc={a.doc} notice={notice}
+          onSaveExport={async (f) => { await saveExport(p!.warehouse, { id: a.id, title: a.title, origin: 'saved', doc: a.doc, scan: { scanned: true, notes: [] }, by: actor.name, at: a.at }, f, actor.name, undefined, notice); setMsg({ tone: 'ok', text: `Saved in the library as ${FORMAT_LABEL[f]}.` }); bump(); }}
+          onSave={async () => { await saveRecord(p!.warehouse, { id: newDocId(), title: a.title, origin: 'saved', doc: a.doc, scan: { scanned: true, notes: scanNotesFor(notice, [`Copy of ${a.id} v${a.version}`]) }, by: actor.name, at: new Date().toISOString() }); setMsg({ tone: 'ok', text: 'Copy saved to the library.' }); }} />
       </Card>
 
       <Card title="Human decision">
@@ -95,8 +105,10 @@ function ArtefactPanel({ a }: { a: Artefact }) {
             <button className="btn" disabled={a.status !== 'DRAFT'} onClick={() => act(() => p!.submitForReview(a.id, actor), 'Submitted for review.')}><Send size={14} /> Submit for review</button>
             <button className="btn ok" disabled={a.status !== 'IN_REVIEW' || !approveGate.ok} title={a.status === 'IN_REVIEW' && !approveGate.ok ? approveGate.why : ''} onClick={() => act(() => p!.decide(a.id, actor, 'APPROVED', note, agent), 'Approved.')}><CheckCircle2 size={14} /> Approve</button>
             <button className="btn danger" disabled={a.status !== 'IN_REVIEW'} onClick={() => act(() => p!.decide(a.id, actor, 'REJECTED', note, agent), 'Rejected.')}><XCircle size={14} /> Reject</button>
-            <button className="btn primary" disabled={a.status !== 'APPROVED' || a.approvedBy === actor.id} title={a.status === 'APPROVED' && a.approvedBy === actor.id ? 'A different person from the approver must countersign' : ''} onClick={() => act(() => p!.countersign(a.id, actor, note, agent), 'Countersigned and ratified.')}><PenLine size={14} /> Countersign and ratify</button>
+            <button className="btn primary" disabled={!cs.enabled || (soloSelf && !token)} title={cs.reason ?? ''} onClick={() => { const t = token; setToken(''); void act(() => countersignWith(p!, a, actor, note, agent, t), 'Countersigned and ratified.'); }}><PenLine size={14} /> Countersign and ratify</button>
           </div>
+          {a.status === 'APPROVED' && cs.reason && <p className="text-sm">{cs.reason}</p>}
+          {soloSelf && <ReauthInput value={token} onChange={setToken} />}
           {msg && <div role="status" className="rounded-lg border p-2 text-sm" style={{ borderColor: msg.tone === 'ok' ? 'var(--emerald)' : 'var(--rose)' }}>{msg.text}</div>}
         </div>
       </Card>
