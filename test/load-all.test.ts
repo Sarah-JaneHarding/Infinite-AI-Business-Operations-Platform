@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { Warehouse } from '../src/core/warehouse';
 import { listDocuments, type DocRecord } from '../src/core/documents';
 import { loadAll } from '../src/library/loadAll';
+import { refusedFiles } from '../src/library/seedEcosystem';
+import { CLIENT_COLLECTIONS } from '../src/server/validate';
 import { sourceOf } from '../src/library/sourceOf';
 import { PACKAGE_FILES } from '../src/library/seedPackage';
 
@@ -53,5 +55,13 @@ describe('loadAll', () => {
 
   it('fails loudly when a file cannot be read, rather than loading a partial set silently', async () => {
     await expect(loadAll(new Warehouse(), () => { throw new Error('ENOENT'); })).rejects.toThrow('ENOENT');
+  });
+
+  it('loadAll lists the refused ecosystem files for the Library, and the browser may read and write that collection', async () => {
+    const w = new Warehouse();
+    const r = await loadAll(w, readFile);
+    expect(refusedFiles(w).map((x) => x.name)).toEqual(r.ecosystem.refused.map((x) => x.name).sort());
+    expect(refusedFiles(w)).toHaveLength(3);
+    expect(CLIENT_COLLECTIONS.has('document_refusals')).toBe(true);
   });
 });

@@ -13,7 +13,7 @@ export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
 const CORE = ['ledger', 'brain', 'artefact_versions', 'runs', 'approvals', 'countersignatures', 'tombstones', 'erasure_requests'];
 /** Document library, builder definitions, chat history and integration settings (no secrets are ever stored here). */
-const LIBRARY = ['documents', 'document_chunks', 'custom_defs', 'chat_log', 'integration_settings'];
+const LIBRARY = ['documents', 'document_chunks', 'document_refusals', 'custom_defs', 'chat_log', 'integration_settings'];
 /** CEO command centre: tasks added by hand, a person's override of one task, and calendar events. */
 const CEO = ['ceo_tasks', 'ceo_task_state', 'ceo_events'];
 /** Collections behind widgets made in the widget builder. */

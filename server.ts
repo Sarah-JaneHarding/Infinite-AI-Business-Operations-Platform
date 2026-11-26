@@ -370,6 +370,7 @@ async function start() {
       };
       const r = await loadAll(seedStore, (p) => new Uint8Array(readFileSync(path.join(process.cwd(), p))));
       console.log(`documents loaded: library ${r.library.written.length}, business plan ${r.businessPlan.written.length}, ecosystem ${r.ecosystem.written.length} (${r.ecosystem.refused.length} refused)`);
+      for (const x of r.ecosystem.refused) console.log(`  not loaded: ${x.name}: ${x.reason}`);
     } catch (e) {
       console.error('document loading failed (the server keeps running):', (e as Error).message);
     }

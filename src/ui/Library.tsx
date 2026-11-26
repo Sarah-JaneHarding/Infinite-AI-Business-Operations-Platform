@@ -5,6 +5,7 @@ import { Badge, Card, download } from './primitives';
 import { BlockEditor } from './Studio';
 import { ExportBar } from './ExportBar';
 import { toHtml } from '../core/artefacts/render';
+import { refusedFiles } from '../library/seedEcosystem';
 import { sourceOf, type DocSource } from '../library/sourceOf';
 import { listDocuments, loadOriginal, MAX_UPLOAD_BYTES, newDocId, saveRecord, uploadFile, UploadRefused, type DocRecord } from '../core/documents';
 import { TEMPLATES, templateById, type Template } from '../departments/templates';
@@ -51,6 +52,7 @@ export function Library() {
   const remove = async () => { if (!rec) return; await saveRecord(store, { ...rec, deleted: true, at: new Date().toISOString() }); setSel(null); setDraft(null); bump(); };
   useEffect(() => { const id = pending.template; if (id) { pending.template = undefined; const t = templateById(id); if (t) void create(structuredClone(t.doc), 'template', t.dept); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const mine = useMemo(() => customArtefacts(store), [store, tick]);
+  const refused = useMemo(() => refusedFiles(store), [store, tick]);
   const counts = useMemo(() => { const c = { library: 0, 'business-plan': 0, ecosystem: 0 }; for (const d of docs) { const k = sourceOf(d); if (k !== 'other') c[k]++; } return c; }, [docs]);
   const shown = source === 'all' ? docs : docs.filter((d) => sourceOf(d) === source);
   const chips: { id: 'all' | DocSource; label: string; n: number }[] = [{ id: 'all', label: 'All', n: docs.length }, { id: 'library', label: 'Library', n: counts.library }, { id: 'business-plan', label: 'Business plan', n: counts['business-plan'] }, { id: 'ecosystem', label: 'Ecosystem', n: counts.ecosystem }];
@@ -60,6 +62,12 @@ export function Library() {
   return (
     <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
       <div className="space-y-4">
+        {refused.length > 0 && (
+          <Card title={`Not loaded (${refused.length})`}>
+            <p className="mb-2 text-xs" style={{ color: 'var(--muted)' }}>The input gate refused these ecosystem documents, so they are not in the Library. Loading them anyway is the owner's decision.</p>
+            <ul className="space-y-1">{refused.map((r) => <li key={r.name} className="rounded-lg border p-2 text-xs" style={{ borderColor: 'var(--line)' }}><div className="text-sm font-semibold">{r.name}</div><div style={{ color: 'var(--muted)' }}>{r.reason}</div></li>)}</ul>
+          </Card>
+        )}
         <Card title="Add documents">
           <div className="space-y-2">
             <input ref={file} type="file" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} aria-label="Upload documents" />

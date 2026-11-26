@@ -195,3 +195,9 @@ Not verified / known limits:
 - Library tab: `sourceOf` (pure, `src/library/sourceOf.ts`) puts every record in `library` (`lib-` ids), `ecosystem` (`eco_` ids), `business-plan` (the `PACKAGE_FILES` ids) or `other`; the tab shows All, Library, Business plan and Ecosystem chips with counts.
 - Finding: 3 of the 35 ecosystem files are refused by the input gate: `STAGE_LOG.md` and `INCIDENT_PROCESS.md` (they describe bypass attempts and the `SKIP_APPROVAL` flag, which the injection rules match) and `ONBOARDING_GUIDE.md` (it contains learner-identifier-shaped text). The gate was not changed. They are listed in the seed output and the test; a person decides whether to load them by another route.
 - Tests: `test/ecosystem-seed.test.ts` (7), `test/load-all.test.ts` (5).
+
+## 2026-11-26: refused ecosystem documents are listed in the Library
+- `seedEcosystem` now keeps each refusal as a record in the new `document_refusals` collection (id = the would-be document id, e.g. `eco_stage-log-md`; fields `name`, `reason`, `source`, `at`). A rerun adds nothing unless the reason changed; when a file that was refused later loads, a superseding record with `resolved: true` is written. `refusedFiles(store)` returns the unresolved ones.
+- The Library tab shows a "Not loaded (n)" card with each file name and the gate's reason, and says the input gate refused them and that loading them anyway is the owner's decision. There is no button to bypass the gate.
+- `document_refusals` is registered in the client collections in `src/server/validate.ts` (beside `documents`), so the browser reads it through the same store. The boot log now lists each refused name and reason.
+- Tests: 5 added to `test/ecosystem-seed.test.ts`, 1 to `test/load-all.test.ts`.
