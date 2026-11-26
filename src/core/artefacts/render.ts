@@ -4,13 +4,21 @@ import { LOGO_PNG_BASE64 } from '../../brandLogo';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const cell = (c: string | number) => String(c);
+/**
+ * A heading level from a document, which can come from an upload or the API: a whole number from 0 to 6, or `dflt` when it is not a
+ * number. It used to go straight into `'#'.repeat(level)`, which throws on a negative count (CodeQL alert 7), and into the tag name `<h${level}>`.
+ */
+const headingLevel = (v: unknown, dflt: number): number => {
+  const n = Math.trunc(Number(v ?? dflt));
+  return Number.isNaN(n) ? dflt : Math.min(6, Math.max(0, n));
+};
 
 export function toMarkdown(d: Doc): string {
   const out: string[] = [`# ${d.title}`];
   if (d.subtitle) out.push(`_${d.subtitle}_`);
   for (const b of d.blocks) {
     switch (b.type) {
-      case 'h': out.push(`${'#'.repeat(Math.min(6, (b.level ?? 2) + 0))} ${b.text}`); break;
+      case 'h': out.push(`${'#'.repeat(headingLevel(b.level, 2))} ${b.text}`); break;
       case 'p': out.push(b.text ?? ''); break;
       case 'ul': out.push((b.items ?? []).map((i) => `- ${i}`).join('\n')); break;
       case 'ol': out.push((b.items ?? []).map((i, n) => `${n + 1}. ${i}`).join('\n')); break;
@@ -31,7 +39,7 @@ export function toMarkdown(d: Doc): string {
 
 function blockHtml(b: Block): string {
   switch (b.type) {
-    case 'h': return `<h${Math.min(4, (b.level ?? 2) + 1)}>${esc(b.text ?? '')}</h${Math.min(4, (b.level ?? 2) + 1)}>`;
+    case 'h': return `<h${Math.min(4, headingLevel(b.level, 2) + 1)}>${esc(b.text ?? '')}</h${Math.min(4, headingLevel(b.level, 2) + 1)}>`;
     case 'p': return `<p>${esc(b.text ?? '').replace(/\n/g, '<br>')}</p>`;
     case 'ul': return `<ul>${(b.items ?? []).map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`;
     case 'ol': return `<ol>${(b.items ?? []).map((i) => `<li>${esc(i)}</li>`).join('')}</ol>`;
@@ -90,7 +98,7 @@ export async function toDocx(d: Doc): Promise<Uint8Array> {
   if (d.subtitle) children.push(new Paragraph({ children: [new TextRun({ text: d.subtitle, italics: true })] }));
   const para = (t: string, extra: Partial<ConstructorParameters<typeof Paragraph>[0] & object> = {}) => new Paragraph({ text: t, ...extra });
   for (const b of d.blocks) {
-    if (b.type === 'h') children.push(para(b.text ?? '', { heading: H[Math.min(3, b.level ?? 1)] }));
+    if (b.type === 'h') children.push(para(b.text ?? '', { heading: H[Math.min(3, headingLevel(b.level, 1))] }));
     else if (b.type === 'p') children.push(para(b.text ?? ''));
     else if (b.type === 'callout') children.push(new Paragraph({ children: [new TextRun({ text: `${(b.tone ?? 'info').toUpperCase()}: `, bold: true }), new TextRun(b.text ?? '')] }));
     else if (b.type === 'ul') (b.items ?? []).forEach((i) => children.push(para(i, { bullet: { level: 0 } })));
