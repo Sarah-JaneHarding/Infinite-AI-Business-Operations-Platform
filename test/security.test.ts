@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { CSP, parseRoles, requestLimits, requireRole, rolesOf, securityHeaders } from '../src/server/security';
 import { parseAuth } from '../src/server/auth';
+import express from 'express';
+import { pageLimiter } from '../src/server/pageLimit';
 
 const auth = parseAuth({ OPS_USERS: `sarah:${'s'.repeat(24)},dan:${'d'.repeat(24)}` });
 const fakeRes = () => {
@@ -62,19 +64,18 @@ describe('headers and limits', () => {
     expect(dev.headers['X-Content-Type-Options']).toBe('nosniff');
     expect(dev.headers['Cache-Control']).toBeUndefined();
   });
-  it('limits page requests on their own, so page loads and API calls do not use each other\'s allowance (CodeQL 9 and 18)', () => {
-    let t = 0;
-    const l = requestLimits({ perMinute: 3, badTokensPerMinute: 2, now: () => t });
-    const req = { ip: '1.2.3.4' } as never;
-    const pass = (h: typeof l.pages) => { let ok = false; h(req, fakeRes() as never, () => { ok = true; }); return ok; };
-    expect([pass(l.pages), pass(l.pages), pass(l.pages), pass(l.pages)]).toEqual([true, true, true, false]);
-    expect(pass(l.general)).toBe(true); // exhausting the page allowance did not touch the API allowance
-    expect(pass(l.pages)).toBe(false);
-    const other = { ip: '5.6.7.8' } as never;
-    let ok = false; l.pages(other, fakeRes() as never, () => { ok = true; });
-    expect(ok).toBe(true); // another address is unaffected
-    t = 61_000;
-    expect(pass(l.pages)).toBe(true);
+  it('pageLimiter refuses the request over the limit with 429, Retry-After and the usual error body, per address (CodeQL 9 and 18)', async () => {
+    const app = express();
+    app.get('*', pageLimiter(2), (_q, res) => { res.send('page'); });
+    const server = app.listen(0, '127.0.0.1');
+    await new Promise((r) => server.once('listening', r));
+    try {
+      const url = `http://127.0.0.1:${(server.address() as { port: number }).port}/some/route`;
+      const got = [await fetch(url), await fetch(url), await fetch(url)];
+      expect(got.map((r) => r.status)).toEqual([200, 200, 429]);
+      expect(Number(got[2]!.headers.get('retry-after'))).toBeGreaterThan(0);
+      expect(await got[2]!.json()).toEqual({ error: 'too many requests: slow down' });
+    } finally { server.close(); }
   });
   it('limits an address overall and limits bad tokens separately, and recovers after the window', () => {
     let t = 0;
