@@ -473,7 +473,7 @@ export class Platform {
     if (cur.status !== 'RATIFIED' && cur.status !== 'INGESTED') throw new RunRefused('hitl', 'Only a ratified artefact needs a revision; a draft can be edited directly.');
     const doc = JSON.parse(JSON.stringify(cur.doc)) as Doc;
     doc.meta = { ...doc.meta, status: 'DRAFT', revisionOf: artefactId };
-    const art: Artefact = { id: newId('art'), orgId: cur.orgId, agentId: cur.agentId, dept: cur.dept, title: cur.title, status: 'DRAFT', version: 1, requestedBy: by.id, formats: cur.formats, doc, flags: [], engine: cur.engine, at: new Date().toISOString(), revisionOf: artefactId };
+    const art: Artefact = { id: newId('art'), orgId: cur.orgId, agentId: cur.agentId, dept: cur.dept, title: cur.title, status: 'DRAFT', version: 1, requestedBy: by.id, formats: cur.formats, doc, flags: cur.flags.filter((f) => f === 'needs-review'), engine: cur.engine, at: new Date().toISOString(), revisionOf: artefactId };
     await this.saveVersion(art, by.id);
     await this.ledger.append({ orgId: this.orgId, actor: by.id, action: 'artefact.revise', subject: art.id, detail: { of: artefactId } });
     return this.artefact(art.id)!;

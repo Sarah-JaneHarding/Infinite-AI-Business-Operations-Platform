@@ -317,3 +317,85 @@ describe('an artefact with no agent contract (LIBRARY-DOC) on the main read path
     expect(done.signing).toBe(SINGLE_SIGNER);
   });
 });
+
+describe('the needs-review flag cannot be dropped', () => {
+  const flagged = { scan: { scanned: true, notes: ['Needs review by a registered attorney'] } };
+  const asActor = { actor: 'sarah' };
+
+  async function ratified(p: Platform, over: Partial<DocRecord>) {
+    const rec = await withRecord(p, over);
+    const a = await p.promoteDocument(rec.id, sarah);
+    await p.submitForReview(a.id, sarah);
+    const ap = await p.decide(a.id, sarah, 'APPROVED', '');
+    return { rec, done: await p.countersign(a.id, sarah, '', undefined, after(ap, 11)) };
+  }
+
+  it('a revision of a ratified needs-review artefact carries the flag, and stays blocked when ratified solo', async () => {
+    const p = await new Platform(solo).init();
+    const { done } = await ratified(p, flagged);
+    const rev = await p.revise(done.id, sarah);
+    expect(rev.flags).toEqual(['needs-review']);
+    await p.submitForReview(rev.id, sarah);
+    const ap = await p.decide(rev.id, sarah, 'APPROVED', '');
+    const again = await p.countersign(rev.id, sarah, '', undefined, after(ap, 11));
+    expect(ratifiedProblem(p.warehouse, rowOf(again))).toBe('This document is marked for professional review and none is recorded; it cannot leave the platform.');
+  });
+
+  it('pin: a revision copies only that flag, so an unflagged artefact still gets none', async () => {
+    const p = await new Platform(solo).init();
+    const { done } = await ratified(p, {});
+    expect((await p.revise(done.id, sarah)).flags).toEqual([]);
+    const q = await new Platform(solo).init();
+    const rec = await withRecord(q);
+    const a = await q.promoteDocument(rec.id, sarah);
+    // another guardrail flag is not carried onto a revision
+    await q.submitForReview(a.id, sarah);
+    const ap = await q.decide(a.id, sarah, 'APPROVED', '');
+    const d2 = await q.countersign(a.id, sarah, '', undefined, after(ap, 11));
+    const withFlag = { ...d2, flags: ['unsourced_claims:1'] };
+    await q.warehouse.put('artefact_versions', { ...withFlag, editedBy: 'sarah' } as unknown as Rec & { id: string });
+    expect((await q.revise(a.id, sarah)).flags).toEqual([]);
+  });
+
+  it('the server refuses a version that drops the flag or adds it, and accepts one that keeps it', async () => {
+    const p = await new Platform().init();
+    const rec = await withRecord(p, flagged);
+    const a = await p.promoteDocument(rec.id, sarah);
+    const v2 = await p.edit(a.id, { ...DOC, blocks: [...DOC.blocks, { type: 'p', text: 'More.' }] }, sarah);
+    const stored = p.warehouse.list<Rec>('artefact_versions').filter((r) => r.id === a.id && r.version === 1);
+    const row = p.warehouse.list<Rec>('artefact_versions').filter((r) => r.id === a.id && r.version === 2).at(-1)!;
+    const ctx = { ...asActor, store: { list: (c: string) => (c === 'artefact_versions' ? stored : []) } };
+    expect(v2.flags).toEqual(['needs-review']);
+    await expect(validateAppend('artefact_versions', row, ctx)).resolves.toBeDefined();
+    await expect(validateAppend('artefact_versions', { ...row, flags: [] }, ctx)).rejects.toMatchObject({ message: 'the needs-review flag cannot be added or removed' });
+    await expect(validateAppend('artefact_versions', { ...row, flags: ['unsourced_claims:1'] }, ctx)).rejects.toMatchObject({ message: 'the needs-review flag cannot be added or removed' });
+    // the other way: an unflagged artefact cannot gain it
+    const plain = await new Platform().init();
+    const prec = await withRecord(plain);
+    const pa = await plain.promoteDocument(prec.id, sarah);
+    await plain.edit(pa.id, { ...DOC, blocks: [...DOC.blocks, { type: 'p', text: 'More.' }] }, sarah);
+    const pstored = plain.warehouse.list<Rec>('artefact_versions').filter((r) => r.id === pa.id && r.version === 1);
+    const prow = plain.warehouse.list<Rec>('artefact_versions').filter((r) => r.id === pa.id && r.version === 2).at(-1)!;
+    const pctx = { ...asActor, store: { list: (c: string) => (c === 'artefact_versions' ? pstored : []) } };
+    await expect(validateAppend('artefact_versions', prow, pctx)).resolves.toBeDefined(); // a normal edit of an unflagged artefact
+    await expect(validateAppend('artefact_versions', { ...prow, flags: ['needs-review'] }, pctx)).rejects.toMatchObject({ message: 'the needs-review flag cannot be added or removed' });
+  });
+
+  it('a new artefact from a needs-review library document must carry the flag; other sources are unaffected', async () => {
+    const p = await new Platform().init();
+    const hot = await withRecord(p, { id: 'lib-hot', ...flagged });
+    const cold = await withRecord(p, { id: 'lib-cold' });
+    const hotArt = await p.promoteDocument(hot.id, sarah);
+    const coldArt = await p.promoteDocument(cold.id, sarah);
+    const rowFor = (id: string) => p.warehouse.list<Rec>('artefact_versions').filter((r) => r.id === id)[0];
+    const ctx = { ...asActor, store: { list: (c: string) => (c === 'documents' ? p.warehouse.list<Rec>('documents') : []) } };
+    const fresh = (r: Rec, id: string, flags: string[]) => ({ ...r, id, flags });
+    await expect(validateAppend('artefact_versions', fresh(rowFor(hotArt.id), 'art_n1', []), ctx)).rejects.toMatchObject({ message: /needs-review flag/ });
+    await expect(validateAppend('artefact_versions', fresh(rowFor(hotArt.id), 'art_n2', ['needs-review']), ctx)).resolves.toBeDefined();
+    await expect(validateAppend('artefact_versions', fresh(rowFor(coldArt.id), 'art_n3', []), ctx)).resolves.toBeDefined();
+    // a source id that names no stored record is not blocked
+    const orphan = { ...fresh(rowFor(coldArt.id), 'art_n4', []), doc: { ...(rowFor(coldArt.id).doc as Doc), meta: { sourceDocId: 'lib-missing' } } };
+    const { sha256Hex, canonical } = await import('../src/core/crypto');
+    await expect(validateAppend('artefact_versions', { ...orphan, docHash: await sha256Hex(canonical(orphan.doc)) }, ctx)).resolves.toBeDefined();
+  });
+});

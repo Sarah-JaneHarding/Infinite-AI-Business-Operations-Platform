@@ -210,3 +210,8 @@ Not verified / known limits:
 - Library tab: a **Send to review** button for an editable selected record (opens the artefact in the Studio), a status chip from `artefactForDocument`, and a needs-review badge. `DocumentStudio` now switches to its artefacts tab when it is given a new artefact id while already open.
 - Tests: `test/library-review.test.ts` (23): promote, idempotency, refusals, solo and dual signing, needs-review, finality pin, and the read paths and server validation for an artefact with no agent contract.
 - Known limit: the Studio's own Countersign button is disabled for the approver, as before; a solo self-countersign (token re-entry) is done on the Review Board.
+
+## 2026-11-26: the needs-review flag cannot be dropped
+- `revise` copies the `needs-review` flag (only that one) from the ratified artefact onto the revision, so a revision of a flagged document stays blocked at the outbound gate. Other artefacts are unchanged.
+- `validateAppend`: for an existing artefact, a new version is refused when it adds or removes `needs-review` ("the needs-review flag cannot be added or removed"). For a new artefact, a `doc.meta.sourceDocId` naming a stored library record that is marked "Needs review by" requires the flag. The stored `documents` are read through the `ReadStore` the function already receives; an unknown source id is not blocked.
+- Tests: 4 added to `test/library-review.test.ts`.

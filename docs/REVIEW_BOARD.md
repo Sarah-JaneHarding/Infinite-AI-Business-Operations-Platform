@@ -151,6 +151,10 @@ Professional-review agents (OPS-LEG-01 to 05) are unaffected: they still need a 
 agent's countersignature records one, and `LIBRARY-DOC` is not one, so such a document stays on the platform until that is
 decided by the owner.
 
+The flag cannot be shed. A revision of a ratified flagged document inherits it (only that flag; other flags are not copied).
+The server refuses any later version of an artefact that adds or removes it, and refuses a new artefact whose
+`doc.meta.sourceDocId` names a library record marked "Needs review by" unless it carries the flag.
+
 ## What this does not do
 
 - It does not decide *who* may approve or countersign (roles). Anyone signed in can, unless `OPS_SIGNERS` is set: then the registry limits who may sign (scope, and profession for professional review). Roles beyond that need the role model (OPQ-002).
