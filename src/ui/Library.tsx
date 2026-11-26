@@ -4,6 +4,8 @@ import { useOps } from './store';
 import { Badge, Card, FORMAT_LABEL, download, statusTone } from './primitives';
 import { BlockEditor } from './Studio';
 import { ExportBar } from './ExportBar';
+import { SuggestPanel } from './SuggestPanel';
+import { applyInput } from '../core/suggest';
 import { toHtml } from '../core/artefacts/render';
 import { NEEDS_REVIEW_NOTICE, withNotice } from '../core/notice';
 import { refusedFiles } from '../library/seedEcosystem';
@@ -122,6 +124,7 @@ export function Library() {
                   <ExportBar doc={draft} notice={notice}
                     onSaveExport={async (f) => { await saveExport(store, { ...rec, doc: draft }, f, actor.name, undefined, notice); bump(); say('ok', `Saved in the library as ${FORMAT_LABEL[f]}.`); }}
                     onSave={async () => { await create({ ...withNotice(structuredClone(draft), notice), title: draft.title + ' (copy)' }, 'saved', rec.dept); say('ok', 'Copy saved.'); }} />
+                  <SuggestPanel key={rec.id} doc={draft} onApply={(blank, value) => setDraft((d) => (d ? applyInput(d, blank, value) : d))} />
                   <details><summary className="cursor-pointer text-xs">Preview</summary><iframe title="Preview" sandbox="" srcDoc={toHtml(withNotice(draft, notice))} className="mt-2 h-[420px] w-full rounded-xl border" style={{ borderColor: 'var(--line)', background: '#fff' }} /></details>
                 </>
               ) : <p className="text-sm">This file is stored as uploaded. It can be downloaded but not edited here.</p>}

@@ -11,6 +11,8 @@ import { RunRefused, type Artefact } from '../core/platform';
 import type { Block, Doc } from '../core/types';
 import { download } from './primitives';
 import { ExportBar } from './ExportBar';
+import { SuggestPanel } from './SuggestPanel';
+import { applyInput } from '../core/suggest';
 import { newDocId, saveExport, saveRecord } from '../core/documents';
 import { noticeFor, scanNotesFor, withNotice } from '../core/notice';
 import { countersignState } from './boardGate';
@@ -86,6 +88,7 @@ function ArtefactPanel({ a }: { a: Artefact }) {
             <button className="btn" onClick={() => setDoc(a.doc)}>Discard changes</button>
           </div>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>Your edits are recorded as a learning proposal. They never change the Brain until a human ratifies them.</p>
+          <SuggestPanel key={a.id} doc={doc} onApply={(blank, value) => setDoc((d) => applyInput(d, blank, value))} />
         </div>
       )}
       {mode2 === 'history' && <ul className="space-y-1 text-sm">{hist.map((h, i) => <li key={i}><Badge tone={statusTone(h.status)}>{h.status}</Badge> v{h.version} · {new Date(h.at).toLocaleString('en-ZA')} · <span className="mono text-[11px]">{String((h as unknown as { hash: string }).hash).slice(0, 12)}</span></li>)}</ul>}

@@ -238,3 +238,17 @@ Not verified / known limits:
 - A saved copy of a `needs-review` artefact (both "Save in chosen type" and "Save copy to library") now carries the scan note `NEEDS_REVIEW_MARK` ("Needs review by a qualified professional (marked on the artefact)"), built by the pure `scanNotesFor` in `src/core/notice.ts`, so `needsReview(saved)` is true and the Library shows the notice. Both store the artefact's own `doc`; the notice is added only on export, print and view. Unflagged artefacts are unchanged.
 - `DocsAndRatify` no longer shows "n / total (%)" or a progress bar (platform artefacts were divided by the legacy sample list). It shows "Ratified on the Review Board: n".
 - Tests: 3 added to `test/save-export.test.ts`, 1 to `test/studio-honesty.test.ts`.
+
+## 2026-11-26: AI suggestions for inputs and prompts, and a Refresh that never repeats
+- `src/core/suggest.ts` (pure, shared by server and browser): `blanksOf`, `applyInput` (returns a new document; fills a `[Fill in: …]` placeholder or an empty key/value value or table cell; unchanged when the blank is not found), `excludeSeen`, `parseDoc`, `deterministicSuggestions`, `parseModelSuggestions`, and the panel's state functions (`nextPanelState`, `failPanelState`, `startLoading`, `requestRound`, `generatedWithLabel`).
+- `Hub.suggestForDocument(doc, round, exclude, actor)`: de-identifies the text (learner identifiers refused), sends at most 8,000 characters through `execute` (so the rate limiter, `OPS_MODEL_DAILY_CALLS` and every rule apply), drops anything excluded, and falls back to the built-in engine with a flag and an honest label when the limit is reached, the provider fails, or nothing new is left. New route `POST /api/ai/document-suggestions`; `/api/ai/agent-recommendations` now takes `round` and `exclude`.
+- `SuggestPanel` is mounted under the Library editor and in the Studio's Edit tab. Apply edits only the on-screen draft. Refresh is disabled while loading, marks new items "New", shows an error line on failure (and clears every "New" mark, so stale items are never shown as new) and the source of the suggestions.
+- `AgentRunner` Refresh now sends `round` and `exclude`; `getDeterministicRecommendations(agent, values, round, exclude)` rotates its wording; a failed refresh shows an error instead of the old suggestions.
+- Built-in pools are 224 prompts and 144 wordings per blank; with `exclude` honoured, 40 refreshes in a row never repeat a text (tested for a document with blanks and one without).
+- Tests: `test/suggest.test.ts` (23), 12 added to `test/models-hub.test.ts`. `test/models-door.test.ts` now also lists `suggestForDocument` among the hub entry points only the routes may call.
+
+## 2026-11-26: mixed-source suggestions are labelled; Refresh cannot dead-end
+- Results the model only partly supplied carry `mixed_source` (with `refresh_fallback`); `generatedWithLabel` shows "Model: … (some suggestions are built-in)". Used by the panel and the agent runner's badge.
+- `requestRound` restarts at 0 after round 50 (exclusion kept); `excludeFor` sends the latest 200 texts, normalised and cut to 500 characters. Model strategic recommendations over 300 characters are dropped; built-in values quote at most 100 characters of a blank label. The route's caps are unchanged.
+- Tests: a 130-click simulation over the real state functions (three blanks, none, a 700-character label), label cases, and mixed-source hub cases.
+
