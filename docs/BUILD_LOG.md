@@ -215,3 +215,7 @@ Not verified / known limits:
 - `revise` copies the `needs-review` flag (only that one) from the ratified artefact onto the revision, so a revision of a flagged document stays blocked at the outbound gate. Other artefacts are unchanged.
 - `validateAppend`: for an existing artefact, a new version is refused when it adds or removes `needs-review` ("the needs-review flag cannot be added or removed"). For a new artefact, a `doc.meta.sourceDocId` naming a stored library record that is marked "Needs review by" requires the flag. The stored `documents` are read through the `ReadStore` the function already receives; an unknown source id is not blocked.
 - Tests: 4 added to `test/library-review.test.ts`.
+
+## 2026-11-26: revisions of needs-review artefacts must carry the flag (server)
+- `validateAppend`, creation with `revisionOf`: when the stored artefact being revised has `needs-review`, a revision without it is refused ("a revision of a needs-review artefact must carry the flag"). The reverse is not required, so unflagged artefacts are unchanged. Together with the platform's `revise`, a client can no longer post a flag-free revision of a flagged document.
+- Tests: 3 added to `test/library-review.test.ts` (refuse and accept, unflagged pin, the platform's own `revise` passes validation).

@@ -154,6 +154,7 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
     if (rec.revisionOf !== undefined) {
       const of = latestById(ctx.store.list('artefact_versions'), rec.revisionOf);
       if (of?.status !== 'RATIFIED' && of?.status !== 'INGESTED') bad('only a ratified artefact can be revised', 409);
+      if (of && hasNeedsReview(of) && !hasNeedsReview(rec)) bad('a revision of a needs-review artefact must carry the flag');
     }
     return;
   }

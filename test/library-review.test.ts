@@ -10,6 +10,7 @@ import { DEPARTMENTS, agentById } from '../src/departments';
 import { contractFor } from '../src/departments/custom';
 import { can, signingHint } from '../src/ui/boardGate';
 import { sourceOf } from '../src/library/sourceOf';
+import { canonical, sha256Hex } from '../src/core/crypto';
 import type { Actor, Doc } from '../src/core/types';
 import type { Rec } from '../src/core/warehouse';
 
@@ -397,5 +398,44 @@ describe('the needs-review flag cannot be dropped', () => {
     const orphan = { ...fresh(rowFor(coldArt.id), 'art_n4', []), doc: { ...(rowFor(coldArt.id).doc as Doc), meta: { sourceDocId: 'lib-missing' } } };
     const { sha256Hex, canonical } = await import('../src/core/crypto');
     await expect(validateAppend('artefact_versions', { ...orphan, docHash: await sha256Hex(canonical(orphan.doc)) }, ctx)).resolves.toBeDefined();
+  });
+});
+
+describe('the server requires the needs-review flag on a revision of a flagged artefact', () => {
+  const flagged = { scan: { scanned: true, notes: ['Needs review by a registered attorney'] } };
+  async function setup(over: Partial<DocRecord>) {
+    const p = await new Platform(solo).init();
+    const rec = await withRecord(p, over);
+    const a = await p.promoteDocument(rec.id, sarah);
+    await p.submitForReview(a.id, sarah);
+    const ap = await p.decide(a.id, sarah, 'APPROVED', '');
+    const done = await p.countersign(a.id, sarah, '', undefined, after(ap, 11));
+    const stored = p.warehouse.list<Rec>('artefact_versions');
+    const ctx = { actor: 'sarah', store: { list: (c: string) => (c === 'artefact_versions' ? stored : []) } };
+    return { p, done, ctx };
+  }
+  // A client-built revision with no sourceDocId in its doc, so only the revisionOf rule can catch it.
+  const post = (done: Artefact, flags: string[]) => {
+    const doc = { ...done.doc, meta: {} as Record<string, string> };
+    return sha256Hex(canonical(doc)).then((docHash) => ({ ...rowOf(done), id: 'art_rev_client', version: 1, status: 'DRAFT', doc, docHash, flags, revisionOf: done.id, requestedBy: done.requestedBy, approvedBy: undefined, countersignedBy: undefined, signing: undefined }) as Rec);
+  };
+
+  it('refuses a revision of a flagged ratified artefact without the flag, accepts it with the flag', async () => {
+    const { done, ctx } = await setup(flagged);
+    await expect(validateAppend('artefact_versions', await post(done, []), ctx)).rejects.toMatchObject({ message: 'a revision of a needs-review artefact must carry the flag' });
+    await expect(validateAppend('artefact_versions', await post(done, ['needs-review']), ctx)).resolves.toBeDefined();
+  });
+
+  it('pin: a revision of an unflagged ratified artefact is accepted with no flag', async () => {
+    const { done, ctx } = await setup({});
+    await expect(validateAppend('artefact_versions', await post(done, []), ctx)).resolves.toBeDefined();
+  });
+
+  it("the platform's own revise of a flagged artefact passes validation", async () => {
+    const { p, done, ctx } = await setup(flagged);
+    const rev = await p.revise(done.id, sarah);
+    const row = p.warehouse.list<Rec>('artefact_versions').filter((r) => r.id === rev.id)[0];
+    expect(rev.flags).toEqual(['needs-review']);
+    await expect(validateAppend('artefact_versions', row, ctx)).resolves.toBeDefined();
   });
 });
