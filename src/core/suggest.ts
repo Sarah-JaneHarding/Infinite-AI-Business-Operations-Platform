@@ -31,8 +31,23 @@ export const textsOf = (r: { inputs: readonly { value: string }[]; prompts: read
 
 // ------------------------------------------------------------------ the document
 
-const FILL = /\[Fill in:\s*([^\]]*?)\s*\]/g;
-const labelsIn = (s: string) => [...s.matchAll(FILL)].map((m) => m[1]!.trim()).filter(Boolean);
+const OPEN = '[Fill in:';
+/**
+ * Placeholders in `s`, found with indexOf rather than a pattern so the time is linear whatever the text holds (no backtracking on
+ * `[Fill in:` followed by spaces or repeated). A placeholder runs from `[Fill in:` to the next `]`; an unclosed one is not one.
+ */
+function fillsIn(s: string): { index: number; length: number; label: string }[] {
+  const out: { index: number; length: number; label: string }[] = [];
+  let at = s.indexOf(OPEN);
+  while (at >= 0) {
+    const end = s.indexOf(']', at + OPEN.length);
+    if (end < 0) break;
+    out.push({ index: at, length: end + 1 - at, label: s.slice(at + OPEN.length, end).trim() });
+    at = s.indexOf(OPEN, end + 1);
+  }
+  return out;
+}
+const labelsIn = (s: string) => fillsIn(s).map((m) => m.label).filter(Boolean);
 const cellText = (c: string | number | undefined) => String(c ?? '');
 
 /** Every `[Fill in: …]` placeholder and every empty key/value value or table cell, labelled by its placeholder text, key or header; document order, no repeats. */
@@ -75,8 +90,8 @@ export function applyInput(doc: Doc, blank: string, value: string): Doc {
   let done = false;
   const replace = (s: string) => {
     if (done) return s;
-    for (const m of s.matchAll(FILL)) {
-      if (m[1]!.trim() === want) { done = true; return s.slice(0, m.index) + value + s.slice(m.index! + m[0].length); }
+    for (const m of fillsIn(s)) {
+      if (m.label === want) { done = true; return s.slice(0, m.index) + value + s.slice(m.index + m.length); }
     }
     return s;
   };

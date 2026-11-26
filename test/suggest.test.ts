@@ -30,6 +30,26 @@ describe('blanksOf', () => {
   });
 });
 
+describe('blanksOf on hostile text', () => {
+  const timed = (text: string) => { const t = performance.now(); const out = blanksOf({ title: 't', blocks: [{ type: 'p', text }], meta: {} }); return { out, ms: performance.now() - t }; };
+  it('does not backtrack on an unclosed placeholder followed by many spaces', () => {
+    const { out, ms } = timed('[Fill in:' + ' '.repeat(200000));
+    expect(out).toEqual([]);
+    expect(ms).toBeLessThan(250);
+  });
+  it('does not backtrack on a closed but empty placeholder, nor on many unclosed ones', () => {
+    const a = timed('[Fill in:' + ' '.repeat(200000) + ']');
+    expect(a.out).toEqual([]);
+    expect(a.ms).toBeLessThan(250);
+    const b = timed('[Fill in:'.repeat(20000));
+    expect(b.out).toEqual([]);
+    expect(b.ms).toBeLessThan(250);
+  });
+  it('still reads labels with odd spacing and brackets as before', () => {
+    expect(timed('[Fill in:   spaced  out  ] and [Fill in:a [b] x').out).toEqual(['spaced  out', 'a [b']);
+  });
+});
+
 describe('excludeSeen', () => {
   it('ignores case and surrounding or repeated space', () => {
     expect(excludeSeen(['Hello  World', 'other'], ['  hello world '])).toEqual(['other']);
