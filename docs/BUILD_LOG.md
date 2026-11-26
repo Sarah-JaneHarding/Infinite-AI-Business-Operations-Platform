@@ -252,3 +252,6 @@ Not verified / known limits:
 - `requestRound` restarts at 0 after round 50 (exclusion kept); `excludeFor` sends the latest 200 texts, normalised and cut to 500 characters. Model strategic recommendations over 300 characters are dropped; built-in values quote at most 100 characters of a blank label. The route's caps are unchanged.
 - Tests: a 130-click simulation over the real state functions (three blanks, none, a 700-character label), label cases, and mixed-source hub cases.
 
+
+## 2026-11-26: the Fill-in placeholder search is linear-time (CodeQL ReDoS)
+- `[Fill in: …]` placeholders in `src/core/suggest.ts` are now found with `indexOf` (`fillsIn`), not a backtracking pattern; same labels, order and de-duplication; tests in `test/suggest.test.ts` use 200,000-character hostile inputs.
