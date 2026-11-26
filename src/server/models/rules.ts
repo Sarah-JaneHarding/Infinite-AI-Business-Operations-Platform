@@ -39,7 +39,7 @@ export class ModelRefused extends Error {
   }
 }
 
-export type Capability = 'complete' | 'copilot' | 'recommend' | 'self-test';
+export type Capability = 'complete' | 'copilot' | 'recommend' | 'suggest' | 'self-test';
 export interface HistoryMessage { role: 'user' | 'assistant'; text: string }
 export interface ModelRequest {
   capability: Capability;

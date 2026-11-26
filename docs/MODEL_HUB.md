@@ -58,6 +58,45 @@ They are code, identical for every provider and model. Configuration can only ma
 | M9 | **Tools see only what is allowed, de-identified.** The ledger, erasure records, integration settings, approvals, the Brain and custom definitions can never be made readable. |
 | M10 | **One door.** Only the hub can call a provider; a test fails if any other file contains a provider host, header, SDK or key name. |
 
+## Suggestions and Refresh
+
+Two routes ask the hub for suggestions. Both return drafts, both go through the same door as every call (rules M1 to M10,
+the per-user rate limit and `OPS_MODEL_DAILY_CALLS`), and neither writes to a document, the warehouse or the Brain. Applying
+a suggestion only edits the draft on screen; a person still saves, submits and signs.
+
+| Route | Body | Used by |
+| ----- | ---- | ------- |
+| `POST /api/ai/document-suggestions` | `{ doc, round?, exclude? }` | The **Suggestions** panel in the Library editor and the Studio's Edit tab: suggested inputs for the document's blanks (`[Fill in: …]` placeholders, empty key/value values and empty table cells) and suggested prompts. |
+| `POST /api/ai/agent-recommendations` | `{ agentId, currentValues?, round?, exclude? }` | The agent runner's **Refresh Suggestions** button. |
+
+**Limits (400 when broken).** `doc` is required, must be a document (title and blocks) and at most 200,000 characters of JSON.
+`round` is a whole number from 0 to 50 (default 0). `exclude` is at most 200 strings of at most 500 characters (default none).
+Learner data in the document is refused with 422 and the rule M2 message.
+
+**What goes to a provider.** The document text is de-identified first (names with titles, emails, phone and ID numbers become
+tokens; a learner identifier refuses the request). At most **8,000 characters** of that text go to a provider, plus up to 20
+blank labels (100 characters each) and the last 40 excluded texts (160 characters each); the constants are `SUGGEST_LIMITS`
+in `src/core/suggest.ts`. A longer document is cut and the tail is not sent.
+
+**The exclusion rule.** The client sends every text it has already shown as `exclude` and the next `round`. The model is told
+the round and "do not repeat any of these"; any item it still returns whose normalised text (case, surrounding and repeated
+space ignored) is in `exclude` is dropped, as is a model input for a blank the document does not have. If nothing new is left,
+the built-in engine answers instead and the response carries the flag `refresh_fallback`. The built-in engine is a pure
+function of the document, the round and `exclude`: it walks pools of 224 prompts and 144 value wordings per blank in a fixed
+scattered order from an offset that moves with the round, skipping anything excluded, so a client that sends back everything
+it has seen never gets a text twice (and consecutive rounds never give the same set, with or without `exclude`). Only if the
+unused pool runs out does it restart, avoiding the previous round's texts, and flag `pool_cycled`. Suggested values are
+`[Fill in: …]` wordings built from the blank's label and the kind of document; they contain no invented names, figures or dates.
+The agent runner's built-in engine rotates its recommendations the same way (the family's own three first, then eleven
+wordings in all).
+
+**Labels and flags.** `generatedWith` is `provider:model` or `deterministic-fallback`. The panel shows "Model: …" or
+"Built-in suggestions (…)" with the reason: no model configured, model limit reached (`rate_limited`: the rate limit or the
+daily budget, answered with the built-in suggestions rather than an error), model unavailable (`provider_failed`), or the model
+had nothing new (`refresh_fallback`). When a model answered only in part and the built-in engine filled the rest (for example inputs from the model but no new prompts, or a replaced strategic list) the flag `mixed_source` is added and the label reads "Model: … (some suggestions are built-in)". Other flags: `model_reply_not_json`, `pool_cycled`.
+
+**Refresh cannot dead-end.** A client sends the most recent 200 texts only, each whitespace-normalised and cut to 500 characters, so a request is always valid; after round 50 the panel and the agent runner restart at round 0 and keep the exclusion list. Model items over 300 characters (including strategic recommendations) are dropped and built-in values quote at most 100 characters of a blank's label, so nothing shown can exceed the exclude limit.
+
 ## Troubleshooting
 
 | You see | Cause and fix |

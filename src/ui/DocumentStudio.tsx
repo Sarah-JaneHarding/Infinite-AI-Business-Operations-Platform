@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BookOpen, FileCode, ShieldCheck, Sparkles, Database, FileText, Layers, Wrench, GitFork } from 'lucide-react';
 import { DocsAndRatify } from '../../legacy/components/DocsAndRatify';
 import { Studio } from './Studio';
@@ -6,6 +6,7 @@ import { Library } from './Library';
 import { Builders } from './Builders';
 import { Integrations } from './Integrations';
 import { useOps } from './store';
+import { countRatified, listDocuments } from '../core/documents';
 
 interface DocumentStudioProps {
   initialArtefactId?: string;
@@ -16,31 +17,26 @@ type StudioTab = 'policy' | 'artefacts' | 'library' | 'builders' | 'integrations
 
 export function DocumentStudio({ initialArtefactId, initialDocId }: DocumentStudioProps) {
   const { p, actor, bump, go } = useOps();
-  const [activeTab, setActiveTab] = useState<StudioTab>(initialArtefactId ? 'artefacts' : 'policy');
-  const [ratifiedCount, setRatifiedCount] = useState<number>(58);
+  const [activeTab, setActiveTab] = useState<StudioTab>(initialArtefactId ? 'artefacts' : 'library');
+  // Opening an artefact from another tab (the Library's "Send to review") switches to the artefacts tab.
+  useEffect(() => { if (initialArtefactId) setActiveTab('artefacts'); }, [initialArtefactId]);
+  // Counted from the stored artefacts, never from a number typed into the screen.
+  const ratifiedCount = countRatified(p?.artefacts() ?? []);
 
-  const handleRatifyPolicy = async (docId?: string) => {
-    setRatifiedCount((prev) => Math.min(136, prev + 1));
-    // Also record into the platform's audit ledger
-    if (p) {
-      try {
-        await p.ledger.append({
-          orgId: p.orgId,
-          actor: actor.id,
-          action: 'document.ratify',
-          subject: docId || 'IA-SOP-001',
-          detail: {
-            law: 'Law 02 (Human-in-the-Loop Supremacy)',
-            signer: actor.name,
-            role: actor.roles[0] || 'Executive Signing Authority',
-            target: 'Brain L0 Immutable Ring',
-            timestamp: new Date().toISOString()
-          }
-        });
-        bump();
-      } catch (err) {
-        console.warn('Could not record to platform ledger:', err);
-      }
+  /**
+   * The legacy screen's Ratify button. It no longer ratifies anything itself: a document that is in the Library goes on the
+   * review board as a draft, where it is approved and countersigned like any other. The legacy list is not the Library, so a
+   * document that is only there gets a pointer to the Library instead. Returns the message the screen shows.
+   */
+  const handleRatifyPolicy = async (docId: string): Promise<string> => {
+    if (!p || !listDocuments(p.warehouse).some((d) => d.id === docId)) return 'Open this document from the Library to send it to review.';
+    try {
+      await p.promoteDocument(docId, actor);
+      bump();
+      go({ name: 'board' });
+      return 'Sent to the review board. Nothing is ratified until it is approved and countersigned there.';
+    } catch (e) {
+      return e instanceof Error ? e.message : 'Could not send it to review.';
     }
   };
 
@@ -120,6 +116,7 @@ export function DocumentStudio({ initialArtefactId, initialDocId }: DocumentStud
           <DocsAndRatify
             ratifiedCount={ratifiedCount}
             initialDocId={initialDocId || 'IA-SOP-001'}
+            signerName={actor.name}
             onRatifyPolicy={handleRatifyPolicy}
             onNavigateToWarehouse={() => go({ name: 'warehouse' })}
           />

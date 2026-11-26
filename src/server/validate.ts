@@ -8,6 +8,7 @@ import { DEFAULT_SIGNING, SINGLE_SIGNER, holdsProfession, requiresTwoPerson, sol
 import { maySignFor, type Signer } from './signing';
 import { checkTaskText, MAX_NOTES, MAX_TITLE } from '../core/ceo/guard';
 import { isDate } from '../core/ceo/time';
+import { LIBRARY_DOC_AGENT, needsReview } from '../core/documents';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const MAX_RECORDS = 20_000;
@@ -63,6 +64,9 @@ function checkRegistry(ctx: AppendCtx, personId: string, department: string | un
 }
 
 const latestById = (rows: readonly Rec[], id: unknown) => rows.filter((r) => r.id === id).at(-1);
+/** The professional-review flag on an artefact version. It can never be dropped or added later by a client. */
+const NEEDS_REVIEW = 'needs-review';
+const hasNeedsReview = (r: Rec) => Array.isArray(r.flags) && r.flags.includes(NEEDS_REVIEW);
 const isHash = (v: unknown) => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
 
 /**
@@ -122,7 +126,7 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
   const status = rec.status;
   if (status !== 'DRAFT' && status !== 'IN_REVIEW' && status !== 'APPROVED' && status !== 'RATIFIED' && status !== 'INGESTED' && status !== 'REJECTED') bad('bad artefact status');
   const customIds = new Set(ctx.store.list('custom_defs').filter((d) => d.kind === 'agent' && !d.deleted).map((d) => d.id));
-  if (typeof rec.agentId !== 'string' || !(agentById(rec.agentId) || customIds.has(rec.agentId))) bad('unknown agent');
+  if (typeof rec.agentId !== 'string' || !(agentById(rec.agentId) || customIds.has(rec.agentId) || rec.agentId === LIBRARY_DOC_AGENT)) bad('unknown agent');
   if (status !== 'APPROVED' && status !== 'REJECTED' && status !== 'RATIFIED' && status !== 'INGESTED' && rec.approvedBy !== undefined) bad('only a decision carries approvedBy');
   if (status !== 'RATIFIED' && status !== 'INGESTED' && rec.countersignedBy !== undefined) bad('only a ratified artefact carries countersignedBy');
   if (rec.signing !== undefined && rec.signing !== SINGLE_SIGNER) bad('the only signing marker is single-signer');
@@ -131,6 +135,12 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
 
   if (!cur) {
     if (status !== 'DRAFT' || rec.version !== 1) bad('a new artefact starts as DRAFT v1');
+    // A draft made from a library document that is flagged for professional review must carry the flag.
+    const sourceId = (rec.doc as Doc | undefined)?.meta?.['sourceDocId'];
+    if (typeof sourceId === 'string') {
+      const source = latestById(ctx.store.list('documents'), sourceId) as unknown as Parameters<typeof needsReview>[0] | undefined;
+      if (source?.scan?.notes && needsReview(source) && !hasNeedsReview(rec)) bad('this library document is marked for professional review, so the artefact must carry the needs-review flag');
+    }
     if (ctx.actor && rec.requestedBy !== ctx.actor) bad('requestedBy is not you', 403);
     if (String(rec.requestedBy).startsWith('auto:')) {
       // An autonomous draft can only be created by the autonomy runner, for an ACTIVE standing order, by the agent it names.
@@ -144,10 +154,12 @@ async function artefact(rec: Rec, ctx: AppendCtx) {
     if (rec.revisionOf !== undefined) {
       const of = latestById(ctx.store.list('artefact_versions'), rec.revisionOf);
       if (of?.status !== 'RATIFIED' && of?.status !== 'INGESTED') bad('only a ratified artefact can be revised', 409);
+      if (of && hasNeedsReview(of) && !hasNeedsReview(rec)) bad('a revision of a needs-review artefact must carry the flag');
     }
     return;
   }
   if (rec.requestedBy !== cur.requestedBy || rec.agentId !== cur.agentId || rec.orgId !== cur.orgId) bad('requestedBy, agent and org cannot change');
+  if (hasNeedsReview(rec) !== hasNeedsReview(cur)) bad('the needs-review flag cannot be added or removed');
   // The contract always comes from the stored artefact, never from anything the client sends.
   const contract = agentById(String(cur.agentId));
   const custom = !contract && customIds.has(String(cur.agentId));

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import * as Icons from 'lucide-react';
 import type { ArtefactFormat, Doc } from '../core/types';
-import { fileName, MIME, render, toHtml } from '../core/artefacts/render';
+import { toHtml } from '../core/artefacts/render';
+import { exportFile } from '../core/documents';
 
 export function Icon({ name, size = 16 }: { name: string; size?: number }) {
   const I = (Icons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[name] ?? Icons.Circle;
@@ -39,6 +40,7 @@ export async function downloadDoc(doc: Doc, f: ArtefactFormat) {
     setTimeout(() => w.print(), 400); // choose "Save as PDF" in the print dialog
     return;
   }
-  download(fileName(doc, f), await render(doc, f), MIME[f]);
+  const file = await exportFile(doc, f);
+  download(file.name, file.bytes, file.mime);
 }
 export const FORMAT_LABEL: Record<ArtefactFormat, string> = { md: 'Markdown', html: 'HTML', pdf: 'PDF (print)', csv: 'CSV', json: 'JSON', docx: 'Word', xlsx: 'Excel' };

@@ -122,6 +122,42 @@ with two non-professional signers (registered professionals do not count). Artef
   ledger entry for that approval, so the artefact cannot pass the outbound gate (or a solo self-countersign) until it is
   edited and approved again. Reload every open tab after deploying.
 
+## Founder-only setup
+
+This is how one person (the founder or CEO) puts any readable Library document on the board and signs it alone. It is
+configuration only: the approve and countersign rules are the ones above, and nothing about them changes.
+
+1. **Put the document on the board.** In the Library tab, select a document that can be edited and press **Send to review**.
+   This makes a DRAFT artefact with agent id `LIBRARY-DOC` (a label, not an agent: nothing runs it) and opens it in the Studio.
+   The Library record is never changed. Pressing it again opens the artefact already made for that document. Stored-as-is files
+   (PDFs, images) cannot be sent. Only a named person can; agents and `auto:` actors are refused.
+2. **Register the one signer.** In `.env`, set `OPS_USERS=<id>:<token>`, `OPS_SIGNERS=<id>|<Display Name>|*` and
+   `OPS_SIGNING_MODE=solo`. Solo needs exactly **one non-professional signer**; the server will not start with none or with two.
+   Registered professionals (attorney, accountant, tax practitioner) may be added beside them.
+3. **Sign.** Submit for review, then approve. To countersign your own approval you must wait: the default is **10 minutes**,
+   set with `OPS_SOLO_WAIT_MINUTES` (1 to 1440), timed by the server from its own `hitl.approved` ledger entry. Then countersign
+   again with your token re-entered; the browser sends it in the `x-ops-reauth` header. That ratifies the document, saves the
+   exact content to the library as `rat_<artefact id>_v<version>` and records an episode in the Brain (L2). You can do this
+   from the Review Board or from the artefact's panel in the Studio: in solo mode the Studio's **Countersign and ratify**
+   button shows the minutes left, then asks for your token (the same field, sent in `x-ops-reauth`). In dual mode it says a
+   different person must countersign, and it never opens for a `twoPerson` or professional-review agent.
+4. **What shows.** The artefact, its countersignature and the ledger entries carry the **single-signer** flag, and it appears on
+   `GET /api/signing/report` so a second person can review it later. Any edit voids both signatures and returns it to DRAFT.
+   Ratified output is final: start a revision to change it.
+
+Professional-review agents (OPS-LEG-01 to 05) are unaffected: they still need a registered professional to countersign, and
+`twoPerson` agents still need a second person, in every mode.
+
+**Documents marked "Needs review by ...".** A library record whose scan note starts with "Needs review by" gets the
+`needs-review` flag on its artefact. The founder can still ratify it (single-signer), but it **cannot leave the platform**
+(an issue, another system) unless a countersignature on the same content carries a profession. Today only a professional-review
+agent's countersignature records one, and `LIBRARY-DOC` is not one, so such a document stays on the platform until that is
+decided by the owner.
+
+The flag cannot be shed. A revision of a ratified flagged document inherits it (only that flag; other flags are not copied).
+The server refuses any later version of an artefact that adds or removes it, and refuses a new artefact whose
+`doc.meta.sourceDocId` names a library record marked "Needs review by" unless it carries the flag.
+
 ## What this does not do
 
 - It does not decide *who* may approve or countersign (roles). Anyone signed in can, unless `OPS_SIGNERS` is set: then the registry limits who may sign (scope, and profession for professional review). Roles beyond that need the role model (OPQ-002).

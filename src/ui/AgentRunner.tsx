@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, ShieldCheck, Sparkles, Check, ArrowRight, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useOps } from './store';
 import { Badge, Card, FORMAT_LABEL } from './primitives';
 import { RunRefused } from '../core/platform';
 import { apiFetch } from '../core/api';
 import type { AgentContract } from '../core/agent';
+import { excludeFor, generatedWithLabel } from '../core/suggest';
 
 interface AgentRecommendations {
   agentId: string;
@@ -14,6 +15,7 @@ interface AgentRecommendations {
   suggestedNextSteps: string[];
   toolsUsed?: string[];
   generatedWith?: string;
+  flags?: string[];
 }
 
 export function AgentRunner({ agent }: { agent: AgentContract }) {
@@ -29,19 +31,29 @@ export function AgentRunner({ agent }: { agent: AgentContract }) {
   const [recsError, setRecsError] = useState<string | null>(null);
   const [recsApplied, setRecsApplied] = useState(false);
 
+  // Refresh asks for the next round and sends back every suggestion already shown, so it brings new wording.
+  const refreshState = useRef({ round: -1, seen: [] as string[] });
   const fetchRecommendations = useCallback(async () => {
     setLoadingRecs(true);
     setRecsError(null);
+    const st = refreshState.current;
+    const round = st.round + 1 > 50 ? 0 : st.round + 1; // past the route's maximum the rotation restarts; the exclusion list is kept
     try {
       const res = await apiFetch('/api/ai/agent-recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: agent.id, currentValues: vals })
+        body: JSON.stringify({ agentId: agent.id, currentValues: vals, round, exclude: excludeFor(st.seen) })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = (await res.json()) as AgentRecommendations;
+      refreshState.current = { round, seen: [...new Set([...st.seen, ...data.strategicRecommendations])] };
       setRecs(data);
-    } catch {
+    } catch (e) {
+      if (st.round >= 0) {
+        // A refresh that failed says so; it does not show the old suggestions again as if they were new.
+        setRecsError(`Could not refresh suggestions: ${(e as Error).message}`);
+        return;
+      }
       // Deterministic fallback if server call is unreachable
       const fallbackInputs: Record<string, string> = {};
       agent.inputs.forEach((input) => {
@@ -139,7 +151,7 @@ export function AgentRunner({ agent }: { agent: AgentContract }) {
                 <Sparkles size={17} className="text-violet-700" />
                 <span className="font-bold text-slate-900">AI Suggestions & Recommendations</span>
                 <span className="mono rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-800">
-                  {recs?.generatedWith && recs.generatedWith !== 'deterministic-fallback' ? recs.generatedWith : 'operations engine'} · AI DRAFT
+                  {recs?.generatedWith && recs.generatedWith !== 'deterministic-fallback' ? generatedWithLabel(recs.generatedWith, recs.flags ?? []) : 'operations engine'} · AI DRAFT
                 </span>
               </div>
               <div className="flex items-center gap-2">

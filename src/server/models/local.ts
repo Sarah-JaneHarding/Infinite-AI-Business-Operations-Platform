@@ -1,5 +1,6 @@
 import { agentById } from '../../departments';
 import type { AgentContract } from '../../core/agent';
+import { excludeSeen } from '../../core/suggest';
 
 export interface ToolInvocationRecord {
   name: string;
@@ -22,7 +23,7 @@ export interface AgentRecommendationResult {
  * Deterministic engine used when no model provider is ready. It is a draft generator like any other: it contains
  * illustrative defaults that are NOT sourced facts (see docs/OPEN_QUESTIONS.md OPQ-014).
  */
-export function getDeterministicRecommendations(agent: AgentContract, currentValues: Record<string, string> = {}): Omit<AgentRecommendationResult, 'toolsUsed' | 'generatedWith'> {
+export function getDeterministicRecommendations(agent: AgentContract, currentValues: Record<string, string> = {}, round = 0, exclude: readonly string[] = []): Omit<AgentRecommendationResult, 'toolsUsed' | 'generatedWith'> & { cycled: boolean } {
     const strategicRecommendations: string[] = [];
     const recommendedInputs: Record<string, string> = {};
     const complianceGuidance: string[] = [
@@ -91,12 +92,42 @@ export function getDeterministicRecommendations(agent: AgentContract, currentVal
       strategicRecommendations.push('Verify operational outputs can export cleanly to PDF, DOCX, and XLSX formats.');
     }
 
+    // Rotate the wording: the family's own three first (round 0), then lenses common to every agent, walked three at a time
+    // from an offset that moves with the round and skipping anything the caller has already seen.
+    const n = agent.name;
+    const pool = [
+      ...strategicRecommendations,
+      `Check that ${n} output states its sources, and mark anything unsourced for a person to confirm.`,
+      `Write the ${n} brief for a named reviewer first, so the human approval step has an owner.`,
+      `Keep the ${n} inputs short and specific; vague inputs produce vague drafts.`,
+      `Compare the ${n} draft with the last approved version before sending it for review.`,
+      `Record any assumption made in the ${n} draft so the approver can accept or reject it.`,
+      `List what the ${n} draft must not contain (personal data, unsourced figures) before drafting.`,
+      `Split a large ${n} request into smaller drafts so each can be reviewed properly.`,
+      `Decide the audience for the ${n} output before choosing its format.`,
+    ];
+    const window = (r: number, seen: readonly string[]) => {
+      const out: string[] = [];
+      for (let i = 0; i < pool.length && out.length < 3; i++) {
+        const t = pool[(3 * r + i) % pool.length]!;
+        if (excludeSeen([t], seen).length) out.push(t);
+      }
+      return out;
+    };
+    let picked = window(round, exclude);
+    let cycled = false;
+    if (picked.length < 3) {
+      cycled = true;
+      picked = window(round, round > 0 ? window(round - 1, []) : []);
+    }
+
     return {
       agentId: agent.id,
-      strategicRecommendations,
+      strategicRecommendations: picked,
       recommendedInputs,
       complianceGuidance,
-      suggestedNextSteps
+      suggestedNextSteps,
+      cycled
     };
   }
 
