@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Infinite-AI Ecosystem — Verified Pilot Readiness Audit v3</title>
+    <style>
+      :root {
+        --navy: #0a1628;
+        --navy-soft: #132238;
+        --blue: #2563eb;
+        --blue-soft: #eaf0fe;
+        --gold: #f59e0b;
+        --gold-soft: #fef3da;
+        --paper: #fbfaf7;
+        --ink: #0a1628;
+        --ink-soft: #4b5568;
+        --line: #e2e5ea;
+        --green: #0f9d58;
+        --green-soft: #e5f6ec;
+        --red: #d64545;
+        --red-soft: #fcebeb;
+        --purple: #6b3fbf;
+        --purple-soft: #efeafb;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      body {
+        font-family: 'Lora', Georgia, 'Times New Roman', serif;
+        font-size: 16px;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      .label {
+        font-family:
+          'Montserrat',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+      .wrap {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 0 28px 120px;
+      }
+
+      .masthead {
+        background: linear-gradient(155deg, var(--navy) 0%, var(--navy-soft) 100%);
+        color: #fff;
+        padding: 60px 28px 44px;
+        position: relative;
+        overflow: hidden;
+      }
+      .masthead::after {
+        content: '∞';
+        position: absolute;
+        right: -40px;
+        top: -60px;
+        font-size: 340px;
+        color: rgba(255, 255, 255, 0.045);
+        font-family: Georgia, serif;
+        line-height: 1;
+        pointer-events: none;
+      }
+      .masthead-inner {
+        max-width: 920px;
+        margin: 0 auto;
+        position: relative;
+      }
+      .brandmark {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        font-size: 14px;
+        color: var(--gold);
+        margin-bottom: 24px;
+      }
+      .brandmark .glyph {
+        display: inline-block;
+        font-size: 20px;
+        transform: translateY(-1px);
+      }
+      .version-pill {
+        display: inline-block;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgba(245, 158, 11, 0.18);
+        color: var(--gold);
+        padding: 4px 11px;
+        border-radius: 20px;
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-size: 36px;
+        line-height: 1.15;
+        margin: 0 0 14px;
+        font-weight: 700;
+        color: #fff;
+        max-width: 660px;
+      }
+      .subtitle {
+        font-family: 'Lora', serif;
+        font-style: italic;
+        font-size: 18px;
+        color: #c7d2e3;
+        max-width: 600px;
+        margin: 0 0 28px;
+      }
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 26px;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        padding-top: 20px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 13px;
+        color: #9fb0c9;
+      }
+      .meta-row strong {
+        display: block;
+        color: #fff;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+
+      .section {
+        padding: 52px 0 8px;
+        border-bottom: 1px solid var(--line);
+      }
+      .section:last-of-type {
+        border-bottom: none;
+      }
+      .kicker {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--blue);
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--navy);
+        margin: 0 0 16px;
+        line-height: 1.25;
+      }
+      h3 {
+        font-size: 18.5px;
+        font-weight: 700;
+        color: var(--navy);
+        margin: 32px 0 12px;
+      }
+      h4 {
+        font-size: 15.5px;
+        font-weight: 700;
+        color: var(--navy);
+        margin: 22px 0 8px;
+      }
+      p {
+        margin: 0 0 15px;
+        color: var(--ink);
+      }
+      .lede {
+        font-size: 17.5px;
+        color: var(--ink-soft);
+        max-width: 700px;
+      }
+      a {
+        color: var(--blue);
+      }
+      strong {
+        color: var(--navy);
+      }
+      code {
+        background: #f0f0ec;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 0.9em;
+      }
+
+      .callout {
+        background: var(--blue-soft);
+        border-left: 4px solid var(--blue);
+        padding: 18px 22px;
+        border-radius: 2px;
+        margin: 20px 0 8px;
+        font-size: 15px;
+      }
+      .callout.gold {
+        background: var(--gold-soft);
+        border-left-color: var(--gold);
+      }
+      .callout.green {
+        background: var(--green-soft);
+        border-left-color: var(--green);
+      }
+      .callout p:last-child {
+        margin-bottom: 0;
+      }
+      .callout .callout-title {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--blue);
+        margin-bottom: 6px;
+        display: block;
+      }
+      .callout.gold .callout-title {
+        color: #966018;
+      }
+      .callout.green .callout-title {
+        color: #0c7b45;
+      }
+
+      .badge {
+        display: inline-block;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 10.5px;
+        letter-spacing: 0.02em;
+        padding: 3px 9px;
+        border-radius: 3px;
+        margin-right: 7px;
+      }
+      .badge.done {
+        background: var(--green-soft);
+        color: #0c7b45;
+      }
+      .badge.closed {
+        background: var(--green-soft);
+        color: #0c7b45;
+      }
+      .badge.partial {
+        background: var(--gold-soft);
+        color: #966018;
+      }
+      .badge.open {
+        background: var(--red-soft);
+        color: #b23a3a;
+      }
+      .badge.gap {
+        background: var(--purple-soft);
+        color: var(--purple);
+      }
+      .badge.oq {
+        background: #eee;
+        color: var(--ink-soft);
+        font-family: monospace;
+        font-weight: 700;
+      }
+
+      .finding {
+        border: 1px solid var(--line);
+        background: #fff;
+        padding: 18px 20px;
+        margin-bottom: 12px;
+        border-radius: 2px;
+      }
+      .finding.good {
+        border-left: 4px solid var(--green);
+      }
+      .finding.partial {
+        border-left: 4px solid var(--gold);
+      }
+      .finding.open {
+        border-left: 4px solid var(--red);
+      }
+      .finding.integrity {
+        border-left: 4px solid var(--purple);
+      }
+      .finding.resolved {
+        border-left: 4px solid var(--green);
+        opacity: 0.85;
+      }
+      .finding h4 {
+        margin: 2px 0 6px;
+        font-size: 16px;
+      }
+      .finding p {
+        margin-bottom: 6px;
+        font-size: 14.5px;
+      }
+      .finding .cite {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 11.5px;
+        color: var(--ink-soft);
+        margin-top: 8px;
+      }
+      .finding .cite code {
+        background: none;
+        padding: 0;
+        color: var(--ink-soft);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 14px 0 22px;
+        font-size: 14px;
+      }
+      th {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 11.5px;
+        font-weight: 700;
+        text-align: left;
+        color: var(--navy);
+        border-bottom: 2px solid var(--navy);
+        padding: 8px 10px;
+      }
+      td {
+        padding: 10px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      td.oqid {
+        font-family: monospace;
+        font-weight: 700;
+        color: var(--purple);
+        white-space: nowrap;
+      }
+      tr.resolved td {
+        color: var(--ink-soft);
+      }
+      tr.resolved td.oqid {
+        color: #0c7b45;
+        text-decoration: line-through;
+      }
+
+      .checklist {
+        list-style: none;
+        margin: 0 0 8px;
+        padding: 0;
+      }
+      .checklist li {
+        position: relative;
+        padding: 9px 0 9px 30px;
+        border-bottom: 1px solid var(--line);
+        font-size: 15px;
+      }
+      .checklist li:last-child {
+        border-bottom: none;
+      }
+      .checklist li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 13px;
+        width: 15px;
+        height: 15px;
+        border: 2px solid var(--ink-soft);
+        border-radius: 3px;
+      }
+      .checklist li b {
+        color: var(--navy);
+      }
+
+      .phase {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+      .phase-num {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+        color: #fff;
+        background: var(--navy);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .phase-num.done {
+        background: var(--green);
+      }
+      .phase-body {
+        flex: 1;
+        border-left: 2px solid var(--line);
+        padding-left: 20px;
+        margin-left: -36px;
+      }
+      .phase:last-child .phase-body {
+        border-left: 2px solid transparent;
+      }
+      .phase-title {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 15.5px;
+        color: var(--navy);
+        margin: 2px 0 4px;
+      }
+      .phase-when {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 11.5px;
+        color: var(--blue);
+        margin-bottom: 8px;
+        display: block;
+      }
+      .phase-when.done {
+        color: var(--green);
+      }
+      .phase ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .phase li {
+        margin-bottom: 5px;
+        font-size: 14.5px;
+      }
+      .phase li.done {
+        color: var(--ink-soft);
+        text-decoration: line-through;
+      }
+
+      .colophon {
+        background: var(--navy);
+        color: #9fb0c9;
+        padding: 38px 28px 42px;
+        font-size: 13.5px;
+        font-family: 'Montserrat', sans-serif;
+      }
+      .colophon .inner {
+        max-width: 920px;
+        margin: 0 auto;
+      }
+      .colophon strong {
+        color: #fff;
+      }
+      .colophon a {
+        color: var(--gold);
+      }
+
+      @media (max-width: 640px) {
+        .masthead {
+          padding: 40px 20px 32px;
+        }
+        h1 {
+          font-size: 27px;
+        }
+        .subtitle {
+          font-size: 15.5px;
+        }
+        .wrap {
+          padding: 0 18px 90px;
+        }
+        h2 {
+          font-size: 22px;
+        }
+        .phase {
+          gap: 12px;
+        }
+        .phase-body {
+          padding-left: 14px;
+          margin-left: -26px;
+        }
+        table {
+          font-size: 12.5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead-inner">
+        <div class="brandmark"><span class="glyph">∞</span> INFINITE-AI</div>
+        <span class="version-pill"
+          >VERIFIED AUDIT — v3, 2 September 2026 · supersedes v2</span
+        >
+        <h1>Pilot Readiness Audit — updated against one day of real commits</h1>
+        <p class="subtitle">
+          The biggest integrity gap from v2 closed overnight. Three new guardrail
+          questions surfaced and one resolved immediately. What actually remains is
+          shorter and sharper than it looked yesterday.
+        </p>
+        <div class="meta-row">
+          <div>
+            <strong>Source files</strong>STAGE_LOG.md (8,043 lines) · OPEN_QUESTIONS.md
+            (269 lines)
+          </div>
+          <div><strong>Updated</strong>2 September 2026</div>
+          <div><strong>Prior version</strong>v2 · 1 September 2026</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <section class="section">
+        <p class="kicker">WHAT CHANGED OVERNIGHT — v2 → v3</p>
+        <h2>Four gaps closed, two new findings, one new open question</h2>
+
+        <div class="callout green">
+          <span class="callout-title"
+            >The biggest correction: Stage 02's integrity gap is closed</span
+          >
+          <p>
+            v2's most serious finding — that Stage 02 (Identity, RBAC, audit ledger) had
+            no exit-gate record in the log and its dead guard had never been removed — is
+            resolved. Two commits landed in the same session:
+            <code>docs(stage-02): add missing exit-gate entry</code> walked all gate items
+            against verifiable test evidence (223 passing tests in
+            <code>packages/policy</code>, 100%/99.29% coverage; 23 passing audit-chain
+            tests in <code>packages/telemetry</code>) and recorded the deviation honestly.
+            <code>fix(policy): remove dead guard in authorize()</code> removed the dead
+            one-line guard that the v2 audit called out specifically. The gate is now
+            closed the way the manual's own §0.6 requires.
+          </p>
+        </div>
+
+        <div class="callout gold">
+          <span class="callout-title">Three OQs resolved, one new one opened</span>
+          <p>
+            <strong>OQ-024</strong> (branch-step conditions couldn't see prior step
+            output) — resolved. No migration needed; the DAG already knew the answer.
+            <strong>OQ-026</strong> (diagnosis-language guardrail had no caller) —
+            resolved. Field allow-list per agent contract, wired into
+            <code>apps/worker</code> for all 8 MOD-02 agents that declare
+            <code>diagnosis_guard</code>. <strong>OQ-027</strong> (SIAS referral status
+            had no ratified shape) — resolved today.
+            <code>ActiveInterventionItem</code> schema ratified; MOD-02 Monitoring's
+            <code>branch-on-referral</code> now implemented.
+            <strong>OQ-028</strong> opened while closing OQ-026: three more declared
+            guardrail names (<code>source_grounding_guard</code>,
+            <code>grounding_check</code>, <code>template_fidelity</code>) have no real
+            caller; <code>readability_guard</code> is now wired for AC-10 only, TB-03
+            still open.
+          </p>
+        </div>
+
+        <div class="callout">
+          <span class="callout-title">New product surface shipped</span>
+          <p>
+            Three features landed between v2 and v3 that aren't blockers but represent
+            real forward motion: a MOD-01 teacher UI (curriculum map, daily schedule,
+            lesson planner views); a MOD-02 SBST role UI (EGRA/MTSS/SIAS support
+            analytics); and a school onboarding wizard
+            (<code>packages/school-setup</code>) that now includes the required
+            <code>ratify_retention_schedule</code> step. AWS cost estimate and financial
+            model HTML artifacts were also added to <code>docs/</code>.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ PART A: THE GOOD NEWS ============ -->
+      <section class="section">
+        <p class="kicker">PART A — VERIFIED, FROM THE LOG ITSELF</p>
+        <h2>What's genuinely solid — unchanged from v2</h2>
+
+        <div class="finding good">
+          <span class="badge done">CONFIRMED</span>
+          <h4>
+            136 CAPS/ATP source documents already ingested — Grades R–7, all three phases
+          </h4>
+          <p>
+            21 CAPS subject statements plus a fully-parsed DBE ATP database: 817 topic
+            blocks and 600 formal-assessment-task rows across 155 sources, consolidated
+            into 136 phase files — Foundation Phase (57 sources), Intermediate Phase (55),
+            Senior Phase (24). This covers Mathematics, English HL/FAL, Afrikaans HL/FAL,
+            all official Life Skills languages, Life Orientation, EMS, Natural Sciences,
+            Social Sciences, Technology, and Creative Arts.
+          </p>
+          <p>
+            What's left of this specific item: 5 multigrade "IP-MULTI" stub sources
+            waiting on the DBE to publish their topic data, and — this is the part that
+            needs <em>you</em>, not more sourcing — <code>ratifiedBy</code> is
+            <code>null</code> on every single ingested source. Nothing is formally
+            ratified into L0 until a human countersigns it.
+          </p>
+          <p class="cite">OQ-002, updates through 2026-08-20</p>
+        </div>
+
+        <div class="finding good">
+          <span class="badge done">CONFIRMED</span>
+          <h4>
+            Benjamin Pine Primary's real lesson-plan template is already in the system
+          </h4>
+          <p>
+            Your school's 2026 Lesson Plan Preparation Template has been supplied and
+            ingested as a machine-readable <code>TemplateDefinition</code>. It's
+            structurally validated — not just filed away. Still needed from the school: a
+            unit blueprint, an assessment task template, a rubric/marking memo template,
+            and a parent progress report template. And, same as above, it needs a
+            principal or designate's actual countersignature before it's ratified.
+          </p>
+          <p class="cite">OQ-003, updated 2026-08-19</p>
+        </div>
+
+        <div class="finding good">
+          <span class="badge done">CONFIRMED</span>
+          <h4>Real ZAR pricing already exists</h4>
+          <p>
+            <code>docs/COST_MODEL.md</code> documents three tiers — Starter R1,200/mo,
+            Professional R3,500/mo, Enterprise R8,500/mo — plus per-artefact cost
+            estimates and a gross-margin estimate (~35% on Starter). The one honest
+            caveat: these numbers are built from estimated token counts, not real usage,
+            and are flagged to be recalibrated against actual gateway telemetry after the
+            first pilot month. A fuller AWS cost estimate and monthly financial model have
+            since been added to <code>docs/aws-cost-estimate.html</code> and
+            <code>docs/financial-model.html</code>.
+          </p>
+          <p class="cite">docs/COST_MODEL.md, referenced at OQ-018</p>
+        </div>
+
+        <div class="finding good">
+          <span class="badge done">CONFIRMED</span>
+          <h4>Safeguarding escalation is fully wired end to end</h4>
+          <p>
+            A production-readiness audit on 25 August found the escalation path had
+            <em>no caller at all</em> — the worker's real agent-call path never invoked
+            the guardrail engine. That's fixed.
+            <code>apps/worker/src/step-executor.ts</code> now calls the check after every
+            agent call and dispatches to a configurable notifier. The mechanism throws a
+            typed <code>GuardrailEscalationError</code> exactly when it should page.
+          </p>
+          <p>
+            <strong
+              >What remains is precisely what the original blocker said: a real paging
+              provider and a named human.</strong
+            >
+            Nothing else. This is genuinely a same-week task once you open the PagerDuty
+            account.
+          </p>
+          <p class="cite">OQ-014, updated 2026-08-25</p>
+        </div>
+
+        <div class="finding good">
+          <span class="badge done">CONFIRMED</span>
+          <h4>SACE CPTD points schedule ingested</h4>
+          <p>
+            150 PD points per 3-year cycle, across the three SACE activity types,
+            structured and in L0. Still missing: the individual Type 1 activity-level
+            point tables and provider-accreditation criteria MOD-05 needs for automatic
+            point-logging — a smaller, specific follow-up rather than the whole schedule.
+          </p>
+          <p class="cite">OQ-006</p>
+        </div>
+
+        <div class="finding good">
+          <span class="badge done">CONFIRMED</span>
+          <h4>Real defects were found and fixed — a good sign, not a bad one</h4>
+          <p>
+            The log's own discipline is what surfaced these, and every one was fixed
+            rather than shipped:
+          </p>
+          <ul class="checklist">
+            <li>
+              Stage 00: pre-commit hooks had silently never installed, on any commit,
+              because of a repo-layout quirk — caught by a CI failure, not assumed fixed
+              by the config files existing.
+            </li>
+            <li>
+              Stage 03: a key-decoding function silently accepted a
+              <em>corrupted</em> encryption key and derived different, wrong key material
+              — caught by a coverage report pointing at an unreached line, not by a
+              functional test.
+            </li>
+            <li>
+              Stage 16: a real high-severity CVE (nanoid, GHSA-2v37-7h3g-55p8) found
+              during the supply-chain audit and pinned.
+            </li>
+            <li>
+              2026-08-25: a CSP nonce leak on the sign-in page, a broken branch-condition
+              evaluator, and a diagnosis-language guardrail with no caller — all three
+              found and fixed.
+            </li>
+            <li>
+              2026-09-01–02: <code>freeTextOutputFields</code> contract invariant caught
+              all 8 MOD-02 contracts that declared <code>diagnosis_guard</code> without
+              naming what they scan; a stale comment in <code>le.ts</code> was quietly
+              misrepresenting the condition it claimed to check; AC-10's own self-reported
+              readability was never independently verified until now.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============ PART B: INTEGRITY STATUS ============ -->
+      <section class="section">
+        <p class="kicker">PART B — INTEGRITY STATUS</p>
+        <h2>The gaps from v2 — where they stand now</h2>
+
+        <div class="finding resolved">
+          <span class="badge closed">CLOSED — 2026-09-02</span>
+          <h4>
+            Stage 02 — Identity, RBAC, audit ledger — exit-gate gap is now formally closed
+          </h4>
+          <p>
+            v2 flagged this as the one thing the README's "all stages complete" didn't
+            mention: Stage 02 had no <code>## Stage 02</code> heading in the log and no
+            item-by-item gate walk. That is now fixed. Two commits landed:
+          </p>
+          <p>
+            <code>docs(stage-02): add missing exit-gate entry</code> walks every gate item
+            against verifiable test evidence — 223 passing tests in
+            <code>packages/policy</code> at 100%/99.29% coverage, 23 passing audit-chain
+            tests in <code>packages/telemetry</code> — and records the deviation (coverage
+            not applied at merge time) honestly, the way §0.6 requires.
+          </p>
+          <p>
+            <code>fix(policy): remove dead guard in authorize()</code> removes the dead
+            one-line guard in <code>rbac.ts:360</code> that v2 cited specifically as
+            "Stage 02's to remove."
+          </p>
+          <p>
+            What v2 said was still true — nobody had walked the gate item by item. It's
+            now done. The tamper-evident audit-chain (<code>packages/telemetry</code>) is
+            confirmed merged and verified against its own 23-test suite.
+          </p>
+          <p class="cite">Commits 00ef951, 2c1ec9c — 2 September 2026</p>
+        </div>
+
+        <div class="finding integrity">
+          <span class="badge gap">UNVERIFIED</span>
+          <h4>
+            <code>infra/terraform</code> has been written and reviewed — never once run
+          </h4>
+          <p>
+            The Terraform that stands up the actual AWS environment is real, detailed, and
+            internally cross-checked (every module's variables against every call site, by
+            script). But <code>terraform init/plan/apply</code> were never run: the
+            authoring sandbox's own egress policy blocks
+            <code>registry.terraform.io</code>. <code>terraform fmt -check</code> passes;
+            that's a syntax check, not a proof the plan applies cleanly against a real AWS
+            account.
+          </p>
+          <p>
+            <strong
+              >Phase 3 in Part D below is the first time this code will ever touch real
+              infrastructure.</strong
+            >
+            Budget time for real, previously-unseen errors — provider version mismatches,
+            IAM permission gaps, resource naming collisions.
+          </p>
+          <p class="cite">STAGE_LOG.md, infra/terraform section</p>
+        </div>
+
+        <div class="finding integrity">
+          <span class="badge gap">RECURRING CAVEAT</span>
+          <h4>
+            A large share of "PASS" results rest on "proven in CI," not re-verified in
+            this read
+          </h4>
+          <p>
+            The authoring environment had no Docker daemon. Every stage that depends on
+            Testcontainers — the RLS isolation suite, the exhaustive multi-tenant security
+            suite, the Brain's integration and temporal tests, the orchestrator's
+            durability tests — was written and reviewed "blind." That's an honest and
+            consistent caveat, not a hidden one. But it means this audit is reporting what
+            CI last confirmed, not a fresh run against today's code.
+          </p>
+          <p>
+            <strong
+              >Before you trust any of this for a live pilot: confirm the most recent
+              GitHub Actions run on <code>main</code> is green.</strong
+            >
+            That's a two-minute check that closes the one gap a document like this can't
+            close on its own.
+          </p>
+        </div>
+
+        <div class="finding partial">
+          <span class="badge partial">NEW — PARTIALLY RESOLVED</span>
+          <h4>
+            OQ-028 — Three declared guardrail names still have no real caller in
+            production
+          </h4>
+          <p>
+            Found while closing OQ-026: <code>source_grounding_guard</code>,
+            <code>grounding_check</code>, and <code>template_fidelity</code> are declared
+            in agent contracts but never dispatched in <code>apps/worker</code> or
+            <code>apps/gateway</code>. <code>checkGrounding</code> is only ever called
+            from the eval scorer (grading eval cases), not the production runtime path.
+            <code>checkTemplateFidelity</code>/<code>buildTemplateFidelityChecker</code>
+            have no caller anywhere.
+          </p>
+          <p>
+            <code>readability_guard</code> is now half-done: wired for AC-10 (ceiling rule
+            was fully specified in its own schema comment, no design judgement left).
+            TB-03 is still open — it has a genuine two-sided
+            <code>GradeBand{minGrade, maxGrade}</code> and an English-only carve-out that
+            needs a design pass before implementation.
+          </p>
+          <p>
+            This doesn't block anything already built — but it means TB-03's readability,
+            source-grounding and template-fidelity claims from any MOD-04 agent are
+            self-reported and unverified in production.
+          </p>
+          <p class="cite">OQ-028, opened 2026-09-01</p>
+        </div>
+      </section>
+
+      <!-- ============ PART B: THE REAL REMAINING GAPS ============ -->
+      <section class="section">
+        <p class="kicker">PART C — THE REAL REMAINING WORK</p>
+        <h2>Every open question, grouped by what it actually blocks</h2>
+        <p class="lede">
+          Sourced directly from <code>docs/OPEN_QUESTIONS.md</code> as of 2 September
+          2026. Items that resolved since v2 are shown struck through for reference.
+        </p>
+
+        <h3>Ratification — signatures, not sourcing</h3>
+        <table>
+          <tr>
+            <th>ID</th>
+            <th>What's needed</th>
+            <th>Who</th>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-002</td>
+            <td>
+              Countersign all 136 already-ingested CAPS/ATP sources; the 5 remaining
+              IP-MULTI stubs wait on the DBE, not on you
+            </td>
+            <td>You, as ratifier</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-003</td>
+            <td>
+              Countersign Benjamin Pine's lesson-plan template; source the four remaining
+              template types (unit blueprint, assessment task, rubric/marking memo, parent
+              progress report)
+            </td>
+            <td>You + the school's principal/designate</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-013</td>
+            <td>
+              Decide: prioritise sourcing Sepedi, Sesotho and Setswana (largest remaining
+              language populations) and Grades 10–12 before calling MOD-01
+              feature-complete, or launch pilot-scope-only and add the rest after
+            </td>
+            <td>You — a scope decision</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-023</td>
+            <td>
+              Source CAPS time-allocation appendices and the Assessment Policy per phase —
+              without these, <code>GradeFramework</code> stays incomplete and CE-01
+              returns <code>NEEDS_INPUT</code> even for subjects that otherwise look done
+            </td>
+            <td>You — sourcing</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-006</td>
+            <td>
+              Source SACE's Type 1 activity-level point tables and provider-accreditation
+              criteria for MOD-05's automatic point-logging
+            </td>
+            <td>You — sourcing</td>
+          </tr>
+        </table>
+
+        <h3>Safety &amp; quality calibration</h3>
+        <table>
+          <tr>
+            <th>ID</th>
+            <th>What's needed</th>
+            <th>Who</th>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-016</td>
+            <td>
+              50+ hand-labelled cases to calibrate the LLM-as-judge scorer — the mechanism
+              exists, no dataset does. Also unblocks most of the age-appropriateness judge
+              work (OQ-015), which needs the same real LLM-judge implementation
+            </td>
+            <td>You + 1–2 CAPS-qualified colleagues</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-015</td>
+            <td>
+              Age-appropriateness: 206 developmental-readiness clauses are ingested and
+              the checker is async-wired — but no agent contract carries phase/grade
+              context through a generic pipeline call, and no real LLM-judge
+              implementation exists to render a verdict. Same root gap as OQ-016.
+            </td>
+            <td>Engineering + same judge work as OQ-016</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-028</td>
+            <td>
+              <code>readability_guard</code> for TB-03 (two-sided grade band +
+              English-only carve-out), plus <code>source_grounding_guard</code>,
+              <code>grounding_check</code>, and <code>template_fidelity</code> — all
+              declared in contracts, none dispatched in production
+            </td>
+            <td>Engineering decision — design shape for each</td>
+          </tr>
+          <tr class="resolved">
+            <td class="oqid">OQ-027</td>
+            <td>
+              <em>Resolved 2026-09-02.</em> <code>ActiveInterventionItem</code> ratified.
+              MOD-02 Monitoring branch-on-referral now implemented.
+            </td>
+            <td>—</td>
+          </tr>
+        </table>
+
+        <h3>Live infrastructure &amp; load</h3>
+        <table>
+          <tr>
+            <th>ID</th>
+            <th>What's needed</th>
+            <th>Who</th>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-017</td>
+            <td>
+              k6 load (3× peak, 450 VU) and spike (term-start 600 VU, Sunday-evening 300
+              VU) tests — scripts are ready, just need a live gateway with seed data to
+              run against
+            </td>
+            <td>You, once infra is live</td>
+          </tr>
+          <tr>
+            <td class="oqid">—</td>
+            <td>
+              Run <code>terraform init/plan/apply</code> for real, for the first time
+              ever, against an actual AWS account
+            </td>
+            <td>You</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-020</td>
+            <td>
+              Record the architecture walkthrough (screen + audio) — the script already
+              exists in <code>docs/HOW_TO_ADD_AN_AGENT.md</code>
+            </td>
+            <td>You</td>
+          </tr>
+        </table>
+
+        <h3>Billing, communications &amp; the pilot itself</h3>
+        <table>
+          <tr>
+            <th>ID</th>
+            <th>What's needed</th>
+            <th>Who</th>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-021</td>
+            <td>
+              Dunning emails need a transactional email provider (SES, SendGrid, etc.) —
+              worth solving in the same sitting as OQ-014, since both need a credentialed
+              comms provider
+            </td>
+            <td>You</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-018</td>
+            <td>
+              Recalibrate the R1,200/R3,500/R8,500 pricing tiers against real telemetry
+              once a month of real usage exists — not before
+            </td>
+            <td>You, post-pilot-month</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-019</td>
+            <td>
+              No pilot school is formally confirmed.
+              <strong
+                >The log is explicit that this is gated on OQ-014 (paging) being resolved
+                first</strong
+              >
+              — don't onboard a real school before the safeguarding vendor is live.
+            </td>
+            <td>You — the actual pilot conversation</td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-022</td>
+            <td>
+              Three real legal decisions for POPIA erasure of append-only tables
+              (audit/consent/metering logs): which fields count as personal information,
+              whether pseudonymising actor/subject tokens is the right erasure technique,
+              and what retention period applies. Until answered, this data is retained
+              indefinitely on tenant closure.
+            </td>
+            <td>You, likely with legal counsel</td>
+          </tr>
+        </table>
+
+        <h3>Product-shape decisions — real, but not pilot-blocking</h3>
+        <p style="font-size: 14.5px; color: var(--ink-soft)">
+          These sit in the extension phase (Stages 19–28) and don't block a Grade R–7
+          pilot on the original 18-stage core. Worth a decision before they're built out
+          further, not before you go live.
+        </p>
+        <table>
+          <tr>
+            <th>ID</th>
+            <th>Question</th>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-008</td>
+            <td>
+              Should the Visual Agent Builder be its own package or live inside
+              <code>packages/agents</code>?
+            </td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-009</td>
+            <td>
+              Should live classroom quiz games be standalone, or folded into MOD-04's
+              toolbox?
+            </td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-011</td>
+            <td>
+              Should SIAS documentation stay inside MOD-02, or become its own module?
+            </td>
+          </tr>
+          <tr>
+            <td class="oqid">OQ-012</td>
+            <td>
+              Should the Master Prompt Builder and System Prompt Builder be one tool or
+              two?
+            </td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- ============ PART D: ACCOUNTS (carried over) ============ -->
+      <section class="section">
+        <p class="kicker">PART D — WHAT THIS CHANGES ABOUT THE ACCOUNT SETUP</p>
+        <h2>The account playbook still holds — with one item even simpler now</h2>
+
+        <ul class="checklist">
+          <li>
+            <b>PagerDuty is purely "connect a vendor."</b> The code path that will call it
+            is live. Opening the account and wiring the webhook is genuinely a same-day
+            task once you get to it.
+          </li>
+          <li>
+            <b>Add a transactional email decision to the same session as PagerDuty</b>
+            (OQ-021 explicitly pairs them). Amazon SES is the natural default since you're
+            already opening an AWS account for hosting.
+          </li>
+          <li>
+            <b
+              >Don't skip straight to onboarding Benjamin Pine Primary as a real tenant</b
+            >
+            just because its template data is already in the system. The seed data is
+            deliberately kept generic (placeholder school names) until a school "signs up
+            as a pilot tenant" for real — and the log is explicit that paging (OQ-014)
+            must be resolved before that onboarding begins.
+          </li>
+          <li>
+            <b
+              >The school onboarding wizard now includes the required
+              <code>ratify_retention_schedule</code> step.</b
+            >
+            When you do formally onboard the first pilot school, this step will surface
+            the demo estimates and require an explicit acceptance action — nothing is
+            adopted silently.
+          </li>
+        </ul>
+      </section>
+
+      <!-- ============ PART E: REVISED PLAYBOOK ============ -->
+      <section class="section">
+        <p class="kicker">PART E — THE REVISED SEQUENCE</p>
+        <h2>What to actually do — updated for v3</h2>
+
+        <div class="phase">
+          <div class="phase-num">1</div>
+          <div class="phase-body">
+            <span class="phase-when">THIS WEEK — RATIFY WHAT'S ALREADY THERE</span>
+            <div class="phase-title">Countersign, don't re-source</div>
+            <ul>
+              <li>
+                Formally ratify the 136 ingested CAPS/ATP sources and Benjamin Pine's
+                lesson-plan template — this is signature work, not sourcing work, and it's
+                the fastest way to unblock CE-01 through CE-09 for real output
+              </li>
+              <li>
+                Decide the OQ-013 scope question: pilot-language-and-grade only, or push
+                for Sepedi/Sesotho/Setswana and Grades 10–12 first
+              </li>
+              <li>
+                Source the CAPS time-allocation appendices and Assessment Policy per phase
+                (OQ-023) — this is what's actually still missing for a
+                <em>complete</em> GradeFramework, not the topic content itself
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-num">2</div>
+          <div class="phase-body">
+            <span class="phase-when">WEEK 1–2 — ACCOUNTS, IN PARALLEL</span>
+            <div class="phase-title">Open every account</div>
+            <ul>
+              <li>AWS, domain + Cloudflare, Anthropic/OpenAI keys</li>
+              <li>PagerDuty — this is now a same-day wiring task, not a build</li>
+              <li>Amazon SES for dunning + guardian email (OQ-021)</li>
+              <li>Paystack sandbox</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-num">3</div>
+          <div class="phase-body">
+            <span class="phase-when">WEEK 2–3 — THE FIRST REAL TERRAFORM RUN</span>
+            <div class="phase-title">
+              Go live on infrastructure, expecting real friction
+            </div>
+            <ul>
+              <li>
+                Run <code>terraform init/plan/apply</code> against a test workspace in
+                <code>af-south-1</code> — the first time this code has ever executed
+                against real AWS, budget time for genuine debugging
+              </li>
+              <li>
+                Confirm the latest GitHub Actions run on <code>main</code> is green before
+                trusting any Docker-dependent "PASS" in the log
+              </li>
+              <li>
+                Wire the PagerDuty integration key into the guardrail engine's escalation
+                route; trigger a real test page
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-num">4</div>
+          <div class="phase-body">
+            <span class="phase-when">WEEK 3–4 — CLOSE THE JUDGE CALIBRATION GAP</span>
+            <div class="phase-title">Resolve OQ-016 (and most of OQ-015 with it)</div>
+            <ul>
+              <li>
+                Hand-score 50+ real agent outputs against a rubric with 1–2 CAPS-qualified
+                colleagues
+              </li>
+              <li>
+                This also unblocks the age-appropriateness judge work (OQ-015), which
+                needs the same real LLM-judge implementation
+              </li>
+              <li>
+                Decide OQ-028's shapes for TB-03 readability, source grounding and
+                template fidelity — these three are the remaining "declared but
+                unverified" guardrails in production
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-num">5</div>
+          <div class="phase-body">
+            <span class="phase-when">WEEK 4–5 — LOAD, SECURITY, RECORDING</span>
+            <div class="phase-title">The mechanical remainder</div>
+            <ul>
+              <li>
+                Run <code>k6-peak.js</code> and <code>k6-spike.js</code> against the
+                now-live environment (OQ-017)
+              </li>
+              <li>Commission the external penetration test</li>
+              <li>
+                Record the architecture walkthrough — the script already exists in
+                <code>docs/HOW_TO_ADD_AN_AGENT.md</code> (OQ-020)
+              </li>
+              <li>
+                Get legal input on the three POPIA erasure decisions for append-only
+                tables (OQ-022)
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-num">6</div>
+          <div class="phase-body">
+            <span class="phase-when">ONLY AFTER PAGING IS LIVE</span>
+            <div class="phase-title">Formally onboard the first pilot school</div>
+            <ul>
+              <li>
+                The log itself gates this on OQ-014 — don't onboard a real school's real
+                learner data before the safeguarding vendor is connected and tested
+              </li>
+              <li>
+                Benjamin Pine Primary is the obvious first candidate, given its templates
+                are already ingested — but treat the formal sign-up, MOU, and Operator
+                Agreement as a distinct step from the data it's already contributed
+              </li>
+              <li>
+                Run the Stage 17 onboarding wizard end to end for this one tenant,
+                including the now-required <code>ratify_retention_schedule</code> step
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="colophon">
+      <div class="inner">
+        <p><strong>Prepared for Sarah-Jane Harding — Infinite-AI</strong></p>
+        <p>
+          v3 — 2 September 2026. Sourced from a direct read of
+          <code>docs/STAGE_LOG.md</code> (8,043 lines) and
+          <code>docs/OPEN_QUESTIONS.md</code> (269 lines) as of commit
+          <code>2c1ec9c</code>. Supersedes v2 dated 1 September 2026. v1 (README-based,
+          caveat-only) is permanently retired.
+        </p>
+        <p>
+          Stage 02 integrity gap: <strong>CLOSED</strong>. OQ-024, OQ-026, OQ-027:
+          <strong>RESOLVED</strong>. OQ-028: <strong>OPEN</strong> (TB-03 readability + 3
+          guardrail callers). All other v2 findings unchanged.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

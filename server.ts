@@ -29,6 +29,9 @@ import { ModelHub } from './src/server/models/hub';
 import { AGENTS, DEPARTMENTS } from './src/departments';
 import { checkRegistry, formatProblems } from './src/core/contract';
 import { modelRoutes } from './src/server/modelRoutes';
+import { loadAll } from './src/library/loadAll';
+import { readFileSync } from 'node:fs';
+import type { Store } from './src/core/documents';
 
 const env = process.env;
 const REPO = env.ECOSYSTEM_REPO ?? 'Sarah-JaneHarding/infinite-ai-ecosystem';
@@ -355,6 +358,21 @@ async function start() {
   if (autonomy.enabled) {
     // Scheduled orders are checked every minute. A failed check is logged and tried again next minute.
     setInterval(() => void autonomy.tick().catch((e: Error) => console.error('autonomy tick failed:', e.message)), 60_000).unref();
+  }
+  if (env.OPS_SEED_ON_START !== 'false') {
+    // Loads the library, business plan and ecosystem documents. Idempotent (an id already stored is skipped), so a
+    // restart writes nothing. A failure is logged and never stops the server.
+    try {
+      const seedStore: Store = {
+        put: async (c, rec) => { store.append(c, rec as Rec); },
+        latest: <T,>(c: string) => [...new Map(store.list(c).map((r) => [String(r.id), r])).values()] as T[],
+        list: <T,>(c: string, where?: (r: Rec) => boolean) => (where ? store.list(c).filter(where) : [...store.list(c)]) as T[],
+      };
+      const r = await loadAll(seedStore, (p) => new Uint8Array(readFileSync(path.join(process.cwd(), p))));
+      console.log(`documents loaded: library ${r.library.written.length}, business plan ${r.businessPlan.written.length}, ecosystem ${r.ecosystem.written.length} (${r.ecosystem.refused.length} refused)`);
+    } catch (e) {
+      console.error('document loading failed (the server keeps running):', (e as Error).message);
+    }
   }
   app.listen(PORT, HOST, () => {
     console.log(`Infinite-AI Ops Platform on http://${HOST}:${PORT}  (repo: ${REPO}; auth: ${auth.mode}; autonomy: ${autonomy.enabled ? 'on' : 'off'})`);
