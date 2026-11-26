@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import type { Purpose } from '../../core/types';
+import type { Doc, Purpose } from '../../core/types';
+import { SUGGEST_LIMITS, blanksOf, deterministicSuggestions, docKind, docText, excludeSeen, parseModelSuggestions, textsOf, type DocSuggestions } from '../../core/suggest';
 import type { AgentContract } from '../../core/agent';
 import { deidentify, detectPii, LearnerDataRefused } from '../../core/guardrails/pii';
 import { newId } from '../../core/crypto';
@@ -325,10 +326,18 @@ export class ModelHub {
     return this.execute({ capability: 'copilot', purpose: 'strategy_planning', system, prompt: message, history: h, provenance, actor }, true);
   }
 
-  async recommend(agent: AgentContract, currentValues: Record<string, unknown>, actor: string | null): Promise<AgentRecommendationResult & { draft: true; flags: string[] }> {
+  /**
+   * `round` and `exclude` make Refresh give new answers: the model is told the round and what not to repeat, anything it still
+   * repeats is dropped, and the built-in engine rotates its wording by round and skips what the caller has seen.
+   */
+  async recommend(agent: AgentContract, currentValues: Record<string, unknown>, actor: string | null, round = 0, exclude: readonly string[] = []): Promise<AgentRecommendationResult & { draft: true; flags: string[] }> {
     const values = Object.fromEntries(Object.entries(currentValues ?? {}).filter(([k, v]) => agent.inputs.some((i) => i.key === k) && typeof v === 'string').map(([k, v]) => [k, String(v).slice(0, 500)]));
-    const fallback = () => ({ ...getDeterministicRecommendations(agent, values), toolsUsed: [] as string[], generatedWith: 'deterministic-fallback', draft: true as const, flags: ['deterministic', 'illustrative_defaults'] });
-    const prompt = `Suggest how to complete this agent task. Agent: ${agent.id} (${agent.name}). Purpose: ${agent.purpose}. Summary: ${agent.summary}.\nInputs: ${JSON.stringify(agent.inputs.map((i) => ({ key: i.key, label: i.label, kind: i.kind, options: i.options })))}\nCurrent values: ${JSON.stringify(values)}\nReply with a JSON object: {"strategicRecommendations": string[], "recommendedInputs": {<input key>: string}, "complianceGuidance": string[], "suggestedNextSteps": string[]}. Do not invent figures, names or facts: where a value needs one, say what source is required.`;
+    const fallback = (extra: string[] = []) => {
+      const { cycled, ...d } = getDeterministicRecommendations(agent, values, round, exclude);
+      return { ...d, toolsUsed: [] as string[], generatedWith: 'deterministic-fallback', draft: true as const, flags: ['deterministic', 'illustrative_defaults', ...(cycled ? ['pool_cycled'] : []), ...extra] };
+    };
+    const again = round > 0 || exclude.length ? `\nThis is refresh round ${round}. Do not repeat any of these earlier suggestions: ${JSON.stringify(exclude.slice(-SUGGEST_LIMITS.excludeSent).map((t) => t.slice(0, SUGGEST_LIMITS.excludeChars)))}` : '';
+    const prompt = `Suggest how to complete this agent task. Agent: ${agent.id} (${agent.name}). Purpose: ${agent.purpose}. Summary: ${agent.summary}.\nInputs: ${JSON.stringify(agent.inputs.map((i) => ({ key: i.key, label: i.label, kind: i.kind, options: i.options })))}\nCurrent values: ${JSON.stringify(values)}${again}\nReply with a JSON object: {"strategicRecommendations": string[], "recommendedInputs": {<input key>: string}, "complianceGuidance": string[], "suggestedNextSteps": string[]}. Do not invent figures, names or facts: where a value needs one, say what source is required.`;
     const provenance = await this.stamp([prompt], [`agent:${agent.id}`, `input:${actor ?? 'open'}`], actor, 'recommend', agent.purpose);
     if (!this.ready().length) return fallback();
     const r = await this.execute({ capability: 'recommend', purpose: agent.purpose, agentId: agent.id, agentPurposes: agent.allowedPurposes, agentProviders: agent.models, system: 'You are an operations specialist. You produce drafts for a human to review. Output only the JSON object asked for.', prompt, history: [], provenance, actor, json: true }, false);
@@ -338,11 +347,66 @@ export class ModelHub {
     } catch {
       return { ...fallback(), flags: [...r.flags, 'model_reply_not_json', 'deterministic'] };
     }
-    const det = getDeterministicRecommendations(agent, values);
+    const { cycled: _c, ...det } = getDeterministicRecommendations(agent, values, round, exclude);
+    void _c;
     const strings = (v: unknown, d: string[]) => (Array.isArray(v) && v.length ? v.map(String).slice(0, 8) : d);
     const recIn = typeof parsed.recommendedInputs === 'object' && parsed.recommendedInputs !== null ? (parsed.recommendedInputs as Record<string, unknown>) : {};
     const recommendedInputs = Object.fromEntries(agent.inputs.map((i) => [i.key, typeof recIn[i.key] === 'string' ? String(recIn[i.key]) : det.recommendedInputs[i.key] ?? '']));
-    return { agentId: agent.id, strategicRecommendations: strings(parsed.strategicRecommendations, det.strategicRecommendations), recommendedInputs, complianceGuidance: strings(parsed.complianceGuidance, det.complianceGuidance), suggestedNextSteps: strings(parsed.suggestedNextSteps, det.suggestedNextSteps), toolsUsed: [], generatedWith: `${r.provider}:${r.model}`, draft: true, flags: r.flags };
+    const flags = [...r.flags];
+    let strategicRecommendations = excludeSeen(strings(parsed.strategicRecommendations, []), exclude);
+    if (!strategicRecommendations.length) {
+      strategicRecommendations = det.strategicRecommendations;
+      if (exclude.length) flags.push('refresh_fallback');
+    }
+    return { agentId: agent.id, strategicRecommendations, recommendedInputs, complianceGuidance: strings(parsed.complianceGuidance, det.complianceGuidance), suggestedNextSteps: strings(parsed.suggestedNextSteps, det.suggestedNextSteps), toolsUsed: [], generatedWith: `${r.provider}:${r.model}`, draft: true, flags };
+  }
+
+  /**
+   * Suggested inputs (for the document's blanks) and prompts. Everything is a draft and nothing here writes to the document.
+   * The text is de-identified first (a learner identifier refuses the request); at most SUGGEST_LIMITS.docChars of it goes to a
+   * provider, through the same door as every call, so the rate limiter and the daily budget apply. A model that runs out of
+   * budget, fails, or only repeats what was excluded is replaced by the built-in engine, which says so in `flags`.
+   */
+  async suggestForDocument(doc: Doc, round: number, exclude: readonly string[], actor: string | null): Promise<DocSuggestions> {
+    const who = actor ?? 'open';
+    const blanks = blanksOf(doc);
+    const sep = '\u001e';
+    const parts = [docText(doc).slice(0, SUGGEST_LIMITS.docChars), JSON.stringify(blanks.slice(0, SUGGEST_LIMITS.blanks).map((b) => b.slice(0, 100))), JSON.stringify(exclude.slice(-SUGGEST_LIMITS.excludeSent).map((t) => t.slice(0, SUGGEST_LIMITS.excludeChars)))];
+    let clean: { text: string; provenance: ModelRequest['provenance'] };
+    try {
+      const d = deidentify(parts.join(sep), [`document-suggestions`, `input:${who}`]);
+      clean = { text: d.text, provenance: d.provenance };
+    } catch (e) {
+      if (!(e instanceof LearnerDataRefused)) throw e;
+      const refusal = new ModelRefused('M2', 'Refused: learner-level identifiers are never sent to a model. Remove them from the document and retry.');
+      await this.audit('model.refused', who, 'none', { rule: refusal.rule, capability: 'suggest', purpose: 'content_review' }).catch(() => undefined);
+      throw refusal;
+    }
+    const built = (flags: string[]) => {
+      const d = deterministicSuggestions(doc, round, exclude);
+      return { inputs: d.inputs, prompts: d.prompts, round, generatedWith: 'deterministic-fallback', draft: true as const, flags: ['deterministic', ...flags, ...(d.cycled ? ['pool_cycled'] : [])] };
+    };
+    if (!this.ready().length) return built([]);
+
+    const [body = '', labels = '[]', seen = '[]'] = clean.text.split(sep);
+    const again = exclude.length ? `\nDo not repeat any of these earlier suggestions: ${seen}` : '';
+    const prompt = `Document kind: ${docKind(doc)}. Refresh round ${round}.\nDocument text (it may be cut short):\n${body}\nBlanks to fill: ${labels}${again}\nReply with only a JSON object: {"inputs": [{"blank": <one of the blanks above>, "value": string, "why": string}], "prompts": [{"text": string, "why": string}]}. Give at most ${SUGGEST_LIMITS.maxInputs} inputs and ${SUGGEST_LIMITS.promptsPerRound} prompts. Each value must be a clearly marked placeholder or a generic example for a person to edit.`;
+    let r: ModelResult;
+    try {
+      r = await this.execute({ capability: 'suggest', purpose: 'content_review', system: 'You help a person complete and improve a business document. You produce drafts only. Never invent figures, names, dates, registration numbers or facts: where a value needs one, write a [Fill in: ...] placeholder that names the source. Output only the JSON object asked for.', prompt, history: [], provenance: clean.provenance, actor, json: true }, false);
+    } catch (e) {
+      if (e instanceof ModelRefused && e.rule === 'M6') return built(['refresh_fallback', 'rate_limited']);
+      if (e instanceof ModelUnavailable) return built(['refresh_fallback', 'provider_failed']);
+      throw e;
+    }
+    const parsed = parseModelSuggestions(r.text, blanks, exclude);
+    if (!parsed || !(parsed.inputs.length + parsed.prompts.length)) return { ...built(['refresh_fallback', ...(parsed ? [] : ['model_reply_not_json'])]), flags: ['refresh_fallback', ...(parsed ? [] : ['model_reply_not_json']), ...r.flags, 'deterministic'] };
+    const det = deterministicSuggestions(doc, round, [...exclude, ...textsOf(parsed)]);
+    const flags = [...r.flags];
+    let { inputs, prompts } = parsed;
+    if (!inputs.length && blanks.length) { inputs = det.inputs; flags.push('refresh_fallback'); }
+    if (!prompts.length) { prompts = det.prompts; if (!flags.includes('refresh_fallback')) flags.push('refresh_fallback'); }
+    return { inputs, prompts, round, generatedWith: `${r.provider}:${r.model}`, draft: true, flags };
   }
 
   /** A fixed, harmless prompt through the full rule path, to prove a provider is wired up. It still needs attestation first. */

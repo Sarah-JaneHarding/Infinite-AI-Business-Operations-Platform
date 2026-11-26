@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { createServer, type Server } from 'node:http';
+import express from 'express';
+import { afterAll, describe, expect, it } from 'vitest';
+import { modelRoutes } from '../src/server/modelRoutes';
+import { textsOf, type DocSuggestions } from '../src/core/suggest';
+import type { Doc } from '../src/core/types';
 import { ModelHub, ModelUnavailable, type HubStore } from '../src/server/models/hub';
 import { ModelRefused } from '../src/server/models/rules';
 import { RateLimiter } from '../src/server/rate';
@@ -413,5 +418,189 @@ describe('self test and status', () => {
     expect(() => setup({ OPS_MODEL_ORDER: 'bogus' })).toThrow(/unknown provider/);
     expect(() => setup({ OPS_MODEL_READABLE_COLLECTIONS: 'ledger' })).toThrow(/never include/);
     expect(() => setup({ GEMINI_API_BASE: 'http://not-local.example' })).toThrow(/https/);
+  });
+});
+
+describe('document suggestions: a refresh always gives new ones', () => {
+  const F = (s: string) => `[Fill in: ${s}]`;
+  const doc = (extra = ''): Doc => ({ title: 'Supplier agreement', blocks: [{ type: 'h', level: 1, text: 'Parties' }, { type: 'p', text: `Between ${F('supplier name')} and the school. ${F('term length')} ${extra}` }, { type: 'kv', pairs: [['Owner', '']] }], meta: {} });
+  const modelJson = (tag = '') => aText(JSON.stringify({ inputs: [{ blank: 'supplier name', value: `Name the supplier${tag}`, why: 'needed' }], prompts: [{ text: `Which clauses are missing${tag}?`, why: 'check' }, { text: `Summarise the term${tag}`, why: 'check' }] }));
+  const sig = (r: DocSuggestions) => JSON.stringify([r.inputs.map((i) => i.value), r.prompts.map((p) => p.text)]);
+
+  it('with no provider, five successive refreshes (sending back everything seen) are five distinct sets, labelled built-in', async () => {
+    const { hub, up } = setup();
+    const seen: string[] = [];
+    const sets: string[] = [];
+    for (let round = 0; round < 5; round++) {
+      const r = await hub.suggestForDocument(doc(), round, seen, 'sarah');
+      expect(r.draft).toBe(true);
+      expect(r.generatedWith).toBe('deterministic-fallback');
+      expect(textsOf(r).filter((t) => seen.includes(t))).toEqual([]);
+      sets.push(sig(r));
+      seen.push(...textsOf(r));
+    }
+    expect(new Set(sets).size).toBe(5);
+    expect(up.calls).toHaveLength(0);
+  });
+
+  it('with a provider that answers the same JSON every time, the second call has no overlap with the first and is flagged refresh_fallback', async () => {
+    const { hub, up } = setup();
+    await attestAll(hub);
+    up.queue.anthropic.push(modelJson(), modelJson());
+    const first = await hub.suggestForDocument(doc(), 0, [], 'sarah');
+    expect(first.generatedWith).toBe('anthropic:claude-sonnet-5-5');
+    expect(first.prompts.map((p) => p.text)).toEqual(['Which clauses are missing?', 'Summarise the term']);
+    expect(first.flags).not.toContain('refresh_fallback');
+    const second = await hub.suggestForDocument(doc(), 1, textsOf(first), 'sarah');
+    expect(textsOf(second).filter((t) => textsOf(first).map((x) => x.toLowerCase()).includes(t.toLowerCase()))).toEqual([]);
+    expect(second.flags).toContain('refresh_fallback');
+    expect(second.generatedWith).toBe('deterministic-fallback');
+    expect(sig(second)).not.toBe(sig(first));
+    expect(second.draft).toBe(true);
+  });
+
+  it('sends the round and the exclusion list to the provider, de-identified, and keeps a model reply that is new', async () => {
+    const { hub, up } = setup();
+    await attestAll(hub);
+    up.queue.anthropic.push(modelJson(' again'));
+    const r = await hub.suggestForDocument(doc('Contact Mrs Dlamini on 0821234567.'), 2, ['Old text one'], 'sarah');
+    const sent = JSON.stringify(up.calls[0]!.body);
+    expect(sent).toContain('Old text one');
+    expect(sent).toMatch(/round 2/i);
+    expect(sent).toMatch(/do not repeat/i);
+    expect(sent).not.toContain('0821234567');
+    expect(sent).not.toContain('Dlamini');
+    expect(r.flags).not.toContain('refresh_fallback');
+    expect(r.round).toBe(2);
+  });
+
+  it('refuses a document that holds a learner identifier, with or without a provider, and sends nothing', async () => {
+    const { hub, up } = setup();
+    const withId = doc('Learner number 4412 needs support.');
+    expect((await refused(hub.suggestForDocument(withId, 0, [], 'sarah')))?.rule).toBe('M2');
+    await attestAll(hub);
+    expect((await refused(hub.suggestForDocument(withId, 0, [], 'sarah')))?.status).toBe(422);
+    expect(up.calls).toHaveLength(0);
+  });
+
+  it('counts provider calls against the budget and the rate limiter, and falls back with an honest label instead of an error', async () => {
+    const { hub, up, store } = setup({ OPS_MODEL_DAILY_CALLS: '1', GEMINI_API_KEY: '' });
+    await hub.attest('anthropic', 'sarah', 'Reviewed the provider terms');
+    up.queue.anthropic.push(modelJson());
+    const a = await hub.suggestForDocument(doc(), 0, [], 'sarah');
+    expect(a.generatedWith).toMatch(/^anthropic:/);
+    const b = await hub.suggestForDocument(doc(), 1, textsOf(a), 'sarah');
+    expect(b.generatedWith).toBe('deterministic-fallback');
+    expect(b.flags).toContain('rate_limited');
+    expect(up.calls).toHaveLength(1);
+    expect(actions(store).filter((x) => x === 'model.request')).toHaveLength(1);
+
+    const lim = setup({}, { limiter: new RateLimiter(1, 60_000) });
+    await attestAll(lim.hub);
+    lim.up.queue.anthropic.push(modelJson());
+    await lim.hub.suggestForDocument(doc(), 0, [], 'sarah');
+    const c = await lim.hub.suggestForDocument(doc(), 1, [], 'sarah');
+    expect([c.generatedWith, c.flags.includes('rate_limited')]).toEqual(['deterministic-fallback', true]);
+  });
+
+  it('falls back, flagged, when the provider fails or answers with prose, and never writes to the store beyond the audit trail', async () => {
+    const { hub, up, store } = setup();
+    await attestAll(hub);
+    up.queue.anthropic.push({ status: 500, body: {} });
+    up.queue.gemini.push({ status: 500, body: {} });
+    const failed = await hub.suggestForDocument(doc(), 0, [], 'sarah');
+    expect([failed.generatedWith, failed.flags.includes('refresh_fallback'), failed.flags.includes('provider_failed')]).toEqual(['deterministic-fallback', true, true]);
+    up.queue.anthropic.push(aText('Sorry, prose only.'));
+    const prose = await hub.suggestForDocument(doc(), 1, [], 'sarah');
+    expect([prose.generatedWith, prose.flags.includes('refresh_fallback')]).toEqual(['deterministic-fallback', true]);
+    expect(Object.keys(store.rows).filter((k) => !['ledger', 'model_attestations'].includes(k))).toEqual([]);
+  });
+
+  it('ignores model inputs for blanks the document does not have', async () => {
+    const { hub, up } = setup();
+    await attestAll(hub);
+    up.queue.anthropic.push(aText(JSON.stringify({ inputs: [{ blank: 'not a blank', value: 'x', why: 'y' }], prompts: [{ text: 'A fresh prompt', why: 'y' }] })));
+    const r = await hub.suggestForDocument(doc(), 0, [], 'sarah');
+    expect(r.inputs.map((i) => i.blank).every((b) => ['supplier name', 'term length', 'Owner'].includes(b))).toBe(true);
+    expect(r.prompts[0]!.text).toBe('A fresh prompt');
+  });
+
+  it('limits the document text sent to a provider', async () => {
+    const { hub, up } = setup();
+    await attestAll(hub);
+    up.queue.anthropic.push(modelJson());
+    const big: Doc = { title: 'Big', blocks: [{ type: 'p', text: 'x'.repeat(30_000) + ' TAIL-MARKER' }], meta: {} };
+    await hub.suggestForDocument(big, 0, [], 'sarah');
+    const sent = JSON.stringify(up.calls[0]!.body);
+    expect(sent).not.toContain('TAIL-MARKER');
+    expect(sent.length).toBeLessThan(20_000);
+  });
+
+  it('agent recommendations: round 1 differs from round 0 in deterministic mode, and a model reply that repeats the excluded text falls back', async () => {
+    const { hub, up } = setup();
+    const agent = agentById('OPS-FIN-01')!;
+    const r0 = await hub.recommend(agent, {}, 'sarah', 0, []);
+    const r1 = await hub.recommend(agent, {}, 'sarah', 1, r0.strategicRecommendations);
+    expect(r1.strategicRecommendations).not.toEqual(r0.strategicRecommendations);
+    expect(r1.strategicRecommendations.filter((t) => r0.strategicRecommendations.includes(t))).toEqual([]);
+    await attestAll(hub);
+    const body = '{"strategicRecommendations":["Same rec"],"recommendedInputs":{},"complianceGuidance":["c"],"suggestedNextSteps":["n"]}';
+    up.queue.anthropic.push(aText(body), aText(body));
+    const m0 = await hub.recommend(agent, {}, 'sarah', 0, []);
+    const m1 = await hub.recommend(agent, {}, 'sarah', 1, m0.strategicRecommendations);
+    expect(m0.strategicRecommendations).toEqual(['Same rec']);
+    expect(m1.strategicRecommendations).not.toContain('Same rec');
+    expect(m1.flags).toContain('refresh_fallback');
+  });
+});
+
+describe('document suggestions routes', () => {
+  const servers: Server[] = [];
+  afterAll(() => Promise.all(servers.map((s) => new Promise((r) => s.close(r)))));
+  async function boot() {
+    const { hub } = setup();
+    const app = express();
+    app.use(express.json({ limit: '1mb' }));
+    app.use('/api', modelRoutes(hub));
+    const srv = createServer(app);
+    servers.push(srv);
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+    const port = (srv.address() as { port: number }).port;
+    return (path: string, body: unknown) => fetch(`http://127.0.0.1:${port}/api${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  }
+  const good: Doc = { title: 'T', blocks: [{ type: 'p', text: '[Fill in: owner]' }], meta: {} };
+
+  it('rejects a missing or malformed doc, a bad round, too many or too long excludes, and an oversized doc with 400', async () => {
+    const post = await boot();
+    const bad = async (b: unknown) => (await post('/ai/document-suggestions', b)).status;
+    expect(await bad({})).toBe(400);
+    expect(await bad({ doc: 'x' })).toBe(400);
+    expect(await bad({ doc: good, round: 99 })).toBe(400);
+    expect(await bad({ doc: good, round: -1 })).toBe(400);
+    expect(await bad({ doc: good, round: 1.5 })).toBe(400);
+    expect(await bad({ doc: good, exclude: Array.from({ length: 201 }, (_, i) => `t${i}`) })).toBe(400);
+    expect(await bad({ doc: good, exclude: ['x'.repeat(501)] })).toBe(400);
+    expect(await bad({ doc: good, exclude: [1] })).toBe(400);
+    expect(await bad({ doc: { ...good, blocks: [{ type: 'p', text: 'y'.repeat(200_001) }] } })).toBe(400);
+  });
+
+  it('answers a good request with a draft and the round, and refuses learner data with 422 and the message', async () => {
+    const post = await boot();
+    const ok = await post('/ai/document-suggestions', { doc: good, round: 3, exclude: Array.from({ length: 200 }, (_, i) => `t${i}`) });
+    expect(ok.status).toBe(200);
+    const j = (await ok.json()) as DocSuggestions;
+    expect([j.draft, j.round, j.generatedWith]).toEqual([true, 3, 'deterministic-fallback']);
+    const learner = await post('/ai/document-suggestions', { doc: { ...good, blocks: [{ type: 'p', text: 'EMIS 7731 struggles.' }] } });
+    expect(learner.status).toBe(422);
+    expect(((await learner.json()) as { error: string }).error).toMatch(/learner/i);
+  });
+
+  it('agent-recommendations validates round and exclude, and round 1 differs from round 0 in deterministic mode', async () => {
+    const post = await boot();
+    expect((await post('/ai/agent-recommendations', { agentId: 'OPS-FIN-01', round: 99 })).status).toBe(400);
+    expect((await post('/ai/agent-recommendations', { agentId: 'OPS-FIN-01', exclude: 'no' })).status).toBe(400);
+    const a = (await (await post('/ai/agent-recommendations', { agentId: 'OPS-FIN-01', round: 0 })).json()) as { strategicRecommendations: string[] };
+    const b = (await (await post('/ai/agent-recommendations', { agentId: 'OPS-FIN-01', round: 1 })).json()) as { strategicRecommendations: string[] };
+    expect(b.strategicRecommendations).not.toEqual(a.strategicRecommendations);
   });
 });

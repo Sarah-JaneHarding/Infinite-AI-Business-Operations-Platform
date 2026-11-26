@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, ShieldCheck, Sparkles, Check, ArrowRight, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useOps } from './store';
 import { Badge, Card, FORMAT_LABEL } from './primitives';
@@ -29,19 +29,29 @@ export function AgentRunner({ agent }: { agent: AgentContract }) {
   const [recsError, setRecsError] = useState<string | null>(null);
   const [recsApplied, setRecsApplied] = useState(false);
 
+  // Refresh asks for the next round and sends back every suggestion already shown, so it brings new wording.
+  const refreshState = useRef({ round: -1, seen: [] as string[] });
   const fetchRecommendations = useCallback(async () => {
     setLoadingRecs(true);
     setRecsError(null);
+    const st = refreshState.current;
+    const round = st.round + 1;
     try {
       const res = await apiFetch('/api/ai/agent-recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: agent.id, currentValues: vals })
+        body: JSON.stringify({ agentId: agent.id, currentValues: vals, round: Math.min(round, 50), exclude: st.seen.slice(-200) })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = (await res.json()) as AgentRecommendations;
+      refreshState.current = { round, seen: [...new Set([...st.seen, ...data.strategicRecommendations])] };
       setRecs(data);
-    } catch {
+    } catch (e) {
+      if (st.round >= 0) {
+        // A refresh that failed says so; it does not show the old suggestions again as if they were new.
+        setRecsError(`Could not refresh suggestions: ${(e as Error).message}`);
+        return;
+      }
       // Deterministic fallback if server call is unreachable
       const fallbackInputs: Record<string, string> = {};
       agent.inputs.forEach((input) => {
