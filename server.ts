@@ -29,6 +29,11 @@ import { ModelHub } from './src/server/models/hub';
 import { AGENTS, DEPARTMENTS } from './src/departments';
 import { checkRegistry, formatProblems } from './src/core/contract';
 import { modelRoutes } from './src/server/modelRoutes';
+import { oqRoutes } from './src/server/oqRoutes';
+import { PrWriter } from './src/connector/prWriter';
+import { loadSeed } from './src/oq/ingest';
+import { ingest as ingestOq } from './src/oq/ingest';
+import { REPO_SLUGS } from './src/oq/plan';
 
 const env = process.env;
 const REPO = env.ECOSYSTEM_REPO ?? 'Sarah-JaneHarding/infinite-ai-ecosystem';
@@ -133,6 +138,7 @@ app.get('/api/health', (_q, res) => res.json({
   autonomy: autonomy.enabled,
   roles: roles !== null,
   ecosystemWrites: env.OPS_ALLOW_ECOSYSTEM_WRITES === 'true',
+  prWrites: env.OPS_ALLOW_PR_WRITES === 'true' && Boolean(env.GITHUB_WRITE_TOKEN),
   webhook: Boolean(env.GITHUB_WEBHOOK_SECRET),
   inbound: (env.OPS_INBOUND_SECRET ?? '').length >= 16,
   calendarFeed: (env.OPS_CALENDAR_TOKEN ?? '').length >= 24,
@@ -287,6 +293,19 @@ app.post('/api/autonomy/orders/:id/activate', requireRole(roles, 'officer'));
 // Stopping stays open to everyone signed in: cancelling a task (and reading the list) is the safe direction.
 app.post('/api/autonomy/tasks', requireRole(roles, 'officer'));
 app.use('/api', modelRoutes(hub));
+
+// ---- open questions register: ingest, decide, route to departments and agents, draft PRs (docs/OPEN_QUESTIONS_REGISTER.md) ----
+// Making a PR ready and merging are judgements for the owner: they need the officer role once roles exist.
+app.post('/api/oq/prs/:id/ready', requireRole(roles, 'officer'));
+app.post('/api/oq/prs/:id/merge', requireRole(roles, 'officer'));
+const oqRepos = { ecosystem: REPO, platform: env.OPS_PLATFORM_REPO ?? REPO_SLUGS.platform };
+const prWriter = new PrWriter(Object.values(oqRepos), env.GITHUB_WRITE_TOKEN, { writes: env.OPS_ALLOW_PR_WRITES === 'true', merge: env.OPS_ALLOW_PR_MERGE === 'true' });
+const oqLedger = async (action: string, subject: string, detail: Record<string, unknown>, actor: string) => {
+  await appendLedger(store, { orgId: 'infinite-ai', actor, action, subject, detail }, Number(store.list('ledger').at(-1)?.seq ?? 0), actor === 'system' ? null : actor);
+};
+const oqSeed = () => loadSeed();
+try { ingestOq(store, oqSeed(), 'system'); } catch (err) { console.error(`open questions seed not loaded: ${(err as Error).message}`); }
+app.use('/api', oqRoutes({ store, writer: prWriter, seed: oqSeed, repos: oqRepos, flags: { writes: env.OPS_ALLOW_PR_WRITES === 'true', merge: env.OPS_ALLOW_PR_MERGE === 'true' }, appendValidated, ledger: oqLedger }));
 
 // ---- autonomy: standing orders, runs by request, and the budgets. Agents only ever draft; people sign (docs/AUTONOMY.md). ----
 app.use('/api', autonomyRoutes(autonomy));
