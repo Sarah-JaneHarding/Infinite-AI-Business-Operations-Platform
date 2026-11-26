@@ -20,7 +20,8 @@ export const REPO_SLUGS: Record<Question['repo'], string> = {
 /** Branches the writer may create. Never `main`, never anything else. */
 export const BRANCH_PREFIX = 'oq/';
 
-const cell = (s: string) => s.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|').trim();
+/** Backslash first, so a trailing `\` cannot escape the pipe that closes the cell. */
+const cell = (s: string) => s.replace(/\r?\n/g, ' ').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').trim();
 const slug = (id: string) => id.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 export function buildPlan(q: Question, d: Decision, repos: Record<string, string> = REPO_SLUGS): PrPlan {

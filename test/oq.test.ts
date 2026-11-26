@@ -115,6 +115,12 @@ describe('plan', () => {
     expect(p.logRow).toContain('a \\| b c is fine');
     expect(p.body).toContain('no agent merges or approves');
   });
+  it('escapes a backslash so it cannot swallow the cell separator', async () => {
+    const s = mem(); const dec = await recordDecision(deps(s), 'sarah', 'OQ-900', { optionIndex: 1, reason: 'ends with a slash \\ | and more' });
+    const cells = buildPlan(Q, dec).logRow.split(/(?<!\\)(?:\\\\)*\|/);
+    expect(cells).toHaveLength(8); // leading and trailing empties plus six real cells
+    expect(buildPlan(Q, dec).logRow).toContain('slash \\\\ \\| and more');
+  });
 });
 
 /** A recording GitHub double: every call is logged, and the PR/CI state is whatever the test sets. */
