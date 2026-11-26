@@ -14,6 +14,7 @@ import { fileName, MIME, render } from './artefacts/render';
 import { NEEDS_REVIEW_NOTICE, scanNotesFor, withNotice } from './notice';
 import { checkInput } from './guardrails/engine';
 import { detectPii } from './guardrails/pii';
+import { blocksOf, cellsOf, removeBlocks, rowsOf, stripTags, titleOf } from './htmlscan';
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 /** Characters of base64 per chunk record. The server caps a record at 256 KiB of JSON. */
@@ -161,28 +162,26 @@ export function jsonToDoc(title: string, text: string): Doc {
 }
 
 const unent = (s: string) => s.replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
-const plain = (s: string) => unent(s.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+const plain = (s: string) => unent(stripTags(s)).replace(/\s+/g, ' ').trim();
 
 export function htmlToDoc(title: string, html: string): Doc {
-  const clean = html.replace(/<(script|style|head)[\s\S]*?<\/\1>/gi, '');
-  const t = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  const clean = removeBlocks(html);
+  const t = titleOf(html);
   const blocks: Block[] = [];
-  const re = /<(h[1-6]|p|li|table|pre|blockquote)\b[^>]*>([\s\S]*?)<\/\1>/gi;
-  let m: RegExpExecArray | null;
   const lis: string[] = [];
   const flush = () => { if (lis.length) { blocks.push({ type: 'ul', items: [...lis] }); lis.length = 0; } };
-  while ((m = re.exec(clean))) {
-    const tag = m[1].toLowerCase();
-    if (tag === 'li') { lis.push(plain(m[2])); continue; }
+  for (const m of blocksOf(clean)) {
+    const tag = m.name;
+    if (tag === 'li') { lis.push(plain(m.inner)); continue; }
     flush();
     if (tag === 'table') {
-      const trs = [...m[2].matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map((r) => [...r[1].matchAll(/<t[hd]\b[^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((c) => plain(c[1])));
+      const trs = rowsOf(m.inner).map((r) => cellsOf(r.inner).map((c) => plain(c.inner)));
       if (trs.length) { const w = Math.max(...trs.map((r) => r.length)); const pad = (r: string[]) => [...r, ...Array(w - r.length).fill('')]; blocks.push({ type: 'table', headers: pad(trs[0]), rows: trs.slice(1).map(pad) }); }
-    } else if (tag[0] === 'h') { const x = plain(m[2]); if (x) blocks.push({ type: 'h', level: Math.min(3, Number(tag[1])), text: x }); }
-    else { const x = plain(m[2]); if (x) blocks.push(tag === 'blockquote' ? { type: 'callout', tone: 'info', text: x } : { type: 'p', text: x }); }
+    } else if (tag[0] === 'h') { const x = plain(m.inner); if (x) blocks.push({ type: 'h', level: Math.min(3, Number(tag[1])), text: x }); }
+    else { const x = plain(m.inner); if (x) blocks.push(tag === 'blockquote' ? { type: 'callout', tone: 'info', text: x } : { type: 'p', text: x }); }
   }
   flush();
-  return { title: (t ? plain(t[1]) : '') || title, blocks: blocks.length ? blocks : [{ type: 'p', text: plain(clean) }], meta: {} };
+  return { title: (t !== null ? plain(t) : '') || title, blocks: blocks.length ? blocks : [{ type: 'p', text: plain(clean) }], meta: {} };
 }
 
 // ---------- zip (for docx) ----------
