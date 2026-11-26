@@ -1,0 +1,1532 @@
+<title>AWS Infrastructure Estimate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap"
+/>
+
+<style>
+  /* ── Tokens ────────────────────────────────────────── */
+  :root {
+    --bg: #f5f6fa;
+    --bg-card: #ffffff;
+    --bg-subtle: #eceef5;
+    --border: #dde0ec;
+    --text: #1a1d2e;
+    --text-sub: #5a5f7a;
+    --text-inv: #ffffff;
+    --accent: #ff9900;
+    --accent-dark: #cc7a00;
+    --navy: #232f3e;
+    --navy-light: #2d3a4d;
+    --green: #1a8a3c;
+    --green-bg: #e6f5ec;
+    --amber: #a06600;
+    --amber-bg: #fff4d6;
+    --red: #c0392b;
+    --red-bg: #fdecea;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --radius: 6px;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #0d1117;
+      --bg-card: #161b22;
+      --bg-subtle: #1c2230;
+      --border: #282f3f;
+      --text: #e0e4f0;
+      --text-sub: #8890aa;
+      --navy: #1a2230;
+      --navy-light: #222c3c;
+      --green: #2db24c;
+      --green-bg: #0d2818;
+      --amber: #e0a020;
+      --amber-bg: #2a1e00;
+      --red: #e05050;
+      --red-bg: #2a0e0e;
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --bg: #0d1117;
+    --bg-card: #161b22;
+    --bg-subtle: #1c2230;
+    --border: #282f3f;
+    --text: #e0e4f0;
+    --text-sub: #8890aa;
+    --navy: #1a2230;
+    --navy-light: #222c3c;
+    --green: #2db24c;
+    --green-bg: #0d2818;
+    --amber: #e0a020;
+    --amber-bg: #2a1e00;
+    --red: #e05050;
+    --red-bg: #2a0e0e;
+  }
+
+  /* ── Reset ─────────────────────────────────────────── */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  /* ── Layout shell ───────────────────────────────────── */
+  .shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+  }
+
+  @media (max-width: 820px) {
+    .shell {
+      grid-template-columns: 1fr;
+    }
+    .sidebar {
+      display: none;
+    }
+  }
+
+  /* ── Header ─────────────────────────────────────────── */
+  .top-bar {
+    grid-column: 1 / -1;
+    background: var(--navy);
+    color: var(--text-inv);
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 52px;
+    border-bottom: 3px solid var(--accent);
+  }
+
+  .top-bar-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .top-bar-brand .wordmark {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--text-inv);
+  }
+
+  .top-bar-brand .slash {
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 15px;
+  }
+
+  .top-bar-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Sidebar ─────────────────────────────────────────── */
+  .sidebar {
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    padding: 28px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    margin-bottom: 28px;
+  }
+
+  .sidebar-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-sub);
+    padding: 0 20px;
+    margin-bottom: 6px;
+  }
+
+  .sidebar-link {
+    display: block;
+    padding: 5px 20px;
+    font-size: 13px;
+    color: var(--text-sub);
+    border-left: 3px solid transparent;
+    transition:
+      color 0.15s,
+      border-color 0.15s;
+  }
+
+  .sidebar-link:hover {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    text-decoration: none;
+    background: var(--bg-subtle);
+  }
+
+  /* ── Main content ────────────────────────────────────── */
+  .main {
+    padding: 36px 40px 80px;
+    max-width: 1000px;
+  }
+
+  @media (max-width: 820px) {
+    .main {
+      padding: 24px 16px 60px;
+    }
+  }
+
+  /* ── Section headers ─────────────────────────────────── */
+  .section {
+    margin-bottom: 56px;
+  }
+
+  .section-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    text-wrap: balance;
+    margin-bottom: 8px;
+    line-height: 1.25;
+  }
+
+  .section-desc {
+    color: var(--text-sub);
+    font-size: 13.5px;
+    max-width: 680px;
+    margin-bottom: 24px;
+    line-height: 1.65;
+  }
+
+  /* ── Layer group ─────────────────────────────────────── */
+  .layer-block {
+    margin-bottom: 32px;
+  }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: var(--navy-light);
+    border-radius: var(--radius) var(--radius) 0 0;
+    border: 1px solid var(--border);
+    border-bottom: none;
+  }
+
+  .layer-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    background: rgba(255, 153, 0, 0.12);
+    border: 1px solid rgba(255, 153, 0, 0.3);
+    border-radius: 3px;
+    padding: 2px 6px;
+  }
+
+  .layer-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.82);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Tables ──────────────────────────────────────────── */
+  .tbl-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .tbl-wrap.standalone {
+    border-radius: var(--radius);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--bg-card);
+  }
+
+  thead th {
+    background: var(--bg-subtle);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-sub);
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background: var(--bg-subtle);
+  }
+
+  td {
+    padding: 10px 14px;
+    vertical-align: top;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .td-svc {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--text);
+  }
+
+  .td-purpose {
+    color: var(--text-sub);
+    font-size: 12.5px;
+  }
+
+  .td-sizing {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-sub);
+    white-space: nowrap;
+  }
+
+  .td-model {
+    font-size: 12px;
+  }
+
+  .td-num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12.5px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* ── Pill / badge ─────────────────────────────────────── */
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    line-height: 1.6;
+  }
+
+  .pill-shared {
+    background: var(--amber-bg);
+    color: var(--amber);
+  }
+
+  .pill-marginal {
+    background: var(--green-bg);
+    color: var(--green);
+  }
+
+  .pill-dominant {
+    background: var(--red-bg);
+    color: var(--red);
+  }
+
+  .pill-fixed {
+    background: var(--bg-subtle);
+    color: var(--text-sub);
+  }
+
+  /* ── Cost driver cards ───────────────────────────────── */
+  .cost-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .cost-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .cost-card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-sub);
+    margin-bottom: 6px;
+  }
+
+  .cost-card-service {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .cost-card-desc {
+    font-size: 12.5px;
+    color: var(--text-sub);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .cost-range {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .cost-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .cost-unit {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-sub);
+  }
+
+  /* ── Workload comparison table special columns ─────────── */
+  .col-small {
+    background: color-mix(in srgb, var(--green-bg) 30%, transparent);
+  }
+  .col-medium {
+    background: color-mix(in srgb, var(--amber-bg) 25%, transparent);
+  }
+  .col-large {
+    background: color-mix(in srgb, var(--red-bg) 20%, transparent);
+  }
+
+  thead th.col-small,
+  thead th.col-medium,
+  thead th.col-large {
+    background: var(--bg-subtle);
+  }
+
+  /* ── Callout box ─────────────────────────────────────── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent);
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 24px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-sub);
+  }
+
+  .callout strong {
+    color: var(--text);
+  }
+
+  /* ── Divider ─────────────────────────────────────────── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 48px 0;
+  }
+
+  /* ── Footer ──────────────────────────────────────────── */
+  .footer {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-sub);
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    line-height: 1.8;
+  }
+</style>
+
+<div class="shell">
+  <!-- Header -->
+  <header class="top-bar">
+    <div class="top-bar-brand">
+      <span class="wordmark">INFINITE-AI</span>
+      <span class="slash">/</span>
+      <span class="wordmark" style="font-weight: 400; opacity: 0.75"
+        >AWS Cost Reference</span
+      >
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px">
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(255, 153, 0, 0.12);
+          border: 1px solid rgba(255, 153, 0, 0.3);
+          border-radius: 4px;
+          padding: 3px 10px;
+        "
+      >
+        <span
+          style="
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--accent);
+            font-weight: 600;
+          "
+          >ZAR</span
+        >
+        <span
+          style="
+            font-family: var(--mono);
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.55);
+          "
+          >@ R18.50 / USD</span
+        >
+      </div>
+      <span class="top-bar-meta">IAI-INFRA-2026-001 &nbsp;·&nbsp; 2026-09-02</span>
+    </div>
+  </header>
+
+  <!-- Sidebar nav -->
+  <nav class="sidebar" aria-label="Page sections">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sections</div>
+      <a class="sidebar-link" href="#services">Service Catalog</a>
+      <a class="sidebar-link" href="#workload">Per-School Workload</a>
+      <a class="sidebar-link" href="#drivers">Cost Drivers</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Architecture Layers</div>
+      <a class="sidebar-link" href="#layer-compute">Compute</a>
+      <a class="sidebar-link" href="#layer-db">Data Plane</a>
+      <a class="sidebar-link" href="#layer-cache">Cache</a>
+      <a class="sidebar-link" href="#layer-storage">Storage &amp; CDN</a>
+      <a class="sidebar-link" href="#layer-queue">Queue &amp; Worker</a>
+      <a class="sidebar-link" href="#layer-security">Security &amp; Secrets</a>
+      <a class="sidebar-link" href="#layer-obs">Observability</a>
+      <a class="sidebar-link" href="#layer-network">Network</a>
+      <a class="sidebar-link" href="#layer-llm">LLM Gateway</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Cost Model</div>
+      <a class="sidebar-link" href="#model">Shared vs. Marginal</a>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Intro -->
+    <div class="section" style="margin-bottom: 40px">
+      <div class="section-eyebrow">Infrastructure Planning</div>
+      <h1 class="section-title">AWS Services &amp; Per-School Workload</h1>
+      <p class="section-desc">
+        Multi-tenant SaaS on AWS — one shared cluster, one RDS instance, one Redis
+        cluster. The cost model splits into a
+        <strong>shared infrastructure baseline</strong> (fixed regardless of school count)
+        and a <strong>per-school marginal cost</strong> driven by storage growth and LLM
+        API usage. Figures below are for a production deployment in
+        <strong>af-south-1 (Cape Town)</strong>. All cost estimates are in
+        <strong>ZAR at R18.50&nbsp;=&nbsp;$1 USD</strong> (assumed rate for planning —
+        verify against the SARB daily rate before budgeting). AWS publishes unit prices in
+        USD; those are kept as-is in the service tables for reference.
+      </p>
+      <div class="callout">
+        <div>
+          <strong>School profile assumed:</strong> South African primary school, Grade
+          R–7, serving 200–800 learners. Active usage 07:00–17:00 SAST, Mon–Fri, ~196
+          school days/year (4 terms, 39–40 teaching weeks). Nine user roles: teacher, HoD,
+          SMT, SBST, admin, guardian, learner, platform_support, platform_admin.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SERVICE CATALOG ─────────────────────────────── -->
+    <div class="section" id="services">
+      <div class="section-eyebrow">Section 01</div>
+      <h2 class="section-title">Service Catalog</h2>
+      <p class="section-desc">
+        Services are grouped by architecture layer as defined in CLAUDE.md. The
+        <span class="pill pill-shared">SHARED</span> pill means the cost is split across
+        all schools. <span class="pill pill-marginal">MARGINAL</span> means cost scales
+        per school.
+      </p>
+
+      <!-- Compute -->
+      <div class="layer-block" id="layer-compute">
+        <div class="layer-header">
+          <span class="layer-badge">L8 + L6 + L7</span>
+          <span class="layer-name">Compute — ECS Fargate</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service / Task</th>
+                <th>Purpose</th>
+                <th>Sizing (starting point)</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">ECS Fargate — apps/web</td>
+                <td class="td-purpose">
+                  Next.js 16 App Router; role-scoped UI; SSR pages. 2 tasks for HA.
+                </td>
+                <td class="td-sizing">0.5 vCPU · 1 GB RAM × 2</td>
+                <td class="td-model">Per vCPU-second + GB-second</td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">ECS Fargate — apps/gateway</td>
+                <td class="td-purpose">
+                  Model gateway; the only path to Anthropic Claude. All AI calls route
+                  here.
+                </td>
+                <td class="td-sizing">0.5 vCPU · 1 GB RAM × 2</td>
+                <td class="td-model">Per vCPU-second + GB-second</td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">ECS Fargate — apps/worker</td>
+                <td class="td-purpose">
+                  Background jobs: Brain ingestion, de-identification pipeline, report
+                  generation, SQS consumer.
+                </td>
+                <td class="td-sizing">0.5 vCPU · 1 GB RAM × 1</td>
+                <td class="td-model">Per vCPU-second + GB-second</td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">ECR</td>
+                <td class="td-purpose">
+                  Private container registry for web, gateway, worker images.
+                </td>
+                <td class="td-sizing">~3 GB stored images</td>
+                <td class="td-model">$0.10/GB/month after 500 MB free</td>
+                <td><span class="pill pill-fixed">FIXED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Data plane -->
+      <div class="layer-block" id="layer-db">
+        <div class="layer-header">
+          <span class="layer-badge">L3</span>
+          <span class="layer-name">Data Plane — RDS PostgreSQL 16 + pgvector</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Purpose</th>
+                <th>Sizing</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">RDS PostgreSQL 16</td>
+                <td class="td-purpose">
+                  Tenant-isolated Prisma data plane with RLS. Stores learner tokens (no
+                  PII), consent ledger, audit events, SIAS cases, MTSS tier data, CAPS
+                  curriculum data, PD journals. pgvector extension for Brain memory tier
+                  embeddings.
+                </td>
+                <td class="td-sizing">
+                  db.t4g.medium<br />(2 vCPU · 4 GB) single-AZ pilot;<br />db.t4g.large HA
+                  for prod
+                </td>
+                <td class="td-model">
+                  On-demand per hour; storage $0.115/GB/month; I/O $0.20/M requests
+                </td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">RDS Storage</td>
+                <td class="td-purpose">
+                  Grows with tenant count. Append-only audit_event and consent_record
+                  tables are the primary growth drivers. pgvector embedding columns (~6 KB
+                  per 1536-dim vector).
+                </td>
+                <td class="td-sizing">20 GB baseline + ~3–8 GB/school/year</td>
+                <td class="td-model">gp3 $0.115/GB/month</td>
+                <td><span class="pill pill-marginal">MARGINAL</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">RDS Automated Backups</td>
+                <td class="td-purpose">
+                  7-day PITR required for POPIA incident response window.
+                </td>
+                <td class="td-sizing">100% DB size × 7 days retention</td>
+                <td class="td-model">
+                  Free up to DB storage size; $0.095/GB/month beyond
+                </td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Cache -->
+      <div class="layer-block" id="layer-cache">
+        <div class="layer-header">
+          <span class="layer-badge">L3</span>
+          <span class="layer-name">Cache — ElastiCache for Redis 7</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Purpose</th>
+                <th>Sizing</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">ElastiCache Redis</td>
+                <td class="td-purpose">
+                  Session cache, rate-limit counters, tenant context lookups, Brain
+                  hot-tier cache. Keyed by tenant slug — no cross-tenant data sharing.
+                </td>
+                <td class="td-sizing">
+                  cache.t4g.micro (0.5 GB) pilot;<br />cache.t4g.small (1.37 GB) prod
+                </td>
+                <td class="td-model">Per node-hour; cache.t4g.micro ~$11.50/month</td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Storage + CDN -->
+      <div class="layer-block" id="layer-storage">
+        <div class="layer-header">
+          <span class="layer-badge">L3 + L8</span>
+          <span class="layer-name">Storage &amp; CDN — S3 + CloudFront</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Purpose</th>
+                <th>Sizing</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">S3 — app-assets</td>
+                <td class="td-purpose">
+                  Next.js static assets (JS bundles, images), lesson plan uploads, MOD-03
+                  data collection attachments, POPIA audit export archives.
+                </td>
+                <td class="td-sizing">~1–3 GB/school/year</td>
+                <td class="td-model">$0.023/GB/month; PUT $0.005/1K; GET $0.0004/1K</td>
+                <td><span class="pill pill-marginal">MARGINAL</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">S3 — brain-archive</td>
+                <td class="td-purpose">
+                  Long-term Brain memory tier snapshots. Append-only by design; deletion
+                  only via the tombstone/retention path.
+                </td>
+                <td class="td-sizing">~50–200 MB/school/year</td>
+                <td class="td-model">S3 Standard-IA $0.0125/GB/month after 30 days</td>
+                <td><span class="pill pill-marginal">MARGINAL</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">S3 — retention-export</td>
+                <td class="td-purpose">
+                  POPIA retention schedule exports triggered by the school's own schedule.
+                  Each school uploads their completed RETENTION_SCHEDULE_TEMPLATE.md
+                  output here.
+                </td>
+                <td class="td-sizing">&lt;10 MB/school/year</td>
+                <td class="td-model">S3 Glacier Instant Retrieval for long-term hold</td>
+                <td><span class="pill pill-marginal">MARGINAL</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">CloudFront</td>
+                <td class="td-purpose">
+                  CDN for Next.js static output and S3 assets. Reduces latency for SA
+                  schools on ADSL/fibre.
+                </td>
+                <td class="td-sizing">Africa (South Africa) edge</td>
+                <td class="td-model">
+                  $0.17/GB data transfer out; $0.0100/10K HTTPS requests
+                </td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Queue -->
+      <div class="layer-block" id="layer-queue">
+        <div class="layer-header">
+          <span class="layer-badge">L6</span>
+          <span class="layer-name">Queue &amp; Async — SQS + ALB</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Purpose</th>
+                <th>Sizing</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">SQS Standard Queue</td>
+                <td class="td-purpose">
+                  Worker job queue: Brain ingestion tasks, de-identification jobs, report
+                  generation, SIAS phase transition events, audit event fanout.
+                </td>
+                <td class="td-sizing">~500–2,000 messages/day/school</td>
+                <td class="td-model">First 1M req/month free; $0.40/M thereafter</td>
+                <td><span class="pill pill-marginal">MARGINAL</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">SES</td>
+                <td class="td-purpose">
+                  Transactional email: guardian consent notifications, SIAS review
+                  reminders, MOD-05 PD completion digests, school admin alerts.
+                </td>
+                <td class="td-sizing">~500–2,000 emails/school/month</td>
+                <td class="td-model">
+                  $0.10/1,000 emails; outbound attachments $0.12/GB
+                </td>
+                <td><span class="pill pill-marginal">MARGINAL</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">ALB</td>
+                <td class="td-purpose">
+                  Application Load Balancer fronting web and gateway Fargate services. TLS
+                  termination.
+                </td>
+                <td class="td-sizing">1 ALB (2 target groups)</td>
+                <td class="td-model">$0.008/LCU-hour + $0.008/ALB-hour</td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div class="layer-block" id="layer-security">
+        <div class="layer-header">
+          <span class="layer-badge">L5 + L2</span>
+          <span class="layer-name">Security &amp; Secrets</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Purpose</th>
+                <th>Sizing</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">Secrets Manager</td>
+                <td class="td-purpose">
+                  Stores: RDS credentials, Anthropic API key, Redis auth token, SES SMTP
+                  credentials, per-tenant encryption keys. Automatic rotation for RDS.
+                </td>
+                <td class="td-sizing">~8–12 secrets; rotated monthly</td>
+                <td class="td-model">$0.40/secret/month; $0.05/10K API calls</td>
+                <td><span class="pill pill-fixed">FIXED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">KMS</td>
+                <td class="td-purpose">
+                  Envelope encryption for RDS (SSE), S3 (SSE-KMS), and Secrets Manager.
+                  Required for POPIA data-at-rest obligations.
+                </td>
+                <td class="td-sizing">2–3 CMKs</td>
+                <td class="td-model">$1.00/CMK/month; $0.03/10K API calls</td>
+                <td><span class="pill pill-fixed">FIXED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">WAF</td>
+                <td class="td-purpose">
+                  Web Application Firewall on the ALB. Protects against SQLi, XSS, rate
+                  abuse. POPIA requires reasonable technical safeguards.
+                </td>
+                <td class="td-sizing">1 WebACL; managed rule groups</td>
+                <td class="td-model">
+                  $5/WebACL/month + $1/rule/month + $0.60/1M requests
+                </td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">ACM</td>
+                <td class="td-purpose">
+                  TLS certificates for the ALB and CloudFront distribution.
+                </td>
+                <td class="td-sizing">2 certificates</td>
+                <td class="td-model">Free (ACM-managed certificates)</td>
+                <td><span class="pill pill-fixed">FIXED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Observability -->
+      <div class="layer-block" id="layer-obs">
+        <div class="layer-header">
+          <span class="layer-badge">L8</span>
+          <span class="layer-name">Observability — CloudWatch + X-Ray</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Purpose</th>
+                <th>Sizing</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">CloudWatch Logs</td>
+                <td class="td-purpose">
+                  Structured logs from all Fargate tasks (packages/telemetry). Log groups
+                  per service. 7-day retention for operational; 90-day for audit (POPIA
+                  incident response).
+                </td>
+                <td class="td-sizing">~5–15 GB/month ingestion</td>
+                <td class="td-model">$0.57/GB ingestion; $0.03/GB/month storage</td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">CloudWatch Metrics</td>
+                <td class="td-purpose">
+                  Custom metrics: LLM call latency, Brain tier write rate, EGRA screening
+                  completion, SQS queue depth per tenant.
+                </td>
+                <td class="td-sizing">~30 custom metrics</td>
+                <td class="td-model">
+                  First 10 metrics free; $0.30/metric/month thereafter
+                </td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">X-Ray</td>
+                <td class="td-purpose">
+                  Distributed tracing for the guardrail plane (L5): PII guard → de-ident →
+                  gateway → Anthropic round trip. Required for latency debugging.
+                </td>
+                <td class="td-sizing">~100K traces/month</td>
+                <td class="td-model">First 100K traces/month free; $5.00/M thereafter</td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Network -->
+      <div class="layer-block" id="layer-network">
+        <div class="layer-header">
+          <span class="layer-badge">L0</span>
+          <span class="layer-name">Network — VPC + Route 53 + NAT Gateway</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Purpose</th>
+                <th>Sizing</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">VPC</td>
+                <td class="td-purpose">
+                  Private subnets for Fargate tasks, RDS, ElastiCache. Public subnets for
+                  ALB only.
+                </td>
+                <td class="td-sizing">1 VPC; 2 AZ; 4 subnets</td>
+                <td class="td-model">Free (VPC itself); data transfer charges apply</td>
+                <td><span class="pill pill-fixed">FIXED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">NAT Gateway</td>
+                <td class="td-purpose">
+                  Fargate tasks in private subnets need outbound internet for Anthropic
+                  Claude API calls.
+                  <strong>This is a significant cost driver</strong> — every LLM call's
+                  request and response payload passes through it.
+                </td>
+                <td class="td-sizing">1 NAT GW per AZ (HA)</td>
+                <td class="td-model">$0.045/hour + $0.045/GB processed</td>
+                <td><span class="pill pill-shared">SHARED</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">Route 53</td>
+                <td class="td-purpose">
+                  DNS for app domain + health checks for ALB endpoints.
+                </td>
+                <td class="td-sizing">1 hosted zone; ~5 records</td>
+                <td class="td-model">$0.50/hosted zone/month; $0.40/M queries</td>
+                <td><span class="pill pill-fixed">FIXED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- LLM -->
+      <div class="layer-block" id="layer-llm">
+        <div class="layer-header">
+          <span class="layer-badge">L2</span>
+          <span class="layer-name">LLM Gateway — Anthropic Claude API (external)</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Purpose</th>
+                <th>Sizing</th>
+                <th>Pricing model</th>
+                <th>Cost type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-svc">Claude Sonnet 4.6 (input)</td>
+                <td class="td-purpose">
+                  MOD-01 curriculum planning, MOD-04 content generation, MOD-05 PD journal
+                  summaries, guardrail evaluation. All routed via apps/gateway — no direct
+                  provider SDK in application code.
+                </td>
+                <td class="td-sizing">
+                  ~1,500 avg input tokens/call; ~80% cached via prompt caching
+                </td>
+                <td class="td-model">$3.00/MTok (fresh); $0.30/MTok (cache read)</td>
+                <td><span class="pill pill-dominant">DOMINANT</span></td>
+              </tr>
+              <tr>
+                <td class="td-svc">Claude Sonnet 4.6 (output)</td>
+                <td class="td-purpose">
+                  Generated lesson plans, EGRA analysis narratives, SIAS case summaries,
+                  PD reflections.
+                </td>
+                <td class="td-sizing">~400 avg output tokens/call</td>
+                <td class="td-model">$15.00/MTok</td>
+                <td><span class="pill pill-dominant">DOMINANT</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ── WORKLOAD ──────────────────────────────────────── -->
+    <div class="section" id="workload">
+      <div class="section-eyebrow">Section 02</div>
+      <h2 class="section-title">Per-School Workload Estimates</h2>
+      <p class="section-desc">
+        Three school-size tiers modelled on the SA DoE norms for public primary schools.
+        Usage assumes full deployment of all five modules (MOD-01 through MOD-05). Figures
+        are per school per year unless noted.
+      </p>
+
+      <div class="tbl-wrap standalone" style="margin-bottom: 28px">
+        <table>
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th class="col-small">Small<br />(~200 learners)</th>
+              <th class="col-medium">Medium<br />(~500 learners)</th>
+              <th class="col-large">Large<br />(~800 learners)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-purpose"><strong>Active staff users</strong></td>
+              <td class="td-num col-small">~15</td>
+              <td class="td-num col-medium">~35</td>
+              <td class="td-num col-large">~55</td>
+            </tr>
+            <tr>
+              <td class="td-purpose"><strong>Peak concurrent sessions</strong></td>
+              <td class="td-num col-small">5 – 8</td>
+              <td class="td-num col-medium">12 – 18</td>
+              <td class="td-num col-large">20 – 32</td>
+            </tr>
+            <tr>
+              <td class="td-purpose"><strong>RDS storage growth / year (GB)</strong></td>
+              <td class="td-num col-small">1 – 2</td>
+              <td class="td-num col-medium">3 – 5</td>
+              <td class="td-num col-large">5 – 10</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>pgvector embeddings / year</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >Brain memory tier; 1536-dim; ~6 KB/row</span
+                >
+              </td>
+              <td class="td-num col-small">~2,000</td>
+              <td class="td-num col-medium">~5,000</td>
+              <td class="td-num col-large">~8,000</td>
+            </tr>
+            <tr>
+              <td class="td-purpose"><strong>S3 storage growth / year (GB)</strong></td>
+              <td class="td-num col-small">0.5 – 1</td>
+              <td class="td-num col-medium">1 – 3</td>
+              <td class="td-num col-large">3 – 6</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>LLM API calls / year</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >MOD-01 + MOD-04 dominant; MOD-02/05 minor</span
+                >
+              </td>
+              <td class="td-num col-small">~30,000</td>
+              <td class="td-num col-medium">~75,000</td>
+              <td class="td-num col-large">~120,000</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>LLM input tokens / year (M)</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >~1,500 avg per call</span
+                >
+              </td>
+              <td class="td-num col-small">~45</td>
+              <td class="td-num col-medium">~112</td>
+              <td class="td-num col-large">~180</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>Cached input tokens / year (M)</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >~80% of input assumed cached (system prompt)</span
+                >
+              </td>
+              <td class="td-num col-small">~36</td>
+              <td class="td-num col-medium">~90</td>
+              <td class="td-num col-large">~144</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>LLM output tokens / year (M)</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >~400 avg per call</span
+                >
+              </td>
+              <td class="td-num col-small">~12</td>
+              <td class="td-num col-medium">~30</td>
+              <td class="td-num col-large">~48</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>LLM cost estimate / year</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >With prompt caching; excl. infra. (USD: ~$215 / ~$545 / ~$870)</span
+                >
+              </td>
+              <td class="td-num col-small">~R3,980</td>
+              <td class="td-num col-medium">~R10,080</td>
+              <td class="td-num col-large">~R16,095</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>LLM cost / month</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >(USD: ~$18 / ~$45 / ~$73)</span
+                >
+              </td>
+              <td class="td-num col-small">~R333</td>
+              <td class="td-num col-medium">~R833</td>
+              <td class="td-num col-large">~R1,350</td>
+            </tr>
+            <tr>
+              <td class="td-purpose"><strong>SQS messages / day</strong></td>
+              <td class="td-num col-small">150 – 400</td>
+              <td class="td-num col-medium">400 – 1,000</td>
+              <td class="td-num col-large">1,000 – 2,000</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>Outbound emails / month</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >Guardian consent, SIAS notices, PD digests</span
+                >
+              </td>
+              <td class="td-num col-small">~300</td>
+              <td class="td-num col-medium">~800</td>
+              <td class="td-num col-large">~1,500</td>
+            </tr>
+            <tr>
+              <td class="td-purpose">
+                <strong>NAT Gateway data processed / month (GB)</strong><br /><span
+                  style="font-size: 11px; color: var(--text-sub)"
+                  >Dominated by LLM payloads through gateway</span
+                >
+              </td>
+              <td class="td-num col-small">~1.5</td>
+              <td class="td-num col-medium">~4</td>
+              <td class="td-num col-large">~6</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div>
+          <strong>LLM cost formula (with caching) — ZAR @ R18.50/$1:</strong><br />
+          <code style="font-family: var(--mono); font-size: 12px">
+            Cost = (fresh_input_tokens × R55.50 + cached_input_tokens × R5.55 +
+            output_tokens × R277.50) / 1,000,000
+          </code>
+          <br />
+          <span style="font-size: 12px; color: var(--text-sub)"
+            >USD equivalent: $3.00 / $0.30 / $15.00 per MTok respectively.</span
+          ><br />
+          At 80% cache hit on system prompts: a medium school saves ~R3,145/year (~$170)
+          vs. no caching. Cache TTL is 5 min — effective in lesson-planning sessions where
+          the teacher sends multiple follow-up prompts.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ── COST DRIVERS ─────────────────────────────────── -->
+    <div class="section" id="drivers">
+      <div class="section-eyebrow">Section 03</div>
+      <h2 class="section-title">Cost Drivers &amp; Shared Baseline</h2>
+      <p class="section-desc">
+        Estimated monthly costs in ZAR (R18.50 = $1 USD) for a production deployment in
+        af-south-1, starting with a pilot of 5–10 schools. Ranges are wide — use the AWS
+        Pricing Calculator with the workload figures above to pin them.
+      </p>
+
+      <div class="cost-grid" id="model">
+        <div class="cost-card">
+          <div class="cost-card-label">Shared baseline</div>
+          <div class="cost-card-service">Compute + DB + Cache + Network</div>
+          <div class="cost-card-desc">
+            ECS Fargate (3 services), RDS db.t4g.medium, ElastiCache cache.t4g.micro, 1
+            ALB, 1 NAT Gateway, CloudFront, WAF, CloudWatch, Secrets Manager. Fixed
+            regardless of school count at low scale.
+          </div>
+          <div class="cost-range">
+            <span class="cost-val">R5,180</span>
+            <span class="cost-unit">– R7,770 / month</span>
+          </div>
+          <div
+            style="
+              font-family: var(--mono);
+              font-size: 11px;
+              color: var(--text-sub);
+              margin-top: 4px;
+            "
+          >
+            ~$280 – $420 USD
+          </div>
+        </div>
+
+        <div class="cost-card">
+          <div class="cost-card-label">Marginal per school (infra only)</div>
+          <div class="cost-card-service">Storage + SQS + SES</div>
+          <div class="cost-card-desc">
+            RDS storage growth (~4 GB/year medium), S3 growth (~2 GB/year), SQS messages,
+            SES emails. Excludes LLM. At medium school size over 12 months.
+          </div>
+          <div class="cost-range">
+            <span class="cost-val">R148</span>
+            <span class="cost-unit">– R333 / month / school</span>
+          </div>
+          <div
+            style="
+              font-family: var(--mono);
+              font-size: 11px;
+              color: var(--text-sub);
+              margin-top: 4px;
+            "
+          >
+            ~$8 – $18 USD
+          </div>
+        </div>
+
+        <div class="cost-card">
+          <div class="cost-card-label" style="color: var(--red)">
+            Dominant cost driver
+          </div>
+          <div class="cost-card-service">Anthropic Claude API</div>
+          <div class="cost-card-desc">
+            LLM calls are the single largest per-school marginal cost. Prompt caching
+            delivers ~25–30% savings. Usage spikes during term time; near-zero in school
+            holidays.
+          </div>
+          <div class="cost-range">
+            <span class="cost-val" style="color: var(--red)">R333</span>
+            <span class="cost-unit">– R1,350 / month / school</span>
+          </div>
+          <div
+            style="
+              font-family: var(--mono);
+              font-size: 11px;
+              color: var(--text-sub);
+              margin-top: 4px;
+            "
+          >
+            ~$18 – $73 USD
+          </div>
+        </div>
+
+        <div class="cost-card">
+          <div class="cost-card-label">NAT Gateway watch</div>
+          <div class="cost-card-service">Data processing charges</div>
+          <div class="cost-card-desc">
+            Every Anthropic API call transits the NAT Gateway. At 75,000 calls/year
+            (medium school) × ~4 KB avg payload = ~300 MB/school/year — modest, but
+            multiplies with school count.
+          </div>
+          <div class="cost-range">
+            <span class="cost-val">$0.045</span>
+            <span class="cost-unit">/GB processed</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap standalone">
+        <table>
+          <thead>
+            <tr>
+              <th>Schools</th>
+              <th>Shared baseline (ZAR)</th>
+              <th>Infra per school (ZAR)</th>
+              <th>LLM per school — medium (ZAR)</th>
+              <th>Total estimate / month (ZAR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-svc">
+                5 schools<br /><span
+                  style="
+                    font-family: var(--mono);
+                    font-size: 10px;
+                    color: var(--text-sub);
+                  "
+                  >~$350/$60/$225/$635</span
+                >
+              </td>
+              <td class="td-num">~R6,475</td>
+              <td class="td-num">~R1,110</td>
+              <td class="td-num">~R4,163</td>
+              <td class="td-num" style="color: var(--accent); font-weight: 600">
+                ~R11,748
+              </td>
+            </tr>
+            <tr>
+              <td class="td-svc">
+                10 schools<br /><span
+                  style="
+                    font-family: var(--mono);
+                    font-size: 10px;
+                    color: var(--text-sub);
+                  "
+                  >~$380/$130/$450/$960</span
+                >
+              </td>
+              <td class="td-num">~R7,030</td>
+              <td class="td-num">~R2,405</td>
+              <td class="td-num">~R8,325</td>
+              <td class="td-num" style="color: var(--accent); font-weight: 600">
+                ~R17,760
+              </td>
+            </tr>
+            <tr>
+              <td class="td-svc">
+                25 schools<br /><span
+                  style="
+                    font-family: var(--mono);
+                    font-size: 10px;
+                    color: var(--text-sub);
+                  "
+                  >~$450/$325/$1,125/$1,900</span
+                >
+              </td>
+              <td class="td-num">~R8,325</td>
+              <td class="td-num">~R6,013</td>
+              <td class="td-num">~R20,813</td>
+              <td class="td-num" style="color: var(--accent); font-weight: 600">
+                ~R35,150
+              </td>
+            </tr>
+            <tr>
+              <td class="td-svc">
+                50 schools<br /><span
+                  style="
+                    font-family: var(--mono);
+                    font-size: 10px;
+                    color: var(--text-sub);
+                  "
+                  >~$560/$650/$2,250/$3,460</span
+                >
+              </td>
+              <td class="td-num">~R10,360</td>
+              <td class="td-num">~R12,025</td>
+              <td class="td-num">~R41,625</td>
+              <td class="td-num" style="color: var(--accent); font-weight: 600">
+                ~R64,010
+              </td>
+            </tr>
+            <tr>
+              <td class="td-svc">
+                100 schools<br /><span
+                  style="
+                    font-family: var(--mono);
+                    font-size: 10px;
+                    color: var(--text-sub);
+                  "
+                  >~$750/$1,300/$4,500/$6,550</span
+                >
+              </td>
+              <td class="td-num">~R13,875</td>
+              <td class="td-num">~R24,050</td>
+              <td class="td-num">~R83,250</td>
+              <td class="td-num" style="color: var(--accent); font-weight: 600">
+                ~R121,175
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout" style="margin-top: 24px">
+        <div>
+          <strong>Caveats:</strong> (1) Exchange rate assumed R18.50 = $1 USD — verify
+          against the SARB daily rate; a R1 move on the rand shifts a 10-school total by
+          ~R960/month. (2) af-south-1 prices are ~15–20% higher than us-east-1 — use the
+          AWS Pricing Calculator with Cape Town selected. (3) LLM usage is highly
+          sensitive to module adoption; MOD-01 and MOD-04 drive &gt;80% of calls. (4) RDS
+          should be sized up to db.t4g.large (multi-AZ) for production HA — adds
+          ~R2,220/month (~$120). (5) NAT Gateway per AZ for HA — adds ~R592/month (~$32).
+          (6) Fargate Spot can reduce worker task costs by 70% but is not suitable for
+          web/gateway (availability risk). (7) These estimates cover AWS only; domain
+          name, email deliverability service (if beyond SES), third-party monitoring, and
+          Anthropic API credits are separate budget lines.
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div>
+        INFINITE-AI AWS Cost Reference · IAI-INFRA-2026-001 · Generated 2026-09-02 ·
+        Updated with ZAR conversion 2026-09-02
+      </div>
+      <div style="margin-top: 4px">
+        For questions: add to docs/OPEN_QUESTIONS.md · Pricing sourced from AWS public
+        pricing page (af-south-1) · Anthropic pricing from anthropic.com/pricing · Cost
+        estimates in ZAR at R18.50/$1 USD assumed rate · Unit prices in service tables
+        remain in USD (AWS published pricing)
+      </div>
+    </footer>
+  </main>
+</div>

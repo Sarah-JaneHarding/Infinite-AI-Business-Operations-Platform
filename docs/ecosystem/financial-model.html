@@ -1,0 +1,1210 @@
+<title>Infinite AI Financial Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Sora:wght@700&family=Inter:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface-2: #eff2f7;
+    --border: #dde2ec;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+
+    --c-aws: #2563eb;
+    --c-3p: #0891b2;
+    --c-infra: #d97706;
+    --c-llm: #dc2626;
+    --c-rev: #16a34a;
+    --c-margin: #7c3aed;
+
+    --c-aws-bg: #dbeafe;
+    --c-3p-bg: #cffafe;
+    --c-infra-bg: #fef3c7;
+    --c-llm-bg: #fee2e2;
+    --c-rev-bg: #dcfce7;
+    --c-margin-bg: #ede9fe;
+
+    --radius: 10px;
+    --gap: 1.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #0c0f1a;
+      --surface: #141826;
+      --surface-2: #1d2236;
+      --border: #272d46;
+      --text-primary: #eef0f8;
+      --text-secondary: #8b92ab;
+      --text-muted: #4a5070;
+
+      --c-aws: #60a5fa;
+      --c-3p: #22d3ee;
+      --c-infra: #fcd34d;
+      --c-llm: #f87171;
+      --c-rev: #4ade80;
+      --c-margin: #c084fc;
+
+      --c-aws-bg: #1e3a6e;
+      --c-3p-bg: #154e5e;
+      --c-infra-bg: #6b3a0a;
+      --c-llm-bg: #6b1a1a;
+      --c-rev-bg: #134a25;
+      --c-margin-bg: #3b1f6a;
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --bg: #0c0f1a;
+    --surface: #141826;
+    --surface-2: #1d2236;
+    --border: #272d46;
+    --text-primary: #eef0f8;
+    --text-secondary: #8b92ab;
+    --text-muted: #4a5070;
+
+    --c-aws: #60a5fa;
+    --c-3p: #22d3ee;
+    --c-infra: #fcd34d;
+    --c-llm: #f87171;
+    --c-rev: #4ade80;
+    --c-margin: #c084fc;
+
+    --c-aws-bg: #1e3a6e;
+    --c-3p-bg: #154e5e;
+    --c-infra-bg: #6b3a0a;
+    --c-llm-bg: #6b1a1a;
+    --c-rev-bg: #134a25;
+    --c-margin-bg: #3b1f6a;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 2rem 1.75rem 3rem;
+  }
+
+  h1,
+  h2,
+  h3,
+  .kpi-value,
+  .ic-value {
+    font-family: 'Sora', system-ui, sans-serif;
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .page-title h1 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+    text-wrap: balance;
+  }
+
+  .page-title p {
+    color: var(--text-secondary);
+    font-size: 0.825rem;
+    margin-top: 0.2rem;
+  }
+
+  .badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+  }
+
+  .badge-fx {
+    background: var(--c-aws-bg);
+    color: var(--c-aws);
+  }
+  .badge-region {
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+
+  /* ── Controls ── */
+  .controls {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.125rem 1.375rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem 2.5rem;
+    margin-bottom: 1.375rem;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .ctl-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+  }
+
+  .pill-row {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      border-color 0.12s,
+      color 0.12s,
+      background 0.12s;
+    font-family: inherit;
+    line-height: 1.4;
+  }
+
+  .pill:hover {
+    border-color: var(--c-aws);
+    color: var(--c-aws);
+  }
+  .pill.active {
+    background: var(--c-aws);
+    border-color: var(--c-aws);
+    color: #fff;
+  }
+  .pill.email-pill:hover {
+    border-color: var(--c-3p);
+    color: var(--c-3p);
+  }
+  .pill.email-pill.active {
+    background: var(--c-3p);
+    border-color: var(--c-3p);
+    color: #fff;
+  }
+
+  /* ── KPI grid ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gap);
+    margin-bottom: 1.375rem;
+  }
+
+  @media (max-width: 680px) {
+    .kpi-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.125rem 1.25rem 1rem;
+  }
+
+  .kpi-label {
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+    margin-bottom: 0.45rem;
+  }
+
+  .kpi-value {
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    margin-bottom: 0.2rem;
+  }
+
+  .kpi-sub {
+    font-size: 0.725rem;
+    color: var(--text-muted);
+  }
+
+  /* ── Insight cards ── */
+  .insight-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--gap);
+    margin-bottom: 1.375rem;
+  }
+
+  @media (max-width: 680px) {
+    .insight-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1.25rem;
+  }
+
+  .ic-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .ic-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.15rem;
+  }
+
+  .ic-note {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* ── Section headers ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-header h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+  }
+
+  /* ── Breakdown table ── */
+  .breakdown-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1.375rem;
+  }
+
+  .breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .breakdown-table th {
+    background: var(--surface-2);
+    text-align: left;
+    padding: 0.55rem 1rem;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+  }
+
+  .breakdown-table th.right,
+  .breakdown-table td.right {
+    text-align: right;
+  }
+
+  .breakdown-table td {
+    padding: 0.55rem 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .breakdown-table .row-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  tr.subtotal-row td {
+    background: var(--surface-2);
+    font-weight: 700;
+  }
+  tr.total-row td {
+    background: var(--bg);
+    font-weight: 700;
+    font-size: 0.84rem;
+    border-top: 2px solid var(--border);
+  }
+  tr.revenue-row td {
+    font-weight: 700;
+  }
+  tr.margin-row td {
+    background: var(--surface-2);
+    font-weight: 700;
+  }
+
+  /* ── Charts row ── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap);
+    margin-bottom: 1.375rem;
+  }
+
+  @media (max-width: 680px) {
+    .charts-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.125rem 1.25rem;
+  }
+
+  .chart-card h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.875rem;
+  }
+
+  .chart-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .chart-wrap svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-top: 0.75rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  .legend-swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-dash {
+    width: 14px;
+    height: 0;
+    border-top-width: 2px;
+    border-top-style: solid;
+    flex-shrink: 0;
+  }
+  .legend-dash-dotted {
+    border-top-style: dashed;
+  }
+
+  /* ── Sensitivity matrix ── */
+  .matrix-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    margin-bottom: 1.375rem;
+  }
+
+  .matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .matrix-table th {
+    background: var(--surface-2);
+    padding: 0.5rem 0.9rem;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .matrix-table th.row-head {
+    text-align: left;
+  }
+
+  .matrix-table td {
+    padding: 0.48rem 0.9rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    transition: background 0.15s;
+  }
+
+  .matrix-table td.row-label {
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: var(--surface-2);
+    border-right: 1px solid var(--border);
+    padding-right: 1rem;
+  }
+
+  .matrix-table td.current-cell {
+    outline: 2px solid var(--c-aws);
+    outline-offset: -2px;
+  }
+
+  /* ── Assumptions ── */
+  .assumptions {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.125rem 1.375rem;
+  }
+
+  .assumptions .sect-h {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+    margin-bottom: 0.875rem;
+  }
+
+  .assumptions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 2.5rem;
+  }
+
+  @media (max-width: 600px) {
+    .assumptions-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .assumption-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .assumption-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.28rem 0;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+  }
+
+  .assumption-row:last-child {
+    border-bottom: none;
+  }
+
+  .ak {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+  .av {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+</style>
+
+<div class="page-header">
+  <div class="page-title">
+    <h1>Infinite AI · Monthly Financial Model</h1>
+    <p>
+      South African primary school SaaS — infrastructure costs &amp; gross margin analysis
+    </p>
+  </div>
+  <div class="badges">
+    <span class="badge badge-fx">R18.50 / USD</span>
+    <span class="badge badge-region">af-south-1</span>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="control-group">
+    <span class="ctl-label">Schools</span>
+    <div class="pill-row" id="school-pills">
+      <button class="pill" data-val="5">5</button>
+      <button class="pill" data-val="10">10</button>
+      <button class="pill active" data-val="25">25</button>
+      <button class="pill" data-val="50">50</button>
+      <button class="pill" data-val="100">100</button>
+    </div>
+  </div>
+  <div class="control-group">
+    <span class="ctl-label"
+      >Monthly price / school, ex VAT (per-school formula, OQ-043: R1,380 = 120 learners /
+      8 educators; R3,067 = plan-mix blend; R3,100 = 400 / 16)</span
+    >
+    <div class="pill-row" id="price-pills">
+      <button class="pill" data-val="1380">R1,380</button>
+      <button class="pill" data-val="2000">R2,000</button>
+      <button class="pill active" data-val="3067">R3,067</button>
+      <button class="pill" data-val="3100">R3,100</button>
+      <button class="pill" data-val="4000">R4,000</button>
+    </div>
+  </div>
+  <div class="control-group">
+    <span class="ctl-label">Email delivery</span>
+    <div class="pill-row" id="email-pills">
+      <button class="pill email-pill active" data-val="ses">SES (included in AWS)</button>
+      <button class="pill email-pill" data-val="postmark">Postmark +R278/mo</button>
+    </div>
+  </div>
+</div>
+
+<!-- KPI tiles -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Monthly Cost</div>
+    <div class="kpi-value" id="kpi-cost" style="color: var(--text-primary)">R—</div>
+    <div class="kpi-sub" id="kpi-cost-sub">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Cost per School</div>
+    <div class="kpi-value" id="kpi-cps" style="color: var(--text-primary)">R—</div>
+    <div class="kpi-sub" id="kpi-cps-sub">blended incl. fixed share</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Gross Revenue</div>
+    <div class="kpi-value" id="kpi-rev" style="color: var(--c-rev)">R—</div>
+    <div class="kpi-sub" id="kpi-rev-sub">N × monthly price</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Gross Margin</div>
+    <div class="kpi-value" id="kpi-margin">—%</div>
+    <div class="kpi-sub">before staff, tax &amp; VAT</div>
+  </div>
+</div>
+
+<!-- Insights -->
+<div class="insight-row">
+  <div class="insight-card">
+    <div class="ic-label">Break-even</div>
+    <div class="ic-value" id="ic-breakeven">— schools</div>
+    <div class="ic-note" id="ic-breakeven-note">schools needed to cover fixed costs</div>
+  </div>
+  <div class="insight-card">
+    <div class="ic-label">Annual Gross Profit</div>
+    <div class="ic-value" id="ic-annual">R—</div>
+    <div class="ic-note" id="ic-annual-note">12 × monthly gross profit</div>
+  </div>
+  <div class="insight-card">
+    <div class="ic-label">LLM FX Exposure</div>
+    <div class="ic-value" id="ic-fx">$—/mo</div>
+    <div class="ic-note">Anthropic billed in USD — rand weakness → cost creep</div>
+  </div>
+</div>
+
+<!-- Cost breakdown -->
+<div class="section-header">
+  <h2>Cost Breakdown</h2>
+</div>
+<div class="breakdown-wrap">
+  <table class="breakdown-table">
+    <thead>
+      <tr>
+        <th style="width: 52%">Line item</th>
+        <th>Type</th>
+        <th class="right">Monthly (ZAR)</th>
+      </tr>
+    </thead>
+    <tbody id="breakdown-body"></tbody>
+  </table>
+</div>
+
+<!-- Charts -->
+<div class="charts-row">
+  <div class="chart-card">
+    <h3>Cost vs Revenue — monthly snapshot</h3>
+    <div class="chart-wrap">
+      <svg id="bar-svg" viewBox="0 0 360 195" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: var(--c-aws)"></div>
+        AWS fixed
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: var(--c-3p)"></div>
+        3rd-party fixed
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: var(--c-infra)"></div>
+        Infra variable
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: var(--c-llm)"></div>
+        LLM API
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: var(--c-rev)"></div>
+        Revenue
+      </div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h3>Cost per school vs scale</h3>
+    <div class="chart-wrap">
+      <svg id="curve-svg" viewBox="0 0 360 195" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dash" style="border-color: var(--c-aws)"></div>
+        Cost/school curve
+      </div>
+      <div class="legend-item">
+        <div
+          class="legend-dash legend-dash-dotted"
+          style="border-color: var(--c-rev)"
+        ></div>
+        Your price
+      </div>
+      <div class="legend-item">
+        <div
+          class="legend-dash legend-dash-dotted"
+          style="border-color: var(--c-infra)"
+        ></div>
+        Variable floor R1,074
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sensitivity matrix -->
+<div class="section-header">
+  <h2>Gross Margin Sensitivity — price × schools</h2>
+</div>
+<div class="matrix-wrap">
+  <table class="matrix-table" id="matrix-table"></table>
+</div>
+
+<!-- Assumptions -->
+<div class="assumptions">
+  <div class="sect-h">Model Assumptions</div>
+  <div class="assumptions-grid">
+    <div class="assumption-col">
+      <div class="assumption-row">
+        <span class="ak">FX rate</span
+        ><span class="av">R18.50 / USD (planning rate)</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">AWS region</span
+        ><span class="av">af-south-1 Cape Town (POPIA)</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">School size modelled</span
+        ><span class="av">~500 learners (medium)</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">LLM model</span
+        ><span class="av">Claude with 5-min prompt cache</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">Cache hit rate assumed</span
+        ><span class="av">~80% on system prompts</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">Anthropic cost / school</span
+        ><span class="av">$45/mo ≈ R833 (cached)</span>
+      </div>
+    </div>
+    <div class="assumption-col">
+      <div class="assumption-row">
+        <span class="ak">AWS fixed infrastructure</span
+        ><span class="av">R6,475/mo ($350)</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">AWS marginal / school</span
+        ><span class="av">R241/mo ($13) storage, data transfer</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">Sentry Team (error tracking)</span
+        ><span class="av">R481/mo ($26)</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">BetterStack (uptime monitoring)</span
+        ><span class="av">R370/mo ($20)</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">Postmark (transactional email)</span
+        ><span class="av">R278/mo ($15) — optional vs SES</span>
+      </div>
+      <div class="assumption-row">
+        <span class="ak">Excluded from model</span
+        ><span class="av">Staff salaries, tax, VAT, support</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const AWS_FIXED = 6475,
+    DOMAIN = 13,
+    SENTRY = 481,
+    UPTIME = 370,
+    POSTMARK = 278;
+  const PER_LLM = 833,
+    PER_INFRA = 241;
+  const VAR_FLOOR = PER_LLM + PER_INFRA; // 1074
+
+  const state = { schools: 25, price: 3067, email: 'ses' };
+
+  function compute(s) {
+    const usePostmark = s.email === 'postmark';
+    const thirdParty = DOMAIN + SENTRY + UPTIME + (usePostmark ? POSTMARK : 0);
+    const totalFixed = AWS_FIXED + thirdParty;
+    const varLLM = s.schools * PER_LLM;
+    const varInfra = s.schools * PER_INFRA;
+    const totalCost = totalFixed + varLLM + varInfra;
+    const costPerSchool = totalCost / s.schools;
+    const revenue = s.schools * s.price;
+    const grossProfit = revenue - totalCost;
+    const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : -Infinity;
+    const breakEven =
+      s.price > VAR_FLOOR ? Math.ceil(totalFixed / (s.price - VAR_FLOOR)) : Infinity;
+    return {
+      usePostmark,
+      thirdParty,
+      totalFixed,
+      varLLM,
+      varInfra,
+      totalCost,
+      costPerSchool,
+      revenue,
+      grossProfit,
+      grossMargin,
+      breakEven,
+      llmUSD: s.schools * 45,
+    };
+  }
+
+  const R = (n) => 'R' + Math.round(n).toLocaleString('en-ZA');
+  const Rk = (n) => (n >= 1000 ? 'R' + (n / 1000).toFixed(1) + 'k' : R(n));
+
+  function marginColor(pct) {
+    if (pct < 0) return 'var(--c-llm)';
+    if (pct < 20) return 'var(--c-infra)';
+    if (pct < 40) return 'var(--text-secondary)';
+    return 'var(--c-rev)';
+  }
+
+  // ─── KPIs ───
+  function updateKPIs(m) {
+    const costEl = document.getElementById('kpi-cost');
+    costEl.textContent = R(m.totalCost);
+    costEl.style.color = 'var(--text-primary)';
+    document.getElementById('kpi-cost-sub').textContent =
+      `${R(m.totalFixed)} fixed + ${R(m.varLLM + m.varInfra)} variable`;
+
+    document.getElementById('kpi-cps').textContent = R(m.costPerSchool);
+    document.getElementById('kpi-cps-sub').textContent =
+      `variable floor R${VAR_FLOOR.toLocaleString('en-ZA')}/school at scale`;
+
+    document.getElementById('kpi-rev').textContent = R(m.revenue);
+    document.getElementById('kpi-rev-sub').textContent =
+      `${state.schools} schools × ${R(state.price)}/mo`;
+
+    const marginEl = document.getElementById('kpi-margin');
+    marginEl.textContent = isFinite(m.grossMargin) ? m.grossMargin.toFixed(1) + '%' : '—';
+    marginEl.style.color = marginColor(m.grossMargin);
+
+    const beEl = document.getElementById('ic-breakeven');
+    beEl.textContent = isFinite(m.breakEven)
+      ? `${m.breakEven} school${m.breakEven !== 1 ? 's' : ''}`
+      : '∞';
+    beEl.style.color =
+      isFinite(m.breakEven) && state.schools >= m.breakEven
+        ? 'var(--c-rev)'
+        : 'var(--c-llm)';
+    document.getElementById('ic-breakeven-note').textContent = isFinite(m.breakEven)
+      ? state.schools >= m.breakEven
+        ? `✓ profitable at ${state.schools} schools`
+        : `need ${m.breakEven - state.schools} more to break even`
+      : 'price must exceed R1,074 variable cost';
+
+    const annualEl = document.getElementById('ic-annual');
+    const ap = m.grossProfit * 12;
+    annualEl.textContent = R(ap);
+    annualEl.style.color = ap >= 0 ? 'var(--c-rev)' : 'var(--c-llm)';
+    document.getElementById('ic-annual-note').textContent =
+      ap >= 0
+        ? `${R(m.grossProfit)}/mo profit × 12`
+        : `${R(Math.abs(m.grossProfit))}/mo shortfall × 12`;
+
+    document.getElementById('ic-fx').textContent =
+      `$${m.llmUSD.toLocaleString('en-US')}/mo`;
+  }
+
+  // ─── Breakdown table ───
+  function updateBreakdown(m) {
+    const rows = [
+      {
+        dot: 'var(--c-aws)',
+        name: 'AWS ECS, RDS, ElastiCache, ALB, network',
+        type: 'Fixed shared',
+        val: AWS_FIXED,
+      },
+      {
+        dot: 'var(--c-3p)',
+        name: 'Domain name (.co.za)',
+        type: 'Fixed shared',
+        val: DOMAIN,
+      },
+      {
+        dot: 'var(--c-3p)',
+        name: 'Sentry Team (error tracking)',
+        type: 'Fixed shared',
+        val: SENTRY,
+      },
+      {
+        dot: 'var(--c-3p)',
+        name: 'BetterStack (uptime monitoring)',
+        type: 'Fixed shared',
+        val: UPTIME,
+      },
+      ...(m.usePostmark
+        ? [
+            {
+              dot: 'var(--c-3p)',
+              name: 'Postmark (transactional email)',
+              type: 'Fixed shared',
+              val: POSTMARK,
+            },
+          ]
+        : []),
+      { kind: 'subtotal', name: 'Total fixed costs', val: m.totalFixed },
+      {
+        dot: 'var(--c-infra)',
+        name: `AWS marginal storage &amp; data transfer × ${state.schools}`,
+        type: 'Variable',
+        val: m.varInfra,
+      },
+      {
+        dot: 'var(--c-llm)',
+        name: `Anthropic API (Claude, cached) × ${state.schools}`,
+        type: 'Variable',
+        val: m.varLLM,
+      },
+      { kind: 'total', name: 'Total monthly cost', val: m.totalCost },
+      { kind: 'revenue', name: 'Gross revenue', val: m.revenue },
+      {
+        kind: 'margin',
+        name: 'Gross profit / margin',
+        val: m.grossProfit,
+        pct: m.grossMargin,
+      },
+    ];
+
+    document.getElementById('breakdown-body').innerHTML = rows
+      .map((r) => {
+        if (r.kind === 'subtotal') {
+          return `<tr class="subtotal-row"><td colspan="2"><strong>Fixed subtotal</strong></td><td class="right"><strong>${R(r.val)}</strong></td></tr>`;
+        }
+        if (r.kind === 'total') {
+          return `<tr class="total-row"><td colspan="2"><strong>${r.name}</strong></td><td class="right"><strong>${R(r.val)}</strong></td></tr>`;
+        }
+        if (r.kind === 'revenue') {
+          return `<tr class="revenue-row"><td colspan="2" style="color:var(--c-rev)">${r.name}</td><td class="right" style="color:var(--c-rev)">${R(r.val)}</td></tr>`;
+        }
+        if (r.kind === 'margin') {
+          const col = marginColor(r.pct);
+          return `<tr class="margin-row"><td colspan="2" style="color:${col}">${r.name}</td><td class="right" style="color:${col}">${R(r.val)} <span style="opacity:0.65;font-size:0.72rem">(${r.pct.toFixed(1)}%)</span></td></tr>`;
+        }
+        const dot = r.dot
+          ? `<span class="row-dot" style="background:${r.dot}"></span>`
+          : '';
+        return `<tr><td>${dot}${r.name}</td><td style="color:var(--text-muted)">${r.type}</td><td class="right">${R(r.val)}</td></tr>`;
+      })
+      .join('');
+  }
+
+  // ─── Bar chart ───
+  function updateBarChart(m) {
+    const svg = document.getElementById('bar-svg');
+    const W = 360,
+      H = 195;
+    const pad = { t: 18, r: 18, b: 34, l: 56 };
+    const cW = W - pad.l - pad.r,
+      cH = H - pad.t - pad.b;
+
+    const maxV = Math.max(m.totalCost, m.revenue) * 1.15 || 1;
+    const bW = cW * 0.27;
+    const x1 = pad.l + cW * 0.22,
+      x2 = pad.l + cW * 0.72;
+
+    function yOf(v) {
+      return pad.t + cH - (v / maxV) * cH;
+    }
+
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * maxV);
+
+    let s = '';
+
+    // Grid
+    yTicks.forEach((t) => {
+      const y = yOf(t);
+      s += `<line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="var(--border)" stroke-width="${t === 0 ? 1 : 0.5}" stroke-dasharray="${t === 0 ? '' : '4,3'}"/>`;
+      s += `<text x="${pad.l - 5}" y="${y + 3.5}" text-anchor="end" fill="var(--text-muted)" font-size="8.5">${Rk(t)}</text>`;
+    });
+
+    // Stacked cost bar
+    const segs = [
+      { h: (AWS_FIXED / maxV) * cH, c: 'var(--c-aws)' },
+      { h: (m.thirdParty / maxV) * cH, c: 'var(--c-3p)' },
+      { h: (m.varInfra / maxV) * cH, c: 'var(--c-infra)' },
+      { h: (m.varLLM / maxV) * cH, c: 'var(--c-llm)' },
+    ];
+    let sy = pad.t + cH;
+    segs.forEach((seg) => {
+      if (seg.h < 0.5) return;
+      sy -= seg.h;
+      s += `<rect x="${x1 - bW / 2}" y="${sy}" width="${bW}" height="${seg.h}" fill="${seg.c}" rx="2"/>`;
+      s += `<line x1="${x1 - bW / 2 + 1}" y1="${sy + seg.h}" x2="${x1 + bW / 2 - 1}" y2="${sy + seg.h}" stroke="var(--surface)" stroke-width="1.5"/>`;
+    });
+    const costTop = yOf(m.totalCost);
+    s += `<text x="${x1}" y="${costTop - 5}" text-anchor="middle" fill="var(--text-primary)" font-size="9" font-weight="700">${Rk(m.totalCost)}</text>`;
+
+    // Revenue bar
+    const revTop = yOf(m.revenue);
+    const rH = (m.revenue / maxV) * cH;
+    s += `<rect x="${x2 - bW / 2}" y="${revTop}" width="${bW}" height="${rH}" fill="var(--c-rev)" rx="2" opacity="0.82"/>`;
+    s += `<text x="${x2}" y="${revTop - 5}" text-anchor="middle" fill="var(--text-primary)" font-size="9" font-weight="700">${Rk(m.revenue)}</text>`;
+
+    // Margin connector
+    if (m.grossMargin > 0 && m.revenue > m.totalCost) {
+      const midX = (x1 + bW / 2 + x2 - bW / 2) / 2;
+      s += `<line x1="${x1 + bW / 2}" y1="${costTop}" x2="${x2 - bW / 2}" y2="${revTop}" stroke="var(--c-margin)" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+      s += `<text x="${midX}" y="${(costTop + revTop) / 2 - 5}" text-anchor="middle" fill="var(--c-margin)" font-size="8.5" font-weight="700">${m.grossMargin.toFixed(1)}%</text>`;
+    }
+
+    // X labels
+    s += `<text x="${x1}" y="${H - pad.b + 14}" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Cost</text>`;
+    s += `<text x="${x2}" y="${H - pad.b + 14}" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Revenue</text>`;
+
+    svg.innerHTML = s;
+  }
+
+  // ─── Scale curve ───
+  function updateCurve(m) {
+    const svg = document.getElementById('curve-svg');
+    const W = 360,
+      H = 195;
+    const pad = { t: 18, r: 22, b: 34, l: 52 };
+    const cW = W - pad.l - pad.r,
+      cH = H - pad.t - pad.b;
+
+    const maxN = 100,
+      maxCPS = 4500;
+
+    function xOf(n) {
+      return pad.l + (n / maxN) * cW;
+    }
+    function yOf(v) {
+      return pad.t + cH - (Math.min(v, maxCPS) / maxCPS) * cH;
+    }
+
+    const xTicks = [10, 25, 50, 75, 100];
+    const yTicks = [0, 1000, 2000, 3000, 4000];
+
+    let s = '';
+
+    // Grid
+    xTicks.forEach((n) => {
+      const x = xOf(n);
+      s += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${pad.t + cH}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="4,3"/>`;
+      s += `<text x="${x}" y="${pad.t + cH + 14}" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">${n}</text>`;
+    });
+
+    yTicks.forEach((v) => {
+      const y = yOf(v);
+      s += `<line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="var(--border)" stroke-width="${v === 0 ? 1 : 0.5}" stroke-dasharray="${v === 0 ? '' : '4,3'}"/>`;
+      s += `<text x="${pad.l - 5}" y="${y + 3.5}" text-anchor="end" fill="var(--text-muted)" font-size="8.5">${v === 0 ? 'R0' : 'R' + v / 1000 + 'k'}</text>`;
+    });
+
+    // Axis label
+    s += `<text x="${pad.l + cW / 2}" y="${H - 2}" text-anchor="middle" fill="var(--text-muted)" font-size="8">Schools</text>`;
+
+    // Variable floor
+    const floorY = yOf(VAR_FLOOR);
+    s += `<line x1="${pad.l}" y1="${floorY}" x2="${W - pad.r}" y2="${floorY}" stroke="var(--c-infra)" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.7"/>`;
+    s += `<text x="${W - pad.r - 2}" y="${floorY - 3}" text-anchor="end" fill="var(--c-infra)" font-size="8" font-weight="700">R${VAR_FLOOR.toLocaleString('en-ZA')}</text>`;
+
+    // Price line
+    if (state.price <= maxCPS) {
+      const priceY = yOf(state.price);
+      s += `<line x1="${pad.l}" y1="${priceY}" x2="${W - pad.r}" y2="${priceY}" stroke="var(--c-rev)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.8"/>`;
+      s += `<text x="${W - pad.r - 2}" y="${priceY - 3}" text-anchor="end" fill="var(--c-rev)" font-size="8" font-weight="700">${Rk(state.price)}</text>`;
+    }
+
+    // Curve (N = 1..100)
+    const pts = [];
+    for (let n = 1; n <= 100; n++) {
+      const cps = (m.totalFixed + n * VAR_FLOOR) / n;
+      pts.push(`${xOf(n)},${yOf(cps)}`);
+    }
+    s += `<polyline points="${pts.join(' ')}" fill="none" stroke="var(--c-aws)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+    // Selection dot
+    const dotX = xOf(state.schools);
+    const selCPS = (m.totalFixed + state.schools * VAR_FLOOR) / state.schools;
+    const dotY = yOf(selCPS);
+    s += `<circle cx="${dotX}" cy="${dotY}" r="5.5" fill="var(--surface)" stroke="var(--c-aws)" stroke-width="2.5"/>`;
+    s += `<circle cx="${dotX}" cy="${dotY}" r="2.5" fill="var(--c-aws)"/>`;
+    const callY = dotY > pad.t + 30 ? dotY - 9 : dotY + 17;
+    s += `<text x="${dotX + 6}" y="${callY}" text-anchor="start" fill="var(--text-primary)" font-size="8.5" font-weight="700">${Rk(m.costPerSchool)}</text>`;
+
+    svg.innerHTML = s;
+  }
+
+  // ─── Sensitivity matrix ───
+  const PRICES_SENS = [1380, 2000, 3067, 3100, 4000];
+  const SCHOOLS_SENS = [5, 10, 25, 50, 100];
+
+  function marginBg(pct) {
+    if (pct < 0) return 'rgba(220,38,38,0.13)';
+    if (pct < 20) return 'rgba(217,119,6,0.11)';
+    if (pct < 40) return 'rgba(22,163,74,0.08)';
+    return 'rgba(22,163,74,0.18)';
+  }
+
+  function updateMatrix() {
+    let html = '<thead><tr><th class="row-head">↓ Price / Schools →</th>';
+    SCHOOLS_SENS.forEach((n) => {
+      html += `<th>${n}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    PRICES_SENS.forEach((price) => {
+      html += `<tr><td class="row-label">${R(price)}</td>`;
+      SCHOOLS_SENS.forEach((n) => {
+        const mc = compute({ schools: n, price, email: state.email });
+        const pct = mc.grossMargin;
+        const isCur = n === state.schools && price === state.price;
+        html += `<td class="${isCur ? 'current-cell' : ''}" style="background:${marginBg(pct)};color:${marginColor(pct)}">${pct.toFixed(0)}%</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    document.getElementById('matrix-table').innerHTML = html;
+  }
+
+  // ─── Pill setup ───
+  function setupPills() {
+    document.getElementById('school-pills').addEventListener('click', (e) => {
+      const b = e.target.closest('.pill');
+      if (!b) return;
+      state.schools = parseInt(b.dataset.val);
+      document
+        .querySelectorAll('#school-pills .pill')
+        .forEach((p) => p.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    });
+    document.getElementById('price-pills').addEventListener('click', (e) => {
+      const b = e.target.closest('.pill');
+      if (!b) return;
+      state.price = parseInt(b.dataset.val);
+      document
+        .querySelectorAll('#price-pills .pill')
+        .forEach((p) => p.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    });
+    document.getElementById('email-pills').addEventListener('click', (e) => {
+      const b = e.target.closest('.pill');
+      if (!b) return;
+      state.email = b.dataset.val;
+      document
+        .querySelectorAll('#email-pills .pill')
+        .forEach((p) => p.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    });
+  }
+
+  function render() {
+    const m = compute(state);
+    updateKPIs(m);
+    updateBreakdown(m);
+    updateBarChart(m);
+    updateCurve(m);
+    updateMatrix();
+  }
+
+  setupPills();
+  render();
+</script>

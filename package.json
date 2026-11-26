@@ -18,6 +18,7 @@
     "audit:ecosystem": "node scripts/audit-ecosystem.mjs",
     "server": "tsx server.ts",
     "seed:business": "tsx scripts/seed-business.ts",
+    "seed:all": "tsx scripts/seed-all.ts",
     "brand:export": "tsx scripts/export-brand-tokens.ts",
     "brand:check": "tsx scripts/export-brand-tokens.ts --check"
   },
